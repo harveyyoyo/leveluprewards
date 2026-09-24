@@ -96,10 +96,9 @@ describe('AttendanceTodayBoard', () => {
     expect(screen.queryByText('Ava Stone')).not.toBeInTheDocument();
   });
 
-  it('class chips narrow the list and the summary', () => {
+  it('picks classes from one tidy dropdown instead of a row of boxes', () => {
     render(<AttendanceTodayBoard schoolId="abc" students={students} classes={classes} attendanceConfig={config} />);
-    fireEvent.click(screen.getByRole('button', { name: /Room 4/ }));
-    expect(headline()).toHaveTextContent('1 of 2 checked in');
-    expect(screen.queryByText('Cleo Park')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Class' })).toHaveTextContent('All classes · 4 students');
+    expect(screen.queryByRole('group', { name: 'Filter by class' })).not.toBeInTheDocument();
   });
 });

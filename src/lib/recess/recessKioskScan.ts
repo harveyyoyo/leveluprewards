@@ -3,6 +3,7 @@ import type { Student } from '@/lib/types';
 import { startRecessCheckout, endRecessCheckout } from '@/lib/db/recess';
 import { parseRecessPassScanCode } from '@/lib/recess/recessPassScanCode';
 import type { RecessReason } from '@/lib/types';
+import type { RecessLimit } from '@/lib/recess/recessKioskSettings';
 
 export type RecessPassScanResult =
   | { action: 'not_pass' }
@@ -19,7 +20,7 @@ export async function performRecessPassScan(
   schoolId: string,
   student: Student,
   rawCode: string,
-  maxMinutes: number,
+  maxMinutes: RecessLimit,
 ): Promise<RecessPassScanResult> {
   const reason = parseRecessPassScanCode(rawCode);
   if (!reason) return { action: 'not_pass' };

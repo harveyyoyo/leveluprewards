@@ -30,6 +30,8 @@ const PROTECTED_SECOND = new Set([
   'secretary',
   'prize-clerk',
   'reports',
+  'attendance',
+  'attendance-roster',
   'hall-of-fame',
   'bulletin-board',
   'smart-screen',

@@ -71,7 +71,7 @@ import { useActiveRecessPasses } from '@/hooks/useActiveRecessPasses';
 import { BathroomPassesBar } from '@/components/attendance/BathroomPassesBar';
 import { startBathroomPass, endBathroomPass } from '@/lib/db/bathroom';
 import { formatBathroomElapsed } from '@/lib/bathroom/formatBathroomElapsed';
-import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import { recessLimitFor } from '@/lib/recess/recessKioskSettings';
 import {
   classroomHallPassByStudent,
   mergeClassroomWhosOutPasses,
@@ -338,7 +338,11 @@ function ClassroomPointsPanelInner({
   const attendanceEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
   const bathroomTimerOn = attendanceEnabled && (settings.enableBathroomTimer ?? true);
   const bathroomMaxMinutes = Math.min(30, Math.max(1, settings.bathroomMaxMinutes ?? 5));
-  const recessMaxMinutes = resolveRecessMaxMinutes(settings);
+  // Each pass type can have its own limit.
+  const recessMaxMinutes = useMemo(
+    () => recessLimitFor({ recessMaxMinutes: settings.recessMaxMinutes, recessMaxMinutesByReason: settings.recessMaxMinutesByReason }),
+    [settings.recessMaxMinutes, settings.recessMaxMinutesByReason],
+  );
   const schoolTodayAttendanceRecords = useTodayAttendanceRecords(schoolId, attendanceEnabled);
   const [liveTool, setLiveTool] = useState<'raffle' | 'behavior' | 'setup' | null>(null);
   const [setupTab, setSetupTab] = useState<ClassroomLiveSetupTab>('setup');

@@ -48,7 +48,7 @@ import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
 import { useActiveRecessPasses } from '@/hooks/useActiveRecessPasses';
 import { endBathroomPass } from '@/lib/db/bathroom';
 import { endRecessCheckout } from '@/lib/db/recess';
-import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import { recessLimitFor } from '@/lib/recess/recessKioskSettings';
 import {
   classroomWhosOutDisplayName,
   classroomWhosOutPassLabel,
@@ -199,7 +199,7 @@ export function ClassroomCommandCenter({
         const s = classStudents.find((stud) => stud.id === studentId);
         return s ? getStudentNickname(s) : fallbackName || 'Student';
       },
-      recessMaxMinutes: resolveRecessMaxMinutes(settings),
+      recessMaxMinutes: recessLimitFor(settings),
       bathroomMaxMinutes: settings.bathroomMaxMinutes || 5,
     }).filter((p) => classStudentIds.has(p.studentId));
   }, [bathroomPasses, classStudents, recessPasses, settings]);
@@ -207,7 +207,7 @@ export function ClassroomCommandCenter({
   const handleEndPass = async (studentId: string) => {
     try {
       const [recessLog, bathroomLog] = await Promise.all([
-        endRecessCheckout(firestore, schoolId, studentId, resolveRecessMaxMinutes(settings)),
+        endRecessCheckout(firestore, schoolId, studentId, recessLimitFor(settings)),
         endBathroomPass(firestore, schoolId, studentId, settings.bathroomMaxMinutes || 5),
       ]);
       if (!recessLog && !bathroomLog) {

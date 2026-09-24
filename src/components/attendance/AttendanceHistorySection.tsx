@@ -118,10 +118,13 @@ function prettyDay(key: string): string {
 
 export function AttendanceHistorySection({
   schoolId,
-  students = [],
-  classes = [],
+  students: studentsProp,
+  classes: classesProp,
   teacherIdScope,
 }: AttendanceHistorySectionProps) {
+  // Pages pass null while their lists are still loading; treat that as empty.
+  const students = useMemo(() => studentsProp ?? [], [studentsProp]);
+  const classes = useMemo(() => classesProp ?? [], [classesProp]);
   const [view, setView] = useState<'day' | 'patterns'>('day');
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
 

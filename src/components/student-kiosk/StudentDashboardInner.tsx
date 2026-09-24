@@ -71,7 +71,7 @@ import { shouldAskStudentToRateReturnedBook } from '@/lib/library/libraryStudent
 import { StudentKioskRecessCheckoutCard } from '@/components/student-kiosk/StudentKioskRecessCheckoutCard';
 import {
   isRecessStudentKioskEnabled,
-  resolveRecessMaxMinutes,
+  recessLimitFor,
 } from '@/lib/recess/recessKioskSettings';
 import { RECESS_REASON_BY_VALUE } from '@/lib/recess/recessReasons';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
@@ -270,7 +270,11 @@ export function StudentDashboardInner({
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
   const libraryKioskCheckoutOn = isLibraryStudentKioskCheckoutEnabled(settings);
   const recessKioskCheckoutOn = isRecessStudentKioskEnabled(settings);
-  const recessMaxMinutes = resolveRecessMaxMinutes(settings);
+  // Each pass type can have its own limit.
+  const recessMaxMinutes = useMemo(
+    () => recessLimitFor({ recessMaxMinutes: settings.recessMaxMinutes, recessMaxMinutesByReason: settings.recessMaxMinutesByReason }),
+    [settings.recessMaxMinutes, settings.recessMaxMinutesByReason],
+  );
   const prefersReducedMotion = useReducedMotion();
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';

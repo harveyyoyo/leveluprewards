@@ -82,9 +82,14 @@ export interface AttendanceTodayBoardProps {
   attendanceConfig?: AttendanceSettings | null;
   teacherIdScope?: string;
   variant?: 'admin' | 'teacher';
+  /** The page already shows the clock and class period above (attendance workspace). */
+  hidePeriodInfo?: boolean;
 }
 
 type StatusFilter = 'all' | 'absent' | AttendanceMark;
+
+/** Shared columns for the student list heading and rows (wider screens only). */
+const ROW_GRID = 'md:grid-cols-[minmax(0,1fr)_7.5rem_5.5rem_8rem_3.5rem_14rem] md:gap-x-4';
 
 const MARK_STYLES: Record<AttendanceMark | 'absent', { chip: string; dot: string; icon: React.ElementType }> = {
   'on-time': {
@@ -173,13 +178,18 @@ function ProgressRing({ value, size = 88 }: { value: number; size?: number }) {
 
 export function AttendanceTodayBoard({
   schoolId,
-  students,
-  classes,
-  periods = [],
+  students: studentsProp,
+  classes: classesProp,
+  periods: periodsProp,
   attendanceConfig: attendanceConfigProp,
   teacherIdScope,
   variant = 'admin',
+  hidePeriodInfo = false,
 }: AttendanceTodayBoardProps) {
+  // Pages pass null while their lists are still loading; treat that as empty.
+  const students = useMemo(() => studentsProp ?? [], [studentsProp]);
+  const classes = useMemo(() => classesProp ?? [], [classesProp]);
+  const periods = useMemo(() => periodsProp ?? [], [periodsProp]);
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -273,7 +283,7 @@ export function AttendanceTodayBoard({
     [classes, teacherScope]
   );
   const scopedStudents = useMemo(
-    () => studentsForTeacher(students || [], classes, teacherScope),
+    () => studentsForTeacher(students, classes, teacherScope),
     [students, classes, teacherScope]
   );
   const classNameById = useMemo(() => new Map(classes.map((c) => [c.id, c.name || 'Class'])), [classes]);
@@ -336,13 +346,15 @@ export function AttendanceTodayBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classStudents, searchQuery, selectedStatus, todayStudentLogMap]);
 
-  const periodLabelNow = activePeriod?.label || 'Homeroom';
+  // The class period on right now, if any. Between periods a check-in counts for the whole day.
+  const periodLabelNow: string | undefined = activePeriod?.label;
 
   const recordCheckIn = async (student: Student, status: AttendanceMark, opts?: { points?: number; periodLabel?: string; note?: string }) => {
     return recordManualAttendance(firestore, schoolId, student.id, student, {
       status,
       points: opts?.points ?? defaultPointsFor(status),
-      periodLabel: opts?.periodLabel ?? periodLabelNow,
+      // An explicit "Whole day" choice (undefined) must not fall back to the current period.
+      periodLabel: opts && 'periodLabel' in opts ? opts.periodLabel : periodLabelNow,
       teacherId: teacherIdScope,
       note: opts?.note,
       attendanceTimeZone: timeZone,
@@ -522,6 +534,14 @@ export function AttendanceTodayBoard({
         </div>
 
         <div className="flex flex-col justify-between gap-4 rounded-3xl border bg-card p-5">
+          {hidePeriodInfo ? (
+            <div>
+              <p className="text-base font-black leading-tight">Quick check-in</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                For a forgotten card or a late arrival. Or tap Here or Late next to a name below.
+              </p>
+            </div>
+          ) : (
           <div className="flex items-start gap-3">
             <div
               className={cn(
@@ -551,6 +571,7 @@ export function AttendanceTodayBoard({
               </p>
             </div>
           </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => openManualCheckIn()} className="flex-1 gap-2 rounded-xl font-black shadow-sm">
               <PlusCircle className="h-4 w-4" aria-hidden="true" />
@@ -597,54 +618,9 @@ export function AttendanceTodayBoard({
         </div>
       </div>
 
-      {/* Classes at a glance */}
-      {perClass.length > 1 && (
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [contain:inline-size]" role="group" aria-label="Filter by class">
-          <button
-            type="button"
-            onClick={() => setSelectedClassId('all')}
-            className={cn(
-              'shrink-0 rounded-2xl border px-3.5 py-2 text-left transition-colors',
-              selectedClassId === 'all' ? 'border-primary bg-primary/10' : 'bg-card hover:bg-muted/50'
-            )}
-            aria-pressed={selectedClassId === 'all'}
-          >
-            <span className="block text-xs font-black">All classes</span>
-            <span className="block text-[11px] text-muted-foreground">{scopedStudents.length} students</span>
-          </button>
-          {perClass.map(({ cls, here, total }) => {
-            const pct = total ? Math.round((here / total) * 100) : 0;
-            const active = selectedClassId === cls.id;
-            return (
-              <button
-                key={cls.id}
-                type="button"
-                onClick={() => setSelectedClassId(active ? 'all' : cls.id)}
-                className={cn(
-                  'w-36 shrink-0 rounded-2xl border px-3.5 py-2 text-left transition-colors',
-                  active ? 'border-primary bg-primary/10' : 'bg-card hover:bg-muted/50'
-                )}
-                aria-pressed={active}
-              >
-                <span className="block truncate text-xs font-black">{cls.name}</span>
-                <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted">
-                  <span
-                    className={cn('block h-full rounded-full', pct === 100 ? 'bg-emerald-500' : 'bg-primary')}
-                    style={{ width: `${pct}%` }}
-                  />
-                </span>
-                <span className="mt-1 block text-[11px] font-semibold text-muted-foreground">
-                  {here}/{total} in
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Filters */}
-      <div className="flex flex-col gap-3 rounded-2xl border bg-muted/20 p-3 md:flex-row md:items-center">
-        <div className="relative md:w-64">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-muted/20 p-3">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             value={searchQuery}
@@ -665,23 +641,24 @@ export function AttendanceTodayBoard({
           )}
         </div>
 
-        {perClass.length <= 1 && scopedClasses.length > 0 && (
+        {scopedClasses.length > 0 && (
           <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-            <SelectTrigger className="h-10 rounded-xl bg-background md:w-48" aria-label="Class">
+            <SelectTrigger className="h-10 w-full rounded-xl bg-background sm:w-56" aria-label="Class">
               <SelectValue placeholder="All classes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All classes</SelectItem>
-              {scopedClasses.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+              <SelectItem value="all">All classes · {scopedStudents.length} students</SelectItem>
+              {perClass.map(({ cls, here, total }) => (
+                <SelectItem key={cls.id} value={cls.id}>
+                  {cls.name} · {here}/{total} in
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
 
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto [contain:inline-size] md:[contain:none]" role="group" aria-label="Filter by status">
+        {/* Wraps onto its own line when there isn't room — no side-scrolling strip. */}
+        <div className="order-last flex w-full flex-wrap gap-1 border-t pt-3" role="group" aria-label="Filter by status">
           {statusFilters.map((f) => (
             <button
               key={f.id}
@@ -700,7 +677,7 @@ export function AttendanceTodayBoard({
           ))}
         </div>
 
-        <div className="flex shrink-0 gap-1 rounded-xl border bg-background p-1">
+        <div className="ml-auto flex shrink-0 gap-1 rounded-xl border bg-background p-1">
           {(['roster', 'feed'] as const).map((mode) => (
             <button
               key={mode}
@@ -754,6 +731,16 @@ export function AttendanceTodayBoard({
               )}
             </div>
           ) : (
+            <>
+            {/* Column headings line up with the rows on wider screens. */}
+            <div className={cn(ROW_GRID, 'hidden border-b bg-muted/40 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-muted-foreground md:grid')}>
+              <span>Student</span>
+              <span>Status</span>
+              <span>Time</span>
+              <span>Class period</span>
+              <span className="text-right">Points</span>
+              <span className="text-right">Mark</span>
+            </div>
             <ul className="divide-y divide-border/60">
               {displayedStudents.map((student) => {
                 const log = todayStudentLogMap.get(student.id);
@@ -763,12 +750,15 @@ export function AttendanceTodayBoard({
                 return (
                   <li
                     key={student.id}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/20"
+                    className={cn(
+                      ROW_GRID,
+                      'flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 transition-colors hover:bg-muted/20 md:grid'
+                    )}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <div
                         className={cn(
-                          'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-black',
+                          'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black',
                           log ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground'
                         )}
                         aria-hidden="true"
@@ -782,27 +772,24 @@ export function AttendanceTodayBoard({
                         <p className="truncate font-bold text-foreground">{studentDisplayName(student)}</p>
                         <p className="truncate text-xs text-muted-foreground">
                           {cls || 'No class'}
-                          {log && (
-                            <>
-                              {' · '}
-                              {formatLogTime(log.signedInAt)}
-                              {log.periodLabel ? ` · ${log.periodLabel}` : ''}
-                              {log.manual ? ' · by staff' : ''}
-                            </>
-                          )}
+                          {/* On phones the time sits under the name; wider screens have its own column. */}
+                          {log && <span className="md:hidden"> · {formatLogTime(log.signedInAt)}</span>}
+                          {log?.manual ? ' · by staff' : ''}
                         </p>
                         {log?.note && <p className="truncate text-xs italic text-muted-foreground">“{log.note}”</p>}
                       </div>
                     </div>
 
-                    <div className={cn('flex items-center gap-2', !log && 'hidden sm:flex')}>
+                    <div className={cn(!log && 'hidden md:block')}>
                       <StatusChip mark={mark} />
-                      {log && (
-                        <span className="w-14 text-right text-xs font-black text-primary">+{log.pointsAwarded ?? 0}</span>
-                      )}
                     </div>
+                    <span className="hidden text-xs text-muted-foreground md:block">{log ? formatLogTime(log.signedInAt) : '—'}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground md:block">{log?.periodLabel || '—'}</span>
+                    <span className={cn('text-right text-xs font-black', log ? 'text-primary' : 'hidden text-muted-foreground md:block')}>
+                      {log ? `+${log.pointsAwarded ?? 0}` : '—'}
+                    </span>
 
-                    <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto">
+                    <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto md:w-full">
                       {isBusy ? (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Saving" />
                       ) : !log ? (
@@ -858,6 +845,7 @@ export function AttendanceTodayBoard({
                 );
               })}
             </ul>
+            </>
           )}
         </div>
       )}
@@ -915,7 +903,7 @@ export function AttendanceTodayBoard({
             <AlertDialogTitle>Mark everyone else in {selectedClassName} as here?</AlertDialogTitle>
             <AlertDialogDescription>
               {notInYet.length} {notInYet.length === 1 ? 'student' : 'students'} who haven&apos;t checked in will be
-              marked on time for {periodLabelNow} and get {defaultPointsFor('on-time')} points each. You can change
+              marked on time for {periodLabelNow ?? 'today'} and get {defaultPointsFor('on-time')} points each. You can change
               anyone afterwards.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1022,7 +1010,9 @@ export function AttendanceTodayBoard({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Right now ({periodLabelNow})</SelectItem>
+                    <SelectItem value="auto">
+                      {periodLabelNow ? `Right now (${periodLabelNow})` : 'Right now (whole day)'}
+                    </SelectItem>
                     {periods.map((p) => (
                       <SelectItem key={p.id} value={p.label}>
                         {p.label}
@@ -1031,6 +1021,9 @@ export function AttendanceTodayBoard({
                     <SelectItem value="none">Whole day</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  A time block from the bell schedule, like Period 1. It&apos;s what this check-in counts for.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold" htmlFor="attendance-checkin-points">

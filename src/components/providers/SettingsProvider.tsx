@@ -112,8 +112,10 @@ interface Settings {
     enableRecess?: boolean;
     /** Student kiosk: self-service bathroom/break checkout card after sign-in. */
     recessStudentKioskEnabled?: boolean;
-    /** Max minutes before a recess trip is flagged over limit. */
+    /** Max minutes before a recess trip is flagged over limit (passes without their own limit). */
     recessMaxMinutes?: number;
+    /** Per-pass over-limit minutes (e.g. water 3, nurse 20); missing passes use `recessMaxMinutes`. */
+    recessMaxMinutesByReason?: Partial<Record<import('@/lib/types').RecessReason, number>>;
     /** School house system: rosters, house totals, sorting ceremony, Hall of Fame. */
     enableHouses: boolean;
     /** Visual theme for the dedicated Houses realm (background, glow, accents). School-wide. */

@@ -148,7 +148,10 @@ export default function Header() {
     pathname?.includes('/classroom-realm') || pathname?.includes('/classroom');
   const isLibraryPage =
     pathname?.includes('/library') || pathname?.includes('/librarian');
+  /** Full-screen Attendance workspace and its shareable headcount page. */
+  const isAttendancePage = typeof pathname === 'string' && /\/attendance(?:-roster)?(?:\/|$)/.test(pathname);
   const isFullscreenSpecialPage =
+    isAttendancePage ||
     isHouseSortingPage ||
     isClassroomRealmPage ||
     isLibraryPage ||
