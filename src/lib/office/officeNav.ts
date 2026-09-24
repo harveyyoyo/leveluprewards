@@ -199,7 +199,6 @@ export function formatCents(cents: number): string {
  * (`action=add` opens the Add form; Settings opens on a tab). The assistant picks one by key.
  */
 export const OFFICE_GO_TARGETS = {
-  home: { page: 'home' },
   students: { page: 'students' },
   'students:add': { page: 'students', params: { action: 'add' } },
   classes: { page: 'classes' },

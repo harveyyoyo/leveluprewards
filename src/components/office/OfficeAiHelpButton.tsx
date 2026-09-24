@@ -31,6 +31,7 @@ import { subscribeOfficeAssistantAsk, useOfficeAnswerSpot } from '@/lib/office/o
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { officeGoHref } from '@/lib/office/officeNav';
 import { officeLocalIsoDate } from '@/lib/office/officeUtils';
+import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { OfficeAssistantListPreview, officeAssistantViewHasList } from '@/components/office/OfficeAssistantListPreview';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -241,6 +242,7 @@ export function OfficeAssistant() {
   const authFetch = useAuthFetch();
   const { toast } = useToast();
   const router = useRouter();
+  const { term: workingTerm } = useOfficeTerm(schoolId);
 
   const officeContext = useMemo(
     () =>
@@ -250,8 +252,10 @@ export function OfficeAssistant() {
         billingAccounts: portal.billingAccounts,
         invoices: portal.invoices,
         useMarksTerminology: settings?.useMarksTerminology,
+        gradeEntries: portal.gradeEntries,
+        termLabel: workingTerm,
       }),
-    [shared.students, shared.families, portal.billingAccounts, portal.invoices, settings?.useMarksTerminology],
+    [shared.students, shared.families, portal.billingAccounts, portal.invoices, settings?.useMarksTerminology, portal.gradeEntries, workingTerm],
   );
 
   const welcome = useMemo<ChatMessage>(
@@ -627,7 +631,10 @@ export function OfficeAssistant() {
             >
               <ChatText text={m.content} nameOf={nameOf} onOpenStudent={openStudentCard} />
               {m.list ? <ChatListAnswer list={m.list} onShowAgain={() => showAgain(index)} onOpen={openCard} /> : null}
-              {m.goHref ? <AppButton onClick={() => goFromAnswer(m.goHref!)}>Take me there</AppButton> : null}
+              {/* Not when it would just reload the page you're on (no form to open). */}
+              {m.goHref && (m.goHref.includes('?') || new URL(m.goHref, 'http://x').pathname !== pathname) ? (
+                <AppButton onClick={() => goFromAnswer(m.goHref!)}>Take me there</AppButton>
+              ) : null}
               {m.reading ? (
                 <div className="mt-1.5 space-y-1">
                   {m.reading.read ? (

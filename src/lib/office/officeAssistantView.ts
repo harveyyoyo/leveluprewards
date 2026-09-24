@@ -348,6 +348,7 @@ export function officeAssistantSystemPrompt(params: {
     'If they ask for a list of something none of these views cover (for example teacher absences), reply {"type":"answer"}.',
     'Use the filter that matches what they asked. Never swap in a filter that would pick different people than they meant (for example, a name search for one letter when they asked how names start). If nothing fits, reply {"type":"answer"}.',
     'Where students live or are from — a town, city, borough, state, zip code, or short forms like "NYC" or "NJ" — always goes in "address", written as they said it. The app understands NYC, state names and abbreviations.',
+    'Families live where their students live: "families from/in/living in <place>" is a Students list with "address" (label it like "Families in Brooklyn"). There is no separate families page; family profiles open from a student’s card.',
     '',
     '"label" is a short plain description of the list, e.g. "Families owing more than $100".',
     `Today is ${params.today}. Use it for words like today or yesterday.`,

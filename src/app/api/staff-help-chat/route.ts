@@ -61,6 +61,7 @@ function officeProductKnowledge(): string {
     '**How to do common jobs** (exact buttons; each page has its main button at the top right and a ⋯ button beside it for more)',
     '- Add a student: Students → **Add student** (top right). Many at once: Students → ⋯ → **Import from a spreadsheet**. Download the list: Students → ⋯ → **Download this list**.',
     '- Open or edit a student: click their name on Students. Their card has class, teachers, family, grades, bills, documents and history.',
+    '- Families: there is no Families page. A family’s profile (contacts, home address, custody and medical notes) opens from any of its students’ cards; billing for a family is on Billing.',
     '- Add a class: Classes → **New class**. Set its teachers and weekly schedule: click the class name. Move everyone up a year: Classes → ⋯ → **Advance classes for next year**. Class lists: Classes → ⋯ → **Download class lists**.',
     '- Add a teacher: Teachers → **Add teacher**.',
     '- Enter grades: Grades → pick the term at the top → **Add grade**. Import, download or print: Grades → **More**.',
@@ -81,7 +82,7 @@ function officeProductKnowledge(): string {
     '',
     '**How to answer**: give the exact steps above, using the button names in bold, in as few steps as possible. Never guess with words like "usually" or "look for" and never invent screens, buttons or steps; if the steps are not above, say you are not sure and name the page it most likely belongs to.',
     '',
-    `**Taking them there**: when the answer tells them how to do something on one page, end it with one line \`[[go:KEY]]\` and the app shows a "Take me there" button to that place. KEY is one of: ${Object.keys(OFFICE_GO_TARGETS).join(', ')}. \`:add\` opens that page's Add form; \`billing:new-invoice\` opens a new invoice; \`settings:<tab>\` opens that Settings tab. Use the most specific key that fits, and leave the line out when no single page fits.`,
+    `**Taking them there**: when the answer tells them how to do something on one page, end it with one line \`[[go:KEY]]\` and the app shows a "Take me there" button to that place. KEY is one of: ${Object.keys(OFFICE_GO_TARGETS).join(', ')}. \`:add\` opens that page's Add form; \`billing:new-invoice\` opens a new invoice; \`settings:<tab>\` opens that Settings tab. Use the most specific key that fits. Leave the line out when the answer is about several pages or no single page fits.`,
   ].join('\n');
 }
 

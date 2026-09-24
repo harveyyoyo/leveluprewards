@@ -75,6 +75,7 @@ import {
 } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeAddressInput } from '@/components/office/OfficeAddressInput';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
@@ -128,6 +129,7 @@ export function OfficeBillingView({
   const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
   const { confirm, confirmDialog } = useOfficeConfirm();
+  const { openFamily } = useOfficeEntityNav();
   const { settings: officeSettings } = useOfficeSettings(schoolId);
 
   const printFamilyStatement = (account: OfficeBillingAccount, studentLabels: string[]) => {
@@ -1254,6 +1256,18 @@ export function OfficeBillingView({
                     </span>
                   </button>
                   <div className="flex items-center gap-3">
+                    {/* The family's own details: its profile when it has one, otherwise its billing details. */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        account.familyId && familyById.has(account.familyId)
+                          ? openFamily(account.familyId)
+                          : openEditAccount(account)
+                      }
+                      className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+                    >
+                      Family details
+                    </button>
                     <span
                       className={cn(
                         'text-right text-base font-semibold tabular-nums',
