@@ -52,6 +52,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The Firebase CLI builds the Cloud Functions code before any deploy (predeploy in
+      # firebase.json), even with --only hosting, so its packages must be installed too —
+      # same as the live deploy workflow.
+      - name: Install Cloud Functions dependencies
+        run: npm ci --prefix functions
+
       - name: Create the test site if it doesn't exist yet
         shell: bash
         run: |
