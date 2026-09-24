@@ -13,6 +13,7 @@ import {
   formatOfficeAiHelpContextBlock,
   type OfficeAiHelpContext,
 } from '@/lib/office/officeHelpContext';
+import { OFFICE_GO_TARGETS, getOfficeNavItems } from '@/lib/office/officeNav';
 import {
   formatLibraryAiHelpContextBlock,
   parseLibraryAiHelpContext,
@@ -37,6 +38,51 @@ function loadProductKnowledgeMarkdown(): string {
 Answer only about using the product. If unsure, suggest a school admin or in-app tips.
 (Product knowledge file is missing: add ${PRODUCT_KNOWLEDGE_REL})`;
   }
+}
+
+const OFFICE_SOURCE_FOLDERS = ['src/app/[schoolId]/office/', 'src/components/office/', 'src/lib/office/'];
+
+/**
+ * The School Office is its own app: the rewards knowledge doc (Admin portal, Branding, points,
+ * prizes…) describes screens the office doesn't have, so office questions get this instead.
+ */
+function officeProductKnowledge(): string {
+  const pages = getOfficeNavItems()
+    .map((item) => `- **${item.label}**: ${item.explainer}`)
+    .join('\n');
+  return [
+    'You are the in-app help assistant for the **School Office**, a school records app.',
+    '',
+    '**The School Office is a separate app.** Settings and screens from the rest of levelUp (the rewards Admin portal, Branding & Identity, points, prizes, coupons, the Library, kiosks, teacher or student portals) do not exist here and never affect the School Office. Never send someone to them or mention them.',
+    '',
+    '**Pages in the left menu**',
+    pages,
+    '',
+    '**How to do common jobs** (exact buttons; each page has its main button at the top right and a ⋯ button beside it for more)',
+    '- Add a student: Students → **Add student** (top right). Many at once: Students → ⋯ → **Import from a spreadsheet**. Download the list: Students → ⋯ → **Download this list**.',
+    '- Open or edit a student: click their name on Students. Their card has class, teachers, family, grades, bills, documents and history.',
+    '- Add a class: Classes → **New class**. Set its teachers and weekly schedule: click the class name. Move everyone up a year: Classes → ⋯ → **Advance classes for next year**. Class lists: Classes → ⋯ → **Download class lists**.',
+    '- Add a teacher: Teachers → **Add teacher**.',
+    '- Enter grades: Grades → pick the term at the top → **Add grade**. Import, download or print: Grades → **More**.',
+    '- Take attendance: Attendance → pick the class → mark each student Present, Absent, Late or Excused → **Save attendance**.',
+    '- Log a late arrival or early pickup: Front desk → **Arrival or pickup**. Nurse visits are on the **Nurse** tab.',
+    '- Email families: Communication → **Announcements** → **Open in email app** or **Copy addresses**. Permission slips: Communication → **Permission slips** → **New form**. School calendar: Communication → **Events** → **New event**.',
+    '- Bill a family: Billing → **New invoice**. Bill many families: Billing → ⋯ → **Bill many families at once**. Take a payment: **Record payment** on the bill. Add a family: Billing → ⋯ → **New family account**. Payment plans: **Payment plan** on the family.',
+    '- Print or download reports: Reports → pick the term and class → **Print** or **Download spreadsheet**.',
+    '',
+    '**Where things are set**',
+    '- **Settings** (left menu) has four tabs: **School** (school terms, the name on billing statements, "Marks" instead of "Grades", and switches for Family profiles, Student photos, Bus & transport, Medical notes, Daily attendance, Front desk, and the question assistant), **Student fields** (extra fields on student records), **Staff sign-ins** (office staff accounts and which sections each can use — **Add office staff**), and **Import** (bring in a roster from a spreadsheet).',
+    '- **Customize** (top of the left menu, under the school name) is personal to this device: a **Color theme** (Teal, Blue, Purple, Rose, Green, Orange or Gray — changes the menu and button colors), **Light or dark** (Light, Dark, or Match this computer), a wide layout switch, and which sections show in their own menu.',
+    '- Questions can be asked in the big box on Home or the small box at the top of every other page. Most pages keep extra actions in a ⋯ menu.',
+    '- **Sign out**: click your name at the bottom of the left menu, then **Sign out** in the small menu that opens.',
+    '- Nothing is ever erased: anything removed stays in Reports → Change history, with who did it and when.',
+    '',
+    '**Not in the School Office**: there is no logo or branding setting; colors and dark mode are only the per-device choices in Customize. If asked about something it does not have, say so plainly.',
+    '',
+    '**How to answer**: give the exact steps above, using the button names in bold, in as few steps as possible. Never guess with words like "usually" or "look for" and never invent screens, buttons or steps; if the steps are not above, say you are not sure and name the page it most likely belongs to.',
+    '',
+    `**Taking them there**: when the answer tells them how to do something on one page, end it with one line \`[[go:KEY]]\` and the app shows a "Take me there" button to that place. KEY is one of: ${Object.keys(OFFICE_GO_TARGETS).join(', ')}. \`:add\` opens that page's Add form; \`billing:new-invoice\` opens a new invoice; \`settings:<tab>\` opens that Settings tab. Use the most specific key that fits, and leave the line out when no single page fits.`,
+  ].join('\n');
 }
 
 function buildSystemPrompt(context: {
@@ -65,10 +111,12 @@ function buildSystemPrompt(context: {
         ? `Product context: ${context.product.trim()}.`
         : 'Product context was not provided (assume rewards Admin/Teacher unless the path includes /office/ or /library/).';
 
-  const base = loadProductKnowledgeMarkdown();
+  const onOffice = context.product === 'office';
+  const base = onOffice ? officeProductKnowledge() : loadProductKnowledgeMarkdown();
   const { block: codeBlock, files: codeFiles } = buildStaffHelpCodeContextBlock({
     pathname: context.pathname,
     userMessage: context.userMessage,
+    onlyUnder: onOffice ? OFFICE_SOURCE_FOLDERS : undefined,
   });
   const codeLine =
     codeFiles.length > 0

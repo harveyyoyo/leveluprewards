@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useOfficeOpenFromLink } from '@/lib/office/useOfficeOpenFromLink';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
@@ -128,6 +129,7 @@ export function OfficeClassesView({
     setClassNotes('');
     setDialogOpen(true);
   };
+  useOfficeOpenFromLink('add', dialogOpen, openNewClass, !isLoading);
 
   const openEditClass = (cls: OfficeClass, e: React.MouseEvent) => {
     e.stopPropagation();

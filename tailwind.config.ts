@@ -18,6 +18,20 @@ export default {
         school: ['Ubuntu', 'sans-serif'],
       },
       colors: {
+        // The School Office's color themes swap these (globals.css); elsewhere they're plain teal.
+        teal: {
+          50: 'rgb(var(--office-accent-50, 240 253 250) / <alpha-value>)',
+          100: 'rgb(var(--office-accent-100, 204 251 241) / <alpha-value>)',
+          200: 'rgb(var(--office-accent-200, 153 246 228) / <alpha-value>)',
+          300: 'rgb(var(--office-accent-300, 94 234 212) / <alpha-value>)',
+          400: 'rgb(var(--office-accent-400, 45 212 191) / <alpha-value>)',
+          500: 'rgb(var(--office-accent-500, 20 184 166) / <alpha-value>)',
+          600: 'rgb(var(--office-accent-600, 13 148 136) / <alpha-value>)',
+          700: 'rgb(var(--office-accent-700, 15 118 110) / <alpha-value>)',
+          800: 'rgb(var(--office-accent-800, 17 94 89) / <alpha-value>)',
+          900: 'rgb(var(--office-accent-900, 19 78 74) / <alpha-value>)',
+          950: 'rgb(var(--office-accent-950, 4 47 46) / <alpha-value>)',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

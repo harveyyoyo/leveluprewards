@@ -1,0 +1,140 @@
+name: Deploy private test copy
+
+# Publishes whatever is on the `test-site` branch to a separate Firebase Hosting site
+# (https://leveluprewards-test.web.app) so changes can be tried before they go live.
+# To show a branch there: git push --force origin <branch>:test-site
+#
+# Safe for the live site: the web frameworks integration names the server function and
+# its codebase after the site id, so this deploys `ssrleveluprewardstest` and never
+# touches the live site's `ssrstudio...` function. Only hosting is deployed here —
+# no Firestore rules, Storage rules or Cloud Functions.
+#
+# It does use the same Firebase project, so the test copy reads and writes the same
+# school data as the real site (fine for trying things on the demo school).
+
+on:
+  push:
+    branches: [test-site]
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-test-site
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  TEST_SITE_ID: leveluprewards-test
+  FIREBASE_PROJECT: studio-1273073612-71183
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      FIREBASE_CLI_EXPERIMENTS: webframeworks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create the test site if it doesn't exist yet
+        shell: bash
+        run: |
+          if npx firebase-tools@14.27.0 hosting:sites:get "$TEST_SITE_ID" --project "$FIREBASE_PROJECT" --non-interactive > /dev/null 2>&1; then
+            echo "Test site $TEST_SITE_ID already exists."
+          else
+            npx firebase-tools@14.27.0 hosting:sites:create "$TEST_SITE_ID" --project "$FIREBASE_PROJECT" --non-interactive
+          fi
+
+      - name: Point firebase.json at the test site
+        run: |
+          node -e "
+            const fs = require('fs');
+            const cfg = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
+            const hosting = Array.isArray(cfg.hosting) ? cfg.hosting : [cfg.hosting];
+            if (hosting.length !== 1) throw new Error('Expected exactly one hosting entry');
+            delete hosting[0].target;
+            hosting[0].site = process.env.TEST_SITE_ID;
+            cfg.hosting = hosting;
+            fs.writeFileSync('firebase.json', JSON.stringify(cfg, null, 2));
+          "
+
+      # Same runtime settings as production, minus the leveluprewards.app cookie domain and
+      # canonical-host redirects, which would bounce the test copy back to the real site.
+      - name: Create test runtime env
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
+          AUTH_GATE_SIGNING_SECRET: ${{ secrets.AUTH_GATE_SIGNING_SECRET }}
+        run: |
+          {
+            if [ -n "$OPENAI_API_KEY" ]; then
+              printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
+            fi
+            if [ -n "$GEMINI_API_KEY" ]; then
+              printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
+            fi
+            printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
+            printf 'NEXT_PUBLIC_TEST_SITE=1\n'
+            printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
+            if [ -n "$AUTH_GATE_SIGNING_SECRET" ]; then
+              printf 'AUTH_GATE_SIGNING_SECRET=%s\n' "$AUTH_GATE_SIGNING_SECRET"
+            fi
+          } > .env
+          if [ -n "$FIREBASE_SA_JSON" ]; then
+            node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.appendFileSync('.env','SSR_SERVICE_ACCOUNT_JSON='+JSON.stringify(sa)+'\n');}"
+          else
+            echo '::error::FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 secret missing.'
+            exit 1
+          fi
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
+          NEXT_PUBLIC_TEST_SITE: '1'
+          NODE_ENV: production
+
+      - name: Deploy to the test site
+        shell: bash
+        run: |
+          set -o pipefail
+          npx firebase-tools@14.27.0 deploy \
+            --only hosting \
+            --project "$FIREBASE_PROJECT" \
+            --non-interactive \
+            --force 2>&1 | tee firebase-deploy-output.log
+          node scripts/assert-firebase-release.cjs firebase-deploy-output.log
+        env:
+          FIREBASE_EXPECT_HOSTING_SITES: ${{ env.TEST_SITE_ID }}
+
+      - name: Show the test link
+        run: echo "::notice::Test copy is at https://${TEST_SITE_ID}.web.app"
+
+      - name: Upload Firebase CLI debug log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-debug-log
+          path: |
+            firebase-deploy-output.log
+            firebase-debug.log
+            .firebase/*.log
+          if-no-files-found: ignore

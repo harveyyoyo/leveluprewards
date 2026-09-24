@@ -12,6 +12,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
+import { OFFICE_APPEARANCES, OFFICE_COLOR_THEMES, useOfficeAppearance, useOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
+import { cn } from '@/lib/utils';
 import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
 import { getOfficeNavItems } from '@/lib/office/officeNav';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
@@ -26,6 +28,8 @@ type OfficeInterfaceSettingsSheetProps = {
 export function OfficeInterfaceSettingsSheet({ schoolId }: OfficeInterfaceSettingsSheetProps) {
   const [open, setOpen] = useState(false);
   const { isWide, setLayoutMode } = useOfficeLayoutMode();
+  const { theme, setTheme } = useOfficeColorTheme();
+  const { appearance, setAppearance } = useOfficeAppearance();
   const { settings } = useOfficePortalChrome();
   const { hidden, setSectionHidden } = useOfficeHiddenSections();
   const menuSections = getOfficeNavItems(settings).filter((item) => item.id !== 'home');
@@ -34,14 +38,12 @@ export function OfficeInterfaceSettingsSheet({ schoolId }: OfficeInterfaceSettin
     <>
       <Button
         type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0 rounded-lg"
+        variant="ghost"
+        className="w-full justify-start gap-2 text-teal-100 hover:bg-white/10 hover:text-white"
         onClick={() => setOpen(true)}
-        aria-label="Interface and display settings"
-        title="Interface"
       >
-        <SlidersHorizontal className="h-3.5 w-3.5" />
+        <SlidersHorizontal className="h-4 w-4" />
+        Customize
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -54,6 +56,57 @@ export function OfficeInterfaceSettingsSheet({ schoolId }: OfficeInterfaceSettin
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
+            <div className="rounded-xl border p-4">
+              <p className="text-sm font-semibold">Color theme</p>
+              <p className="text-xs text-muted-foreground">Changes the menu and button colors.</p>
+              <div className="mt-3 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Color theme">
+                {OFFICE_COLOR_THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={theme === t.id}
+                    onClick={() => setTheme(t.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-xl p-2 text-xs ring-1 transition-colors',
+                      theme === t.id ? 'ring-2 ring-slate-900 dark:ring-white' : 'ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800',
+                    )}
+                  >
+                    <span className="flex h-8 w-full overflow-hidden rounded-lg" aria-hidden>
+                      <span className="w-1/2" style={{ backgroundColor: t.menu }} />
+                      <span className="w-1/2" style={{ backgroundColor: t.swatch }} />
+                    </span>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border p-4">
+              <p className="text-sm font-semibold">Light or dark</p>
+              <p className="text-xs text-muted-foreground">Dark screens are easier on the eyes in a dim room.</p>
+              <div className="mt-3 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Light or dark">
+                {OFFICE_APPEARANCES.map((a) => {
+                  const selected = (appearance ?? 'light') === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setAppearance(a.id)}
+                      className={cn(
+                        'rounded-xl px-2 py-2 text-xs font-medium ring-1 transition-colors',
+                        selected ? 'ring-2 ring-slate-900 dark:ring-white' : 'ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800',
+                      )}
+                    >
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
               <div>
                 <Label htmlFor="office-wide-layout" className="text-sm font-semibold">

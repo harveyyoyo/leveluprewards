@@ -117,3 +117,17 @@ Then refresh the app and retry the denied view.
 Any time `firestore.rules` changes, deploy rules before testing against live
 Firestore. If the intent is to avoid touching live Firebase, start the full local
 emulator suite and seed it before testing Firestore reads/writes.
+
+## Private test copy (before going live)
+
+`.github/workflows/test-site.yml` publishes the `test-site` branch to
+https://leveluprewards-test.web.app — a separate Hosting site in the same Firebase project.
+To show a branch there: `git push --force origin <branch>:test-site` (takes ~15–20 minutes).
+
+- It gets its own server function (`ssrleveluprewardstest`), so the live site is never touched,
+  and it has no approval gate. Only hosting is deployed.
+- Same Firestore data as the live site — tell the owner to try things on the demo school.
+- No `leveluprewards.app` cookie domain or canonical-host redirects (those would bounce it to
+  the real site). A yellow "TEST COPY" tag shows in the corner (`NEXT_PUBLIC_TEST_SITE=1`).
+- Google sign-in on the test copy needs `leveluprewards-test.web.app` in Firebase Auth →
+  authorized domains.

@@ -193,6 +193,126 @@ html[data-office-portal] .office-content-pane {
   box-sizing: border-box;
 }
 
+/*
+ * School Office dark mode (Customize → Light or dark). The school's color scheme sets light-mode
+ * text and surfaces on the page and would win over plain `.dark`, leaving dark text on dark
+ * screens, so the office sets the dark ones itself.
+ */
+html[data-office-portal].dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 33% 22%;
+  --accent-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+}
+
+/* School Office color themes (Customize): swap the accent color and the side menu. */
+html[data-office-portal][data-office-theme="blue"] {
+  --office-accent-50: 239 246 255;
+  --office-accent-100: 219 234 254;
+  --office-accent-200: 191 219 254;
+  --office-accent-300: 147 197 253;
+  --office-accent-400: 96 165 250;
+  --office-accent-500: 59 130 246;
+  --office-accent-600: 37 99 235;
+  --office-accent-700: 29 78 216;
+  --office-accent-800: 30 64 175;
+  --office-accent-900: 30 58 138;
+  --office-accent-950: 23 37 84;
+}
+html[data-office-portal][data-office-theme="blue"] .office-sidebar-pane {
+  background-color: #1e3a5f !important;
+}
+html[data-office-portal][data-office-theme="purple"] {
+  --office-accent-50: 245 243 255;
+  --office-accent-100: 237 233 254;
+  --office-accent-200: 221 214 254;
+  --office-accent-300: 196 181 253;
+  --office-accent-400: 167 139 250;
+  --office-accent-500: 139 92 246;
+  --office-accent-600: 124 58 237;
+  --office-accent-700: 109 40 217;
+  --office-accent-800: 91 33 182;
+  --office-accent-900: 76 29 149;
+  --office-accent-950: 46 16 101;
+}
+html[data-office-portal][data-office-theme="purple"] .office-sidebar-pane {
+  background-color: #35205c !important;
+}
+html[data-office-portal][data-office-theme="rose"] {
+  --office-accent-50: 255 241 242;
+  --office-accent-100: 255 228 230;
+  --office-accent-200: 254 205 211;
+  --office-accent-300: 253 164 175;
+  --office-accent-400: 251 113 133;
+  --office-accent-500: 244 63 94;
+  --office-accent-600: 225 29 72;
+  --office-accent-700: 190 18 60;
+  --office-accent-800: 159 18 57;
+  --office-accent-900: 136 19 55;
+  --office-accent-950: 76 5 25;
+}
+html[data-office-portal][data-office-theme="rose"] .office-sidebar-pane {
+  background-color: #561a2c !important;
+}
+html[data-office-portal][data-office-theme="green"] {
+  --office-accent-50: 236 253 245;
+  --office-accent-100: 209 250 229;
+  --office-accent-200: 167 243 208;
+  --office-accent-300: 110 231 183;
+  --office-accent-400: 52 211 153;
+  --office-accent-500: 16 185 129;
+  --office-accent-600: 5 150 105;
+  --office-accent-700: 4 120 87;
+  --office-accent-800: 6 95 70;
+  --office-accent-900: 6 78 59;
+  --office-accent-950: 2 44 34;
+}
+html[data-office-portal][data-office-theme="green"] .office-sidebar-pane {
+  background-color: #0f3b2e !important;
+}
+html[data-office-portal][data-office-theme="orange"] {
+  --office-accent-50: 255 247 237;
+  --office-accent-100: 255 237 213;
+  --office-accent-200: 254 215 170;
+  --office-accent-300: 253 186 116;
+  --office-accent-400: 251 146 60;
+  --office-accent-500: 249 115 22;
+  --office-accent-600: 234 88 12;
+  --office-accent-700: 194 65 12;
+  --office-accent-800: 154 52 18;
+  --office-accent-900: 124 45 18;
+  --office-accent-950: 67 20 7;
+}
+html[data-office-portal][data-office-theme="orange"] .office-sidebar-pane {
+  background-color: #4a2614 !important;
+}
+html[data-office-portal][data-office-theme="gray"] {
+  --office-accent-50: 248 250 252;
+  --office-accent-100: 241 245 249;
+  --office-accent-200: 226 232 240;
+  --office-accent-300: 203 213 225;
+  --office-accent-400: 148 163 184;
+  --office-accent-500: 100 116 139;
+  --office-accent-600: 71 85 105;
+  --office-accent-700: 51 65 85;
+  --office-accent-800: 30 41 59;
+  --office-accent-900: 15 23 42;
+  --office-accent-950: 2 6 23;
+}
+html[data-office-portal][data-office-theme="gray"] .office-sidebar-pane {
+  background-color: #1e293b !important;
+}
+
 @supports not (zoom: 1) {
   html[data-office-portal] .office-main-pane {
     transform: scale(var(--office-main-zoom, 0.8888888889));

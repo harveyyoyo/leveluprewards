@@ -338,6 +338,8 @@ function DrivingScreen({
   const next = nextStop(activeRoute, trip);
   const riders = useMemo(
     () => driverRiders(trip, students, activeRoute.id),
+    // Only the rider lists matter here; live location updates shouldn't rebuild it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeRoute.id, students, trip.riderManifest, trip.riderSnapshot],
   );
   const status = trip.riders ?? {};

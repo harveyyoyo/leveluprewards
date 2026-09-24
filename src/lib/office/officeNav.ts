@@ -35,7 +35,7 @@ export type OfficeNavItem = {
   id: OfficeNavId;
   label: string;
   description: string;
-  /** One or two plain sentences on what the page is for (shown in Help → Guide). */
+  /** One or two plain sentences on what the page is for (shown under the page title). */
   explainer: string;
   href: (schoolId: string) => string;
   icon: LucideIcon;
@@ -52,7 +52,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'home',
       label: 'Home',
       description: 'Overview and quick actions',
-      explainer: 'What needs attention today, a few key numbers, and shortcuts to everyday jobs.',
+      explainer: 'Ask about your school — like who is absent or which families owe money — or how to do anything here.',
       href: (schoolId) => officePublicHref(schoolId),
       icon: Home,
     },
@@ -192,4 +192,47 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
 export function formatCents(cents: number): string {
   const n = Number.isFinite(cents) ? cents : 0;
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n / 100);
+}
+
+/**
+ * Where a how-to answer can take someone: a page, and sometimes the option on it
+ * (`action=add` opens the Add form; Settings opens on a tab). The assistant picks one by key.
+ */
+export const OFFICE_GO_TARGETS = {
+  home: { page: 'home' },
+  students: { page: 'students' },
+  'students:add': { page: 'students', params: { action: 'add' } },
+  classes: { page: 'classes' },
+  'classes:add': { page: 'classes', params: { action: 'add' } },
+  teachers: { page: 'teachers' },
+  'teachers:add': { page: 'teachers', params: { action: 'add' } },
+  grades: { page: 'grades' },
+  attendance: { page: 'attendance' },
+  frontdesk: { page: 'frontdesk' },
+  transportation: { page: 'transportation' },
+  communication: { page: 'communication' },
+  reports: { page: 'reports' },
+  billing: { page: 'billing' },
+  'billing:new-invoice': { page: 'billing', params: { action: 'new-invoice' } },
+  settings: { page: 'settings' },
+  'settings:school': { page: 'settings', params: { tab: 'school' } },
+  'settings:fields': { page: 'settings', params: { tab: 'fields' } },
+  'settings:staff': { page: 'settings', params: { tab: 'staff' } },
+  'settings:import': { page: 'settings', params: { tab: 'import' } },
+} as const satisfies Record<string, { page: OfficeNavId; params?: Record<string, string> }>;
+
+export type OfficeGoTarget = keyof typeof OFFICE_GO_TARGETS;
+
+/** The link for a go-to key, or null for an unknown key or a page that's turned off. */
+export function officeGoHref(
+  schoolId: string,
+  key: string,
+  settings?: Pick<OfficeSettings, 'useMarksTerminology' | 'features'> | null,
+): string | null {
+  if (!Object.prototype.hasOwnProperty.call(OFFICE_GO_TARGETS, key)) return null;
+  const target: { page: OfficeNavId; params?: Record<string, string> } = OFFICE_GO_TARGETS[key as OfficeGoTarget];
+  const item = getOfficeNavItems(settings).find((i) => i.id === target.page);
+  if (!item) return null;
+  const href = item.href(schoolId);
+  return target.params ? `${href}?${new URLSearchParams(target.params).toString()}` : href;
 }

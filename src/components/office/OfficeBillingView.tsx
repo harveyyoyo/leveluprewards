@@ -17,7 +17,13 @@ import {
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { dollarsParamToCents } from '@/lib/office/officeAssistantView';
-import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import {
+  filterOfficeBillingAccounts,
+  officeBillingListReport,
+  officeInvoicesByAccount,
+  officeOwedByAccount,
+} from '@/lib/office/officeAssistantLists';
 import {
   Archive,
   Ban,
@@ -33,6 +39,8 @@ import {
   Printer,
   Wand2,
   AlertCircle,
+  ChevronDown,
+  Wallet,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -66,6 +74,7 @@ import {
   splitCentsIntoInstallments,
 } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
+import { OfficeAddressInput } from '@/components/office/OfficeAddressInput';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
@@ -108,7 +117,7 @@ type OfficeBillingViewProps = {
 export function OfficeBillingView({
   schoolId,
   students,
-  families: _families = [],
+  families = [],
   studentLabelById,
   accounts,
   invoices,
@@ -154,6 +163,17 @@ export function OfficeBillingView({
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [accountAddress, setAccountAddress] = useState('');
+  // Each family is one line; its bills show when it's opened.
+  const [openAccounts, setOpenAccounts] = useState<Set<string>>(() => new Set());
+  const toggleAccount = (id: string) =>
+    setOpenAccounts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
   const [accountNotes, setAccountNotes] = useState('');
   const [accountStudentSearch, setAccountStudentSearch] = useState('');
   const [discountLabel, setDiscountLabel] = useState('');
@@ -200,19 +220,7 @@ export function OfficeBillingView({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [invoices]);
 
-  const invoicesByAccount = useMemo(() => {
-    const map = new Map<string, OfficeInvoice[]>();
-    for (const inv of invoices) {
-      const list = map.get(inv.accountId) ?? [];
-      list.push(inv);
-      map.set(inv.accountId, list);
-    }
-    for (const [id, list] of map) {
-      list.sort((a, b) => (b.dueDate ?? '').localeCompare(a.dueDate ?? ''));
-      map.set(id, list);
-    }
-    return map;
-  }, [invoices]);
+  const invoicesByAccount = useMemo(() => officeInvoicesByAccount(invoices), [invoices]);
 
   const openBalanceCents = useMemo(
     () => invoices.reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0),
@@ -224,42 +232,23 @@ export function OfficeBillingView({
   const dueSoonCount = useMemo(() => invoices.filter((i) => isInvoiceDueSoon(i)).length, [invoices]);
 
   // What each family still owes (open invoices minus payments), for "owes more/less than" views.
-  const owedByAccount = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const inv of invoices) map.set(inv.accountId, (map.get(inv.accountId) ?? 0) + invoiceBalanceDueCents(inv));
-    return map;
-  }, [invoices]);
+  const owedByAccount = useMemo(() => officeOwedByAccount(invoices), [invoices]);
 
-  const filteredAccounts = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let list = accounts;
-    if (minOwedCents != null) list = list.filter((a) => (owedByAccount.get(a.id) ?? 0) > minOwedCents);
-    if (maxOwedCents != null) list = list.filter((a) => (owedByAccount.get(a.id) ?? 0) < maxOwedCents);
-    if (invoiceFilter === 'overdue') {
-      list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceOverdue(i)));
-    } else if (invoiceFilter === 'due-soon') {
-      list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceDueSoon(i)));
-    } else if (invoiceFilter === 'open') {
-      list = list.filter(
-        (a) =>
-          (a.balanceCents || 0) > 0 ||
-          (invoicesByAccount.get(a.id) ?? []).some(
-            (i) => i.status === 'sent' || i.status === 'partial' || i.status === 'draft',
-          ),
-      );
-    }
-    if (!q) return list;
-    return list.filter((a) => {
-      const linked = (a.studentIds ?? []).map((id) => studentLabelById.get(id) ?? '').join(' ');
-      return (a.familyName ?? '').toLowerCase().includes(q) || linked.toLowerCase().includes(q);
-    });
-  }, [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount, minOwedCents, maxOwedCents, owedByAccount]);
+  const filteredAccounts = useMemo(
+    () =>
+      filterOfficeBillingAccounts(
+        accounts,
+        { search, minOwedCents, maxOwedCents, invoiceFilter },
+        { owedByAccount, invoicesByAccount, studentLabelById },
+      ),
+    [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount, minOwedCents, maxOwedCents, owedByAccount]);
 
   const resetAccountForm = () => {
     setFamilyName('');
     setSelectedStudentIds([]);
     setContactEmail('');
     setContactPhone('');
+    setAccountAddress('');
     setAccountNotes('');
     setAccountStudentSearch('');
     setDiscountLabel('');
@@ -292,26 +281,7 @@ export function OfficeBillingView({
   }, [searchParams]);
 
   // Tell the Help chat what this list shows (largest balance first), so it can answer with it.
-  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
-    status: 'ready',
-    total: filteredAccounts.length,
-    noun: ['family', 'families'],
-    studentIds: [...new Set(filteredAccounts.flatMap((a) => a.studentIds ?? []))],
-    rows: filteredAccounts
-      .map((a) => ({ a, owed: owedByAccount.get(a.id) ?? 0 }))
-      .sort((x, y) => y.owed - x.owed)
-      .slice(0, OFFICE_ASSISTANT_CHAT_ROWS)
-      .map(({ a, owed }) => ({
-        id: a.id,
-        name: a.familyName?.trim() || 'Family',
-        detail: owed > 0 ? `owes ${formatCents(owed)}` : 'nothing owed',
-        open: a.familyId
-          ? { kind: 'family' as const, id: a.familyId }
-          : a.studentIds?.[0]
-            ? { kind: 'student' as const, id: a.studentIds[0] }
-            : undefined,
-      })),
-  }));
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => officeBillingListReport(filteredAccounts, owedByAccount));
 
   const clearAsk = () => {
     setReportAskAt(null);
@@ -380,6 +350,8 @@ export function OfficeBillingView({
     setSelectedStudentIds(account.studentIds);
     setContactEmail(account.contactEmail ?? '');
     setContactPhone(account.contactPhone ?? '');
+    const family = account.familyId ? familyById.get(account.familyId) : undefined;
+    setAccountAddress((family ? family.homeAddress : account.mailingAddress)?.trim() ?? '');
     setAccountNotes(account.notes ?? '');
     setDiscountLabel(account.discountLabel ?? '');
     setDiscountPercent(account.discountPercent != null ? String(account.discountPercent) : '');
@@ -567,8 +539,18 @@ export function OfficeBillingView({
       };
       if (editAccountId) {
         const existing = accounts.find((a) => a.id === editAccountId);
+        // One address per family: a family with a profile keeps it there, so both screens show the same one.
+        const family = existing?.familyId ? familyById.get(existing.familyId) : undefined;
+        const address = accountAddress.trim() || null;
+        if (family && write.ctx && address !== (family.homeAddress?.trim() || null)) {
+          const { id: _id, updatedAt: _updatedAt, updatedBy: _updatedBy, ...familyData } = family;
+          await write.upsertOfficeFamily(write.ctx, family.id, { ...familyData, homeAddress: address });
+        }
         // Balance/status are left alone: they only change through invoices and payments.
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), payload);
+        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), {
+          ...payload,
+          ...(family ? {} : { mailingAddress: address }),
+        });
         if (write.ctx) {
           await write.logOfficeChange(write.ctx, {
             entityType: 'officeBillingAccount',
@@ -582,7 +564,7 @@ export function OfficeBillingView({
         toast({ title: 'Account updated' });
       } else {
         const ref = doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts'));
-        const created = { ...payload, balanceCents: 0, status: 'active' as const };
+        const created = { ...payload, mailingAddress: accountAddress.trim() || null, balanceCents: 0, status: 'active' as const };
         await setDoc(ref, created);
         if (write.ctx) {
           await write.logOfficeChange(write.ctx, {
@@ -1222,32 +1204,51 @@ export function OfficeBillingView({
               .filter(Boolean)
               .join(', ');
             const acctInvoices = invoicesByAccount.get(account.id) ?? [];
+            const isOpen = openAccounts.has(account.id);
+            const overdueCount = acctInvoices.filter((i) => isInvoiceOverdue(i)).length;
             return (
               <article
                 key={account.id}
                 className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccount(account.id)}
+                    aria-expanded={isOpen}
+                    className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                  >
+                    <ChevronDown
+                      className={cn('mt-1.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform', !isOpen && '-rotate-90')}
+                      aria-hidden
+                    />
+                    <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold">{account.familyName}</h3>
                       {account.discountPercent ? (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
                           {account.discountLabel || 'Discount'} · {account.discountPercent}%
                         </span>
                       ) : null}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{linked || 'No students linked'}</p>
-                    <p
+                    </span>
+                    <span className="block text-sm text-muted-foreground">
+                      {linked || 'No students linked'}
+                      {acctInvoices.length > 0
+                        ? ` · ${acctInvoices.length} ${acctInvoices.length === 1 ? 'bill' : 'bills'}${overdueCount ? `, ${overdueCount} overdue` : ''}`
+                        : ''}
+                    </span>
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <span
                       className={cn(
-                        'mt-1 text-sm font-semibold',
-                        account.status === 'past_due' ? 'text-amber-700' : 'text-teal-800 dark:text-teal-300',
+                        'text-right text-base font-semibold tabular-nums',
+                        overdueCount > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-slate-900 dark:text-slate-100',
                       )}
                     >
-                      Balance: {formatCents(account.balanceCents || 0)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
+                      {formatCents(account.balanceCents || 0)}
+                    </span>
+                    <div className="flex items-center gap-1">
                     <Button
                       type="button"
                       variant="outline"
@@ -1306,39 +1307,41 @@ export function OfficeBillingView({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    </div>
                   </div>
                 </div>
-                {acctInvoices.length > 0 ? (
-                  <ul className="mt-4 space-y-2 border-t pt-3">
-                    {acctInvoices.map((inv) => (
-                      <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span>
-                          {inv.label} · due {inv.dueDate} · {formatCents(inv.amountCents)}
-                          {invoicePaidCents(inv) > 0 && inv.status !== 'paid' ? (
-                            <span className="text-muted-foreground">
-                              {' '}
-                              · {formatCents(invoiceRemainingCents(inv))} due
-                            </span>
-                          ) : null}
+                {isOpen && acctInvoices.length > 0 ? (
+                  <ul className="mt-3 divide-y border-t dark:divide-slate-800 dark:border-slate-800">
+                    {acctInvoices.map((inv) => {
+                      // One label per bill: overdue says it all; otherwise its state.
+                      const overdue = isInvoiceOverdue(inv);
+                      return (
+                      <li key={inv.id} className="flex items-center gap-3 py-2 pl-6 text-sm">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{inv.label}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            Due {inv.dueDate}
+                            {invoicePaidCents(inv) > 0 && inv.status !== 'paid'
+                              ? ` · ${formatCents(invoiceRemainingCents(inv))} still due`
+                              : ''}
+                          </span>
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          {isInvoiceOverdue(inv) ? (
-                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                              Overdue
-                            </span>
-                          ) : null}
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-xs font-medium',
-                              inv.status === 'paid'
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
+                            overdue
+                              ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+                              : inv.status === 'paid'
                                 ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
                                 : inv.status === 'partial'
                                   ? 'bg-sky-50 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200'
                                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                            )}
-                          >
-                            {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
-                          </span>
+                          )}
+                        >
+                          {overdue ? 'Overdue' : (INVOICE_STATUS_LABEL[inv.status] ?? inv.status)}
+                        </span>
+                        <span className="w-24 shrink-0 text-right font-medium tabular-nums">{formatCents(inv.amountCents)}</span>
+                        <span className="flex w-16 shrink-0 items-center justify-end gap-1">
                           {inv.status === 'draft' ? (
                             <Button
                               type="button"
@@ -1348,17 +1351,6 @@ export function OfficeBillingView({
                               onClick={() => void sendDraft(inv)}
                             >
                               Send
-                            </Button>
-                          ) : null}
-                          {isInvoicePayable(inv) && inv.status !== 'draft' ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 rounded-lg text-xs"
-                              onClick={() => openRecordPayment(account, inv)}
-                            >
-                              Record payment
                             </Button>
                           ) : null}
                           <DropdownMenu modal={false}>
@@ -1374,6 +1366,12 @@ export function OfficeBillingView({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                              {isInvoicePayable(inv) && inv.status !== 'draft' ? (
+                                <DropdownMenuItem onSelect={() => openRecordPayment(account, inv)}>
+                                  <Wallet className="mr-2 h-4 w-4" />
+                                  Record payment for this bill
+                                </DropdownMenuItem>
+                              ) : null}
                               {inv.status === 'sent' || inv.status === 'partial' ? (
                                 <>
                                   {account.contactEmail?.trim() ? (
@@ -1437,11 +1435,12 @@ export function OfficeBillingView({
                           </DropdownMenu>
                         </span>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
-                ) : (
-                  <p className="mt-3 text-xs text-muted-foreground">No invoices for this account.</p>
-                )}
+                ) : isOpen ? (
+                  <p className="mt-3 pl-6 text-xs text-muted-foreground">No invoices for this account.</p>
+                ) : null}
               </article>
             );
           })}
@@ -1478,6 +1477,13 @@ export function OfficeBillingView({
                 <Label>Phone</Label>
                 <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="rounded-xl" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="office-billing-address">Address</Label>
+              <OfficeAddressInput id="office-billing-address" value={accountAddress} onChange={setAccountAddress} />
+              {editAccountId && familyById.has(accounts.find((a) => a.id === editAccountId)?.familyId ?? '') ? (
+                <p className="text-xs text-muted-foreground">The same address as on the family profile — changing it here changes it there too.</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>

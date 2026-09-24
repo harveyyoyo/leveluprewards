@@ -21,7 +21,8 @@ import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 
 type OfficeEntityNavContextValue = {
-  openStudent: (target: OfficeStudent | string) => void;
+  /** `edit`: open the card straight on its full edit form (e.g. right after adding the student). */
+  openStudent: (target: OfficeStudent | string, options?: { edit?: boolean }) => void;
   openTeacher: (target: OfficeTeacher | string) => void;
   openClass: (target: OfficeClass | string) => void;
   openFamily: (familyId: string) => void;
@@ -55,6 +56,8 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
   const { term } = useOfficeTerm(schoolId);
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  /** The student whose card should open on its edit form (right after adding them). */
+  const [editStudentId, setEditStudentId] = useState<string | null>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
@@ -86,9 +89,10 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
   );
 
   const openStudent = useCallback(
-    (target: OfficeStudent | string) => {
+    (target: OfficeStudent | string, options?: { edit?: boolean }) => {
       const id = typeof target === 'string' ? target : target.id;
       setSelectedStudentId(id);
+      setEditStudentId(options?.edit ? id : null);
       setSelectedTeacherId(null);
       setSelectedClassId(null);
       setSelectedFamilyId(null);
@@ -242,6 +246,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
         onOpenChange={(open) => {
           if (!open) {
             setSelectedStudentId(null);
+            setEditStudentId(null);
             replaceEntityQuery({ student: null });
           }
         }}
@@ -253,6 +258,8 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
         teachers={shared.teachers}
         allStudents={shared.students}
         families={shared.families}
+        startEditing={!!selectedStudent && editStudentId === selectedStudent.id}
+        onStartedEditing={() => setEditStudentId(null)}
       />
       <OfficeTeacherSheet
         schoolId={schoolId}
@@ -289,6 +296,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
         schoolId={schoolId}
         family={selectedFamily}
         students={shared.students}
+        allFamilies={shared.families}
         billingAccount={selectedFamilyBillingAccount}
         open={!!selectedFamily}
         onOpenChange={(open) => {
