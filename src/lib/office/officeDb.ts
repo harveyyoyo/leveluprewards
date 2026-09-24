@@ -945,6 +945,24 @@ function assertValidVehicle(vehicle: OfficeBusVehicleDetails | null | undefined)
     const value = vehicle[key];
     if (value != null && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${label} is invalid.`);
   }
+  if (vehicle.maintenanceLog != null) {
+    if (!Array.isArray(vehicle.maintenanceLog) || vehicle.maintenanceLog.length > 50) throw new Error('A bus can have up to 50 service records.');
+    const ids = new Set<string>();
+    for (const entry of vehicle.maintenanceLog) {
+      if (!entry || typeof entry !== 'object') throw new Error('A service record is invalid.');
+      assertSafeFieldId(entry.id, 'Service record');
+      if (ids.has(entry.id)) throw new Error('A bus cannot contain the same service record twice.');
+      ids.add(entry.id);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.serviceDate)) throw new Error('Service date is invalid.');
+      if (typeof entry.serviceType !== 'string' || !entry.serviceType.trim() || entry.serviceType.trim().length > 100) throw new Error('Give each service record a type under 100 characters.');
+      if (entry.archived != null && typeof entry.archived !== 'boolean') throw new Error('Service record choice is invalid.');
+      if (entry.mileage != null && (!Number.isInteger(entry.mileage) || entry.mileage < 0 || entry.mileage > 10_000_000)) throw new Error('Mileage is invalid.');
+      for (const [key, label, max] of [['vendor', 'Service provider', 120], ['notes', 'Service notes', 500]] as const) {
+        const value = entry[key];
+        if (value != null && (typeof value !== 'string' || value.trim().length > max)) throw new Error(`${label} is invalid.`);
+      }
+    }
+  }
 }
 
 function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'notifyFamiliesOnAlert' | 'stops'>): void {

@@ -190,6 +190,17 @@ export type OfficeBusStop = {
   isSchool?: boolean;
 };
 
+export type OfficeBusMaintenanceEntry = {
+  id: string;
+  serviceDate: string;
+  serviceType: string;
+  mileage?: number | null;
+  vendor?: string | null;
+  notes?: string | null;
+  /** Removed records stay in the route history and are simply hidden. */
+  archived?: boolean;
+};
+
 export type OfficeBusVehicleDetails = {
   make?: string | null;
   model?: string | null;
@@ -199,6 +210,8 @@ export type OfficeBusVehicleDetails = {
   inspectionDue?: string | null;
   insuranceDue?: string | null;
   notes?: string | null;
+  /** Service and repair history kept with this bus. */
+  maintenanceLog?: OfficeBusMaintenanceEntry[] | null;
 };
 
 /** A bus route (`schools/{id}/officeBusRoutes`). Morning runs the stops in order, afternoon in reverse. */

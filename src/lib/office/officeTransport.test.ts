@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   distanceMeters,
   exampleRoutes,
+  latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
   nextStop,
@@ -74,6 +75,18 @@ describe('officeTransport', () => {
     const vehicle = { year: 2022, make: 'Ford', model: 'Transit', plate: 'BUS-4', inspectionDue: '2026-01-01' };
     expect(vehicleLabel(vehicle)).toBe('2022 Ford Transit · BUS-4');
     expect(vehicleDueLabel(vehicle, at(2, 0))).toBe('Inspection overdue');
+  });
+
+  it('shows the newest visible service record', () => {
+    expect(
+      latestMaintenanceLabel({
+        maintenanceLog: [
+          { id: 'old', serviceDate: '2026-01-01', serviceType: 'Oil change' },
+          { id: 'new', serviceDate: '2026-03-01', serviceType: 'Inspection', archived: true },
+          { id: 'current', serviceDate: '2026-02-01', serviceType: 'Tire repair' },
+        ],
+      }),
+    ).toBe('2026-02-01 · Tire repair');
   });
 
   it('finds the first stop not reached yet', () => {

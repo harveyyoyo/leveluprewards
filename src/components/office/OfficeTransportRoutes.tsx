@@ -24,6 +24,8 @@ import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import {
   BUS_ROUTE_COLORS,
   exampleRoutes,
+  latestMaintenanceLabel,
+  localIsoDate,
   newTransportId,
   ridersForRoute,
   routeLabel,
@@ -33,7 +35,7 @@ import {
   type LatLng,
 } from '@/lib/office/officeTransport';
 import { downloadCsv, getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBusMaintenanceEntry, OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
@@ -145,6 +147,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
               const readiness = routeReadiness(route);
               const vehicle = vehicleLabel(route.vehicle);
               const vehicleDue = vehicleDueLabel(route.vehicle);
+              const lastService = latestMaintenanceLabel(route.vehicle);
               return (
                 <li key={route.id}>
                   <button
@@ -166,6 +169,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
                     ) : null}
                     {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
+                    {lastService ? <span className="mt-1 block text-xs text-muted-foreground">Last service: {lastService}</span> : null}
                     {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
@@ -213,6 +217,17 @@ function vehicleDraftValue(vehicle: OfficeBusVehicleDetails | null | undefined, 
 
 function cleanVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): OfficeBusVehicleDetails | null {
   if (!vehicle) return null;
+  const maintenanceLog = Array.isArray(vehicle.maintenanceLog)
+    ? vehicle.maintenanceLog.map((entry) => ({
+        id: entry.id,
+        serviceDate: entry.serviceDate,
+        serviceType: entry.serviceType.trim(),
+        mileage: entry.mileage ?? null,
+        vendor: entry.vendor?.trim() || null,
+        notes: entry.notes?.trim() || null,
+        ...(entry.archived ? { archived: true } : {}),
+      }))
+    : [];
   const clean = {
     make: vehicle.make?.trim() || null,
     model: vehicle.model?.trim() || null,
@@ -222,6 +237,7 @@ function cleanVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): Offi
     inspectionDue: vehicle.inspectionDue || null,
     insuranceDue: vehicle.insuranceDue || null,
     notes: vehicle.notes?.trim() || null,
+    maintenanceLog: maintenanceLog.length ? maintenanceLog : null,
   };
   return Object.values(clean).some((value) => value !== null) ? clean : null;
 }
@@ -277,6 +293,13 @@ function OfficeBusRouteSheet({
   const [dirty, setDirty] = useState(false);
   const [focusStop, setFocusStop] = useState<string | null>(null);
   const [addStudentId, setAddStudentId] = useState('');
+  const [maintenanceDraft, setMaintenanceDraft] = useState({
+    serviceDate: localIsoDate(),
+    serviceType: '',
+    mileage: null as number | null,
+    vendor: '',
+    notes: '',
+  });
   const locked = !!route && activeRouteIds.has(route.id);
 
   // A different route opened, or someone else saved this one while it was open and nothing here changed.
@@ -291,6 +314,30 @@ function OfficeBusRouteSheet({
   };
   const setStop = (id: string, p: Partial<OfficeBusStop>) => patch({ stops: draft.stops.map((s) => (s.id === id ? { ...s, ...p } : s)) });
   const setVehicle = (p: Partial<OfficeBusVehicleDetails>) => patch({ vehicle: { ...(draft.vehicle ?? {}), ...p } });
+  const maintenanceLog = draft.vehicle?.maintenanceLog ?? [];
+  const visibleMaintenanceLog = maintenanceLog.filter((entry) => entry.archived !== true);
+  const addMaintenance = () => {
+    if (maintenanceLog.length >= 50) {
+      toast({ variant: 'destructive', title: 'Service history is full', description: 'Keep this bus to 50 saved service records.' });
+      return;
+    }
+    const serviceType = maintenanceDraft.serviceType.trim();
+    if (!maintenanceDraft.serviceDate || !serviceType) {
+      toast({ variant: 'destructive', title: 'Add the service date and type', description: 'For example: oil change, inspection, or tire repair.' });
+      return;
+    }
+    const entry: OfficeBusMaintenanceEntry = {
+      id: newTransportId('maintenance'),
+      serviceDate: maintenanceDraft.serviceDate,
+      serviceType,
+      mileage: maintenanceDraft.mileage,
+      vendor: maintenanceDraft.vendor.trim() || null,
+      notes: maintenanceDraft.notes.trim() || null,
+    };
+    setVehicle({ maintenanceLog: [entry, ...maintenanceLog] });
+    setMaintenanceDraft({ serviceDate: localIsoDate(), serviceType: '', mileage: null, vendor: '', notes: '' });
+  };
+  const removeMaintenance = (id: string) => setVehicle({ maintenanceLog: maintenanceLog.map((entry) => (entry.id === id ? { ...entry, archived: true } : entry)) });
   const addStop = (at: LatLng & { label?: string }) => {
     const stop: OfficeBusStop = {
       id: newTransportId('stop'),
@@ -626,6 +673,69 @@ function OfficeBusRouteSheet({
               <Label htmlFor="vehicle-notes">Vehicle notes</Label>
               <Textarea id="vehicle-notes" value={vehicleDraftValue(draft.vehicle, 'notes')} onChange={(e) => setVehicle({ notes: e.target.value })} placeholder="Maintenance or equipment notes" className="min-h-[60px] rounded-xl" />
             </div>
+          </section>
+
+          <section className="space-y-3 rounded-2xl border p-4 dark:border-slate-800">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Service history</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Keep inspections, repairs, and other service work with this bus.</p>
+            </div>
+            {visibleMaintenanceLog.length > 0 ? (
+              <ul className="space-y-2">
+                {[...visibleMaintenanceLog]
+                  .sort((a, b) => b.serviceDate.localeCompare(a.serviceDate))
+                  .map((entry) => (
+                    <li key={entry.id} className="rounded-xl border px-3 py-2 text-sm dark:border-slate-800">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">{entry.serviceType}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {entry.serviceDate}
+                            {entry.mileage != null ? ` · ${entry.mileage.toLocaleString()} miles` : ''}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${entry.serviceType} service record`}
+                          disabled={locked}
+                          onClick={() => removeMaintenance(entry.id)}
+                          className="rounded p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {entry.vendor || entry.notes ? <p className="mt-1 text-xs text-muted-foreground">{[entry.vendor, entry.notes].filter(Boolean).join(' · ')}</p> : null}
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No service records yet.</p>
+            )}
+            <div className="grid grid-cols-2 gap-3 border-t pt-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="maintenance-date">Service date</Label>
+                <Input id="maintenance-date" type="date" disabled={locked} value={maintenanceDraft.serviceDate} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, serviceDate: e.target.value }))} className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="maintenance-mileage">Mileage</Label>
+                <Input id="maintenance-mileage" type="number" min={0} disabled={locked} value={maintenanceDraft.mileage ?? ''} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, mileage: e.target.value ? Number(e.target.value) : null }))} placeholder="Optional" className="rounded-xl" />
+              </div>
+              <div className="col-span-2 space-y-1.5 sm:col-span-1">
+                <Label htmlFor="maintenance-type">Service type</Label>
+                <Input id="maintenance-type" disabled={locked} value={maintenanceDraft.serviceType} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, serviceType: e.target.value }))} placeholder="e.g. Oil change" className="rounded-xl" />
+              </div>
+              <div className="col-span-2 space-y-1.5 sm:col-span-1">
+                <Label htmlFor="maintenance-vendor">Service provider</Label>
+                <Input id="maintenance-vendor" disabled={locked} value={maintenanceDraft.vendor} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, vendor: e.target.value }))} placeholder="Optional" className="rounded-xl" />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="maintenance-notes">Service notes</Label>
+                <Textarea id="maintenance-notes" disabled={locked} value={maintenanceDraft.notes} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, notes: e.target.value }))} placeholder="What was done?" className="min-h-[60px] rounded-xl" />
+              </div>
+            </div>
+            <Button type="button" variant="outline" disabled={locked} onClick={addMaintenance} className="rounded-xl">
+              Add service record
+            </Button>
           </section>
 
           <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">

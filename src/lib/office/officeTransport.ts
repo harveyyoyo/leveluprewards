@@ -308,6 +308,13 @@ export function vehicleDueLabel(vehicle: OfficeBusVehicleDetails | null | undefi
   return null;
 }
 
+export function latestMaintenanceLabel(vehicle: OfficeBusVehicleDetails | null | undefined): string | null {
+  const latest = (vehicle?.maintenanceLog ?? [])
+    .filter((entry) => entry.archived !== true)
+    .sort((a, b) => b.serviceDate.localeCompare(a.serviceDate))[0];
+  return latest ? `${latest.serviceDate} · ${latest.serviceType}` : null;
+}
+
 /** "Bus 4 · North" or just the route name. */
 export function routeLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): string {
   const bus = route.busNumber?.trim();

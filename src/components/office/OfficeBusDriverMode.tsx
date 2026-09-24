@@ -408,9 +408,11 @@ function DrivingScreen({
         description:
           result.notificationStatus === 'failed'
             ? 'The report is safe, but the family update could not be queued. Please tell the office.'
-            : result.notificationsQueued > 0
-              ? `It will appear on the live page, and ${result.notificationsQueued} family update${result.notificationsQueued === 1 ? '' : 's'} will be queued.`
-              : 'It will appear on the live Transportation page.',
+            : result.notificationStatus === 'no_recipients'
+              ? 'The report is safe, but no opted-in family email was found.'
+              : result.notificationsQueued > 0
+                ? `It will appear on the live page, and ${result.notificationsQueued} family update${result.notificationsQueued === 1 ? '' : 's'} will be queued.`
+                : 'It will appear on the live Transportation page.',
       });
       setReport(null);
       setReportText('');

@@ -98,6 +98,25 @@ function assertVehicle(vehicle: OfficeBusRoute['vehicle']): void {
     const value = raw[key];
     if (value != null && (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))) throw new Error(`${label} is invalid.`);
   }
+  if (raw.maintenanceLog != null) {
+    if (!Array.isArray(raw.maintenanceLog) || raw.maintenanceLog.length > 50) throw new Error('A bus can have up to 50 service records.');
+    const ids = new Set<string>();
+    for (const value of raw.maintenanceLog) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('A service record is invalid.');
+      const entry = value as Record<string, unknown>;
+      safeId(entry.id, 'Service record');
+      if (ids.has(entry.id as string)) throw new Error('A bus cannot contain the same service record twice.');
+      ids.add(entry.id as string);
+      if (typeof entry.serviceDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(entry.serviceDate)) throw new Error('Service date is invalid.');
+      if (typeof entry.serviceType !== 'string' || !entry.serviceType.trim() || entry.serviceType.trim().length > 100) throw new Error('Give each service record a type under 100 characters.');
+      if (entry.mileage != null && (!Number.isInteger(entry.mileage) || (entry.mileage as number) < 0 || (entry.mileage as number) > 10_000_000)) throw new Error('Mileage is invalid.');
+      if (entry.archived != null && typeof entry.archived !== 'boolean') throw new Error('Service record choice is invalid.');
+      for (const [key, label, max] of [['vendor', 'Service provider', 120], ['notes', 'Service notes', 500]] as const) {
+        const field = entry[key];
+        if (field != null && (typeof field !== 'string' || field.trim().length > max)) throw new Error(`${label} is invalid.`);
+      }
+    }
+  }
 }
 
 function assertRoute(route: OfficeBusRoute): void {
@@ -106,6 +125,7 @@ function assertRoute(route: OfficeBusRoute): void {
   if (route.capacity != null && (!Number.isInteger(route.capacity) || route.capacity < 1 || route.capacity > 200)) {
     throw new Error('Bus capacity is invalid.');
   }
+  if (route.notifyFamiliesOnAlert != null && typeof route.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
   assertVehicle(route.vehicle);
   if (!Array.isArray(route.stops) || route.stops.length > MAX_STOPS) throw new Error('This route has too many stops.');
   const ids = new Set<string>();
