@@ -70,9 +70,8 @@ describe('ClassroomLiveTeachChrome', () => {
     expect(screen.queryByRole('button', { name: /turn sounds on/i })).toBeNull();
     expect(screen.getByRole('link', { name: /projector view/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /reset screen/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /cheatsheet/i })).toBeDefined();
-    expect(screen.queryByText(/keyboard shortcuts & legend/i)).toBeNull();
     expect(screen.getByRole('button', { name: /^shortcuts$/i })).toBeDefined();
+    expect(screen.queryByText(/keyboard shortcuts & legend/i)).toBeNull();
     expect(screen.queryByText(/everyone is in class/i)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /appearance/i }));
     expect(screen.getByText('Vibrant / Playful')).toBeDefined();

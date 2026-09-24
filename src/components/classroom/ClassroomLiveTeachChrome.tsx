@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { ClassroomAppearancePopover } from '@/components/classroom/ClassroomAppearancePopover';
 import { ClassroomAwardsEffectsPopover } from '@/components/classroom/ClassroomAwardsEffectsPopover';
-import { ClassroomLiveCheatsheetTrigger } from '@/components/classroom/ClassroomLiveCheatsheet';
 import { ClassroomShortcutsModal, ClassroomShortcutsTrigger } from '@/components/classroom/ClassroomShortcutsModal';
 import { ClassroomMissionTimerModal } from '@/components/classroom/ClassroomMissionTimerModal';
 import { ClassroomNoiseRadarModal } from '@/components/classroom/ClassroomNoiseRadarModal';
@@ -26,6 +25,7 @@ import { ClassroomQuickVoteModal } from '@/components/classroom/ClassroomQuickVo
 import {
   loadClassroomLiveCheatsheetShown,
   saveClassroomLiveCheatsheetShown,
+  subscribeClassroomLiveCheatsheet,
 } from '@/lib/classroom/classroomLiveCheatsheet';
 import { ClassroomWhosOutPulse } from '@/components/classroom/ClassroomWhosOutPulse';
 import type { ClassroomWhosOutPass } from '@/lib/classroom/classroomWhosOutPasses';
@@ -111,6 +111,7 @@ export function ClassroomLiveTeachChrome({
 
   useEffect(() => {
     setCheatsheetOpen(loadClassroomLiveCheatsheetShown());
+    return subscribeClassroomLiveCheatsheet((prefs) => setCheatsheetOpen(prefs.showQuickSheet));
   }, []);
 
   return (
@@ -328,14 +329,10 @@ export function ClassroomLiveTeachChrome({
         ) : null}
         {headerControls?.shortcutHint ? (
           <>
-            <ClassroomLiveCheatsheetTrigger
-              visible={cheatsheetOpen}
-              onShow={() => {
-                saveClassroomLiveCheatsheetShown(true);
-                setCheatsheetOpen(true);
-              }}
+            <ClassroomShortcutsTrigger
+              isPinned={cheatsheetOpen}
+              onOpen={() => setShortcutsOpen(true)}
             />
-            <ClassroomShortcutsTrigger onOpen={() => setShortcutsOpen(true)} />
             <ClassroomShortcutsModal
               open={shortcutsOpen}
               onOpenChange={setShortcutsOpen}
