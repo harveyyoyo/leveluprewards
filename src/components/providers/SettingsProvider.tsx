@@ -318,6 +318,9 @@ interface Settings {
     }>;
     /** When on, staff get a Room display section tab (in-room projector/monitor view). */
     enableClassroomRoomDisplay?: boolean;
+    classroomDefaultTimerMinutes?: number;
+    classroomTimerSoundEnabled?: boolean;
+    classroomNoiseRadarDefaultZone?: 'silent' | 'whisper' | 'collaborative' | 'presentation';
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
     /** When true, every student must have a portal passcode set before they can sign in at home. */
