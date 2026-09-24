@@ -452,7 +452,8 @@ async function updateLocation(auth: AuthContext, schoolId: string, body: Body): 
   if (body.reachedStopId) {
     const reachedStopId = safeId(body.reachedStopId, 'Stop');
     patch[`stopArrivals.${reachedStopId}`] = now;
-    patch.events = FieldValue.arrayUnion({ kind: 'stop', stopId: reachedStopId, reached: true, at: now, by: auth.uid });
+    patch.events = FieldValue.arrayUnion({ kind: 'stop', stopId: reachedStopId, reached: true, at: now, by: auth.uid, source: 'browser' });
+    patch[`stopArrivalDetails.${reachedStopId}`] = { at: now, source: 'browser' };
   }
   await tripRef(auth.db, schoolId, tripId).update(patch);
   return { ok: true };
@@ -469,7 +470,8 @@ async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise
   const now = Date.now();
   await tripRef(auth.db, schoolId, tripId).update({
     [`stopArrivals.${stopId}`]: body.reached === true ? now : FieldValue.delete(),
-    events: FieldValue.arrayUnion({ kind: 'stop', stopId, reached: body.reached === true, at: now, by: auth.uid }),
+    [`stopArrivalDetails.${stopId}`]: body.reached === true ? { at: now, source: 'manual' } : FieldValue.delete(),
+    events: FieldValue.arrayUnion({ kind: 'stop', stopId, reached: body.reached === true, at: now, by: auth.uid, source: 'manual' }),
     updatedAt: now,
   });
   return { ok: true };

@@ -1,8 +1,9 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
-import type { OfficeBusGpsDevice, OfficeBusLocation, OfficeBusTrip } from '@/lib/office/types';
+import { distanceMeters, nextStop, STOP_ARRIVAL_RADIUS_M } from '@/lib/office/officeTransport';
+import type { OfficeBusGpsDevice, OfficeBusLocation, OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,24 @@ function errorStatus(message: string): number {
   return 400;
 }
 
+function routeForTelemetry(trip: OfficeBusTrip): OfficeBusRoute | null {
+  const snapshot = trip.routeSnapshot;
+  if (!snapshot) return null;
+  return {
+    id: trip.routeId,
+    name: snapshot.name,
+    busNumber: snapshot.busNumber ?? null,
+    color: snapshot.color,
+    driverName: null,
+    driverPhone: null,
+    capacity: null,
+    vehicle: snapshot.vehicle ?? null,
+    stops: snapshot.stops ?? [],
+    notes: null,
+    updatedAt: trip.updatedAt,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Body;
@@ -108,15 +127,16 @@ export async function POST(req: NextRequest) {
     const receivedAt = Date.now();
     let duplicate = false;
     let ignored = false;
+    let arrivedStopId: string | null = null;
     await db.runTransaction(async (transaction) => {
       const [tripSnap, locationSnap, deviceSnap, keySnap] = await Promise.all([transaction.get(tripRef), transaction.get(locationRef), transaction.get(deviceRef), transaction.get(keyRef)]);
       const currentDevice = deviceSnap.exists ? ({ id: deviceSnap.id, ...deviceSnap.data() } as OfficeBusGpsDevice) : null;
       const currentKey = keySnap.exists ? keySnap.data() as { keyVersion?: number } : null;
-      if (!currentDevice || currentDevice.status !== 'active' || currentKey?.keyVersion !== auth.keyVersion) throw new Error('Unauthorized');
+      if (!currentDevice || currentDevice.status !== 'active' || currentDevice.assignmentVersion !== auth.device.assignmentVersion || currentKey?.keyVersion !== auth.keyVersion) throw new Error('Unauthorized');
       const trip = tripSnap.exists ? ({ id: tripSnap.id, ...tripSnap.data() } as OfficeBusTrip) : null;
       if (!trip || trip.status !== 'active') throw new Error('This bus run is not active.');
       if (auth.device.assignedRouteId !== trip.routeId || trip.gpsDeviceId !== auth.id || trip.gpsAssignmentVersion !== auth.device.assignmentVersion) throw new Error('This GPS device is not assigned to this bus run.');
-      const previous = locationSnap.exists ? locationSnap.data() as { lastSequence?: number; lastRecordedAt?: number; lastSampleId?: string; lastReceivedAt?: number } : null;
+      const previous = locationSnap.exists ? locationSnap.data() as { lastSequence?: number; lastRecordedAt?: number; lastSampleId?: string; lastReceivedAt?: number; nearStopId?: string | null; nearStopFirstAt?: number | null; nearStopSampleCount?: number | null } : null;
       if (previous?.lastSampleId === sample.sampleId || (typeof previous?.lastSequence === 'number' && sample.sequence <= previous.lastSequence)) {
         duplicate = true;
         return;
@@ -135,6 +155,17 @@ export async function POST(req: NextRequest) {
         at: receivedAt,
         source: 'gps_device',
       };
+      const route = routeForTelemetry(trip);
+      const next = route ? nextStop(route, trip) : null;
+      const distanceM = next ? distanceMeters({ lat: sample.lat, lng: sample.lng }, next) : null;
+      const goodAccuracy = sample.accuracyM != null && sample.accuracyM <= 100;
+      const nearStop = next && goodAccuracy && distanceM != null && distanceM <= STOP_ARRIVAL_RADIUS_M;
+      const sameNearStop = nearStop && previous?.nearStopId === next?.id && typeof previous.nearStopFirstAt === 'number' && receivedAt - previous.nearStopFirstAt <= 20_000;
+      const nearStopId = nearStop ? next.id : null;
+      const nearStopFirstAt = nearStop ? (sameNearStop ? previous?.nearStopFirstAt ?? receivedAt : receivedAt) : null;
+      const nearStopSampleCount = nearStop ? (sameNearStop ? (previous?.nearStopSampleCount ?? 0) + 1 : 1) : 0;
+      const shouldArrive = Boolean(nearStop && nearStopSampleCount >= 2 && !trip.stopArrivals?.[next.id]);
+      if (shouldArrive && next) arrivedStopId = next.id;
       transaction.set(locationRef, {
         deviceId: auth.id,
         tripId,
@@ -148,11 +179,20 @@ export async function POST(req: NextRequest) {
         lastRecordedAt: sample.recordedAt,
         lastSampleId: sample.sampleId,
         lastReceivedAt: receivedAt,
+        nearStopId,
+        nearStopFirstAt,
+        nearStopSampleCount,
       });
       transaction.update(deviceRef, { lastSeenAt: receivedAt, lastSequence: sample.sequence, updatedAt: receivedAt, updatedBy: 'gps_device' });
-      transaction.update(tripRef, { location, locationSource: 'gps_device', updatedAt: receivedAt });
+      const tripPatch: Record<string, unknown> = { location, locationSource: 'gps_device', updatedAt: receivedAt };
+      if (shouldArrive && next) {
+        tripPatch[`stopArrivals.${next.id}`] = receivedAt;
+        tripPatch[`stopArrivalDetails.${next.id}`] = { at: receivedAt, source: 'gps_device', deviceId: auth.id, sampleId: sample.sampleId, accuracyM: sample.accuracyM, distanceM };
+        tripPatch.events = FieldValue.arrayUnion({ kind: 'stop', stopId: next.id, reached: true, at: receivedAt, by: 'gps_device', source: 'gps_device', deviceId: auth.id, sampleId: sample.sampleId, accuracyM: sample.accuracyM, distanceM });
+      }
+      transaction.update(tripRef, tripPatch);
     });
-    return NextResponse.json({ ok: true, duplicate, ignored, receivedAt }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ ok: true, duplicate, ignored, arrivedStopId, receivedAt }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not accept the GPS update.';
     return NextResponse.json({ error: message }, { status: errorStatus(message), headers: { 'Cache-Control': 'no-store' } });

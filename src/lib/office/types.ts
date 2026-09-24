@@ -298,7 +298,7 @@ export type OfficeBusRelease = {
 
 export type OfficeBusEvent =
   | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
-  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string }
+  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string; source?: 'browser' | 'gps_device' | 'manual'; deviceId?: string | null; sampleId?: string | null; accuracyM?: number | null; distanceM?: number | null }
   | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string };
 
 export type OfficeBusRiderManifestEntry = {
@@ -339,6 +339,8 @@ export type OfficeBusTrip = {
   locationSource?: 'browser' | 'gps_device' | null;
   /** stopId -> time the bus reached it. */
   stopArrivals?: Record<string, number> | null;
+  /** Trusted arrival details, kept separately from the simple stop time map. */
+  stopArrivalDetails?: Record<string, { at: number; source: 'browser' | 'gps_device' | 'manual'; deviceId?: string | null; sampleId?: string | null; accuracyM?: number | null; distanceM?: number | null }> | null;
   /** studentId -> latest status on this run. */
   riders?: Record<string, { status: OfficeBusRiderStatus; at: number }> | null;
   /** Release confirmation for each rider who was marked off. */
