@@ -196,6 +196,61 @@ export function tripWarnings(
   return out.sort((a, b) => rank[a.tone] - rank[b.tone]);
 }
 
+export type TransportDaySummary = {
+  totalRuns: number;
+  completedRuns: number;
+  activeRuns: number;
+  riderRides: number;
+  alertCount: number;
+  averageMinutes: number | null;
+  lateRuns: number;
+};
+
+/** Counts for a selected day in History, without changing any safety record. */
+export function transportDaySummary(
+  trips: OfficeBusTrip[],
+  routes: OfficeBusRoute[],
+  now = Date.now(),
+): TransportDaySummary {
+  const routeById = new Map(routes.map((route) => [route.id, route]));
+  const completedTrips = trips.filter((trip) => trip.status === 'done');
+  const durations = completedTrips
+    .filter((trip): trip is OfficeBusTrip & { endedAt: number } => typeof trip.endedAt === 'number')
+    .map((trip) => Math.max(0, trip.endedAt - trip.startedAt));
+  const averageMs = durations.length ? durations.reduce((sum, value) => sum + value, 0) / durations.length : null;
+  const lateRuns = trips.filter((trip) => {
+    if (trip.status !== 'active') return false;
+    const route = routeById.get(trip.routeId);
+    return route ? (minutesLate(route, trip, now) ?? 0) >= LATE_THRESHOLD_MIN : false;
+  }).length;
+
+  return {
+    totalRuns: trips.length,
+    completedRuns: completedTrips.length,
+    activeRuns: trips.length - completedTrips.length,
+    riderRides: trips.reduce(
+      (sum, trip) => sum + Object.values(trip.riders ?? {}).filter((rider) => rider.status === 'on' || rider.status === 'off').length,
+      0,
+    ),
+    alertCount: trips.reduce((sum, trip) => sum + (trip.alerts?.length ?? 0), 0),
+    averageMinutes: averageMs === null ? null : Math.max(1, Math.round(averageMs / 60_000)),
+    lateRuns,
+  };
+}
+
+/** A short plain-text summary staff can paste into a report or message. */
+export function transportDaySummaryText(date: string, summary: TransportDaySummary): string {
+  const lines = [
+    `Transportation report — ${date}`,
+    `${summary.totalRuns} run${summary.totalRuns === 1 ? '' : 's'}: ${summary.completedRuns} finished, ${summary.activeRuns} active`,
+    `${summary.riderRides} rider ride${summary.riderRides === 1 ? '' : 's'}`,
+    `${summary.alertCount} driver report${summary.alertCount === 1 ? '' : 's'}`,
+    summary.averageMinutes === null ? null : `Average finished run: ${summary.averageMinutes} minutes`,
+    summary.lateRuns ? `${summary.lateRuns} run${summary.lateRuns === 1 ? '' : 's'} running late` : null,
+  ];
+  return lines.filter((line): line is string => Boolean(line)).join('\n');
+}
+
 function listNames(names: string[]): string {
   if (names.length <= 2) return names.join(' and ');
   return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;

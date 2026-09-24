@@ -1,12 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, Printer, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { useToast } from '@/hooks/use-toast';
 import { useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
-import { BUS_ALERT_LABEL, BUS_RUN_LABEL, clockLabel, localIsoDate, orderedStops, routeForTrip, routeLabel } from '@/lib/office/officeTransport';
+import { downloadCsv } from '@/lib/office/officeUtils';
+import {
+  BUS_ALERT_LABEL,
+  BUS_RUN_LABEL,
+  clockLabel,
+  localIsoDate,
+  orderedStops,
+  routeForTrip,
+  routeLabel,
+  transportDaySummary,
+  transportDaySummaryText,
+} from '@/lib/office/officeTransport';
 import type { OfficeBusEvent, OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
@@ -30,8 +42,47 @@ export function OfficeTransportHistory({
   const [date, setDate] = useState(today);
   const [openId, setOpenId] = useState<string | null>(null);
   const { trips, isLoading, error } = useOfficeBusTripsForDate(schoolId, date);
+  const summary = useMemo(() => transportDaySummary(trips, routes), [trips, routes]);
+  const { toast } = useToast();
   // Removed routes are still named here so old trips stay readable.
   const routeById = new Map(routes.map((r) => [r.id, r]));
+
+  const copySummary = async () => {
+    try {
+      await navigator.clipboard.writeText(transportDaySummaryText(date, summary));
+      toast({ title: 'Summary copied', description: 'The day’s transportation numbers are ready to paste.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not copy the summary' });
+    }
+  };
+
+  const downloadDayCsv = () => {
+    const rows = trips.map((trip) => {
+      const route = routeForTrip(routeById.get(trip.routeId), trip);
+      const minutes = trip.endedAt ? Math.round((trip.endedAt - trip.startedAt) / 60_000) : '';
+      return [
+        date,
+        BUS_RUN_LABEL[trip.run],
+        route ? routeLabel(route) : 'Removed route',
+        route?.busNumber ?? '',
+        trip.driverName ?? route?.driverName ?? '',
+        trip.status === 'done' ? 'Finished' : 'On the road',
+        clockLabel(trip.startedAt),
+        trip.endedAt ? clockLabel(trip.endedAt) : '',
+        String(minutes),
+        String(Object.values(trip.riders ?? {}).filter((rider) => rider.status !== 'absent').length),
+        String((trip.alerts ?? []).length),
+        String(Object.keys(trip.stopArrivals ?? {}).length),
+        trip.childCheckDone === true ? 'Yes' : 'No',
+      ];
+    });
+    downloadCsv(
+      `transportation-${date}.csv`,
+      ['Date', 'Run', 'Route', 'Bus number', 'Driver', 'Status', 'Started', 'Ended', 'Minutes', 'Riders', 'Driver reports', 'Stops reached', 'Bus checked'],
+      rows,
+    );
+    toast({ title: 'CSV downloaded', description: 'The selected day’s trip records are ready to open in a spreadsheet.' });
+  };
 
   return (
     <div className="space-y-3">
@@ -49,6 +100,30 @@ export function OfficeTransportHistory({
           </button>
         ) : null}
       </div>
+
+      {!isLoading && !error ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <SummaryMetric label="Runs" value={summary.totalRuns} />
+            <SummaryMetric label="Finished" value={summary.completedRuns} />
+            <SummaryMetric label="Rider rides" value={summary.riderRides} />
+            <SummaryMetric label="Driver reports" value={summary.alertCount} />
+            <SummaryMetric label="Average minutes" value={summary.averageMinutes ?? '—'} />
+            {summary.lateRuns ? <SummaryMetric label="Running late" value={summary.lateRuns} tone="warn" /> : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" /> Print
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => void copySummary()}>
+              <Copy className="h-4 w-4" /> Copy summary
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="gap-2 rounded-xl" onClick={downloadDayCsv}>
+              <Download className="h-4 w-4" /> Download CSV
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-8 text-center text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
@@ -74,6 +149,15 @@ export function OfficeTransportHistory({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function SummaryMetric({ label, value, tone = 'plain' }: { label: string; value: number | string; tone?: 'plain' | 'warn' }) {
+  return (
+    <div>
+      <p className={cn('text-lg font-semibold tabular-nums', tone === 'warn' && 'text-amber-700 dark:text-amber-400')}>{value}</p>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
     </div>
   );
 }

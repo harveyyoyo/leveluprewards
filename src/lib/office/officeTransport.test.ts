@@ -9,6 +9,8 @@ import {
   pointAlongStops,
   riderSnapshotFromStudents,
   routeForTrip,
+  transportDaySummary,
+  transportDaySummaryText,
   tripWarnings,
 } from '@/lib/office/officeTransport';
 import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
@@ -126,5 +128,32 @@ describe('officeTransport', () => {
     };
     const historical = routeForTrip(undefined, trip({ routeSnapshot: oldSnapshot }));
     expect(historical).toMatchObject({ id: 'r1', name: 'Old North', stops: oldSnapshot.stops });
+  });
+
+  it('summarizes a day without changing the trip records', () => {
+    const finished = trip({
+      id: 'finished',
+      status: 'done',
+      startedAt: at(7, 0),
+      endedAt: at(7, 45),
+      riders: { kid1: { status: 'off', at: at(7, 40) }, kid2: { status: 'absent', at: at(7, 10) } },
+      alerts: [{ id: 'a1', kind: 'delay', minutes: 8, at: at(7, 20) }],
+    });
+    const active = trip({
+      id: 'active',
+      startedAt: at(8, 0),
+      location: { lat: 40.72, lng: -74.32, at: at(8, 10) },
+    });
+    const summary = transportDaySummary([finished, active], [route], at(8, 10));
+    expect(summary).toEqual({
+      totalRuns: 2,
+      completedRuns: 1,
+      activeRuns: 1,
+      riderRides: 1,
+      alertCount: 1,
+      averageMinutes: 45,
+      lateRuns: 1,
+    });
+    expect(transportDaySummaryText('2026-09-23', summary)).toContain('Transportation report — 2026-09-23');
   });
 });
