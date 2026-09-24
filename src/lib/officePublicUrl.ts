@@ -9,6 +9,7 @@ export type OfficePublicSegment =
   | 'grades'
   | 'attendance'
   | 'front-desk'
+  | 'transportation'
   | 'communication'
   | 'billing'
   | 'reports'

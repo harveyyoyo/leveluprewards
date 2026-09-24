@@ -31,7 +31,7 @@ import { subscribeOfficeAssistantAsk, useOfficeAnswerSpot } from '@/lib/office/o
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { officeGoHref } from '@/lib/office/officeNav';
 import { officeLocalIsoDate } from '@/lib/office/officeUtils';
-import { OfficeAssistantListPreview } from '@/components/office/OfficeAssistantListPreview';
+import { OfficeAssistantListPreview, officeAssistantViewHasList } from '@/components/office/OfficeAssistantListPreview';
 import { usePathname, useRouter } from 'next/navigation';
 
 /**
@@ -69,6 +69,7 @@ const TOPIC_WORDS: Record<string, string> = {
   frontdesk: 'front desk entries',
   notes: 'notes',
   health: 'health details',
+  transportation: 'transportation records',
 };
 
 function joinWords(words: string[]): string {
@@ -132,9 +133,11 @@ function ChatListAnswer({
   onOpen: (target: OfficeAssistantOpenTarget) => void;
 }) {
   const r = list.results;
+  // Some pages (the Transportation map) aren't lists: the answer just offers to open them.
+  const opensOnly = !officeAssistantViewHasList(list.view);
   return (
     <div className="mt-1.5 space-y-1.5">
-      {!r && !list.timedOut ? (
+      {opensOnly ? null : !r && !list.timedOut ? (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" />
           Finding them…
@@ -463,7 +466,8 @@ export function OfficeAssistant() {
         const page = OFFICE_ASSISTANT_PAGE_LABEL[decision.view.page];
         const turnedOff =
           (decision.view.page === 'attendance' && settings?.features?.attendance === false) ||
-          (decision.view.page === 'frontdesk' && settings?.features?.frontDesk === false);
+          (decision.view.page === 'frontdesk' && settings?.features?.frontDesk === false) ||
+          (decision.view.page === 'transportation' && settings?.features?.busInfo === false);
         // A class the school doesn't have would otherwise be ignored and show every class.
         const askedClass =
           decision.view.page === 'students' || decision.view.page === 'attendance' ? decision.view.className : null;
@@ -566,7 +570,7 @@ export function OfficeAssistant() {
 
   // Lists not opened in the app yet get their names here.
   const previews = messages.map((m) =>
-    m.list?.notOpened && !m.list.results && !m.list.timedOut ? (
+    m.list?.notOpened && !m.list.results && !m.list.timedOut && officeAssistantViewHasList(m.list.view) ? (
       <OfficeAssistantListPreview key={m.list.askAt} view={m.list.view} askAt={m.list.askAt} />
     ) : null,
   );

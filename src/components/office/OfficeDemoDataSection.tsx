@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FlaskConical, RefreshCw, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore } from '@/firebase';
+import { useAuthFetch } from '@/lib/authFetch';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
@@ -11,15 +12,18 @@ import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { addDemoFamiliesToSchool, populateDemoOfficeDataForSchool } from '@/lib/office/populateDemoOfficeData';
+import { useOfficeBusRoutes } from '@/lib/office/useOfficeTransport';
 
 /** Settings → Demo school tools. Only shown on the built-in demo schools, to admins/developers. */
 export function OfficeDemoDataSection({ schoolId }: { schoolId: string }) {
   const firestore = useFirestore();
+  const authFetch = useAuthFetch();
   const { isAdmin, loginState, userName } = useAppContext();
   const { toast } = useToast();
   const { confirm, confirmDialog } = useOfficeConfirm();
   const { gradeEntries, billingAccounts, invoices, isOfficeDataLoading } = useOfficePortalData();
   const shared = useOfficeSharedData(schoolId, true);
+  const { routes } = useOfficeBusRoutes(schoolId);
   const [busy, setBusy] = useState(false);
 
   const allowed = isPublicSampleSchoolId(schoolId) && (isAdmin || loginState === 'developer');
@@ -34,12 +38,13 @@ export function OfficeDemoDataSection({ schoolId }: { schoolId: string }) {
       shared.classes.length > 0 ||
       gradeEntries.length > 0 ||
       billingAccounts.length > 0 ||
-      invoices.length > 0;
+      invoices.length > 0 ||
+      routes.length > 0;
     if (hasData) {
       const ok = await confirm({
         title: 'Replace all demo school data?',
         description:
-          'Students, classes, families, grades, and billing in this demo school are replaced with fresh sample data. This only works on demo schools.',
+          'Students, classes, families, grades, and billing in this demo school are replaced with fresh sample data. Existing bus routes are hidden, but past bus runs stay in history. This only works on demo schools.',
         confirmLabel: 'Replace with sample data',
         tone: 'caution',
       });
@@ -47,6 +52,14 @@ export function OfficeDemoDataSection({ schoolId }: { schoolId: string }) {
     }
     setBusy(true);
     try {
+      const transportResponse = await authFetch('/api/office/transport', {
+        method: 'POST',
+        body: JSON.stringify({ schoolId, action: 'reset' }),
+      });
+      if (!transportResponse.ok) {
+        const detail = (await transportResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(detail.error || 'Could not clear demo bus data.');
+      }
       const result = await populateDemoOfficeDataForSchool(firestore, schoolId);
       toast({
         title: 'Sample data loaded',

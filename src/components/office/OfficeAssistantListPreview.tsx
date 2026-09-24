@@ -34,7 +34,13 @@ export function OfficeAssistantListPreview({ view, askAt }: { view: OfficeAssist
   if (view.page === 'students') return <StudentsPreview view={view} askAt={askAt} />;
   if (view.page === 'billing') return <BillingPreview view={view} askAt={askAt} />;
   if (view.page === 'attendance') return <AttendancePreview view={view} askAt={askAt} />;
-  return <FrontDeskPreview view={view} askAt={askAt} />;
+  if (view.page === 'frontdesk') return <FrontDeskPreview view={view} askAt={askAt} />;
+  return null;
+}
+
+/** Whether the answer can list names for this view (the Transportation map just opens). */
+export function officeAssistantViewHasList(view: OfficeAssistantView): boolean {
+  return view.page === 'students' || view.page === 'billing' || view.page === 'attendance' || view.page === 'frontdesk';
 }
 
 type Props<P extends OfficeAssistantView['page']> = { view: Extract<OfficeAssistantView, { page: P }>; askAt: string };

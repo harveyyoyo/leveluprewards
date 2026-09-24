@@ -14,7 +14,7 @@ const RESERVED_OFFICE_SEGMENTS = new Set([
 ]);
 
 /** Path segments on the office host (after /{schoolId}/). */
-const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'attendance', 'front-desk', 'communication', 'teachers', 'billing', 'reports', 'settings']);
+const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'attendance', 'front-desk', 'transportation', 'communication', 'teachers', 'billing', 'reports', 'settings']);
 
 import { canonicalPortalHost, isLocalDevHost } from '@/lib/portalRouting';
 

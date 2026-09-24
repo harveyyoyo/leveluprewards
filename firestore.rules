@@ -532,6 +532,18 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /officeBusRoutes/{routeId} {
+        allow read, create, update: if canAccessOffice(schoolId);
+        allow delete: if false;
+      }
+
+      // Bus runs are written by the trusted Office service so a browser cannot invent a child
+      // location or rewrite the safety record. Office staff can still read the live history.
+      match /officeBusTrips/{tripId} {
+        allow read: if canAccessOffice(schoolId);
+        allow create, update, delete: if false;
+      }
+
       match /officeForms/{formId} {
         allow read, write: if canAccessOffice(schoolId);
       }

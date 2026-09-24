@@ -18,6 +18,7 @@ export type OfficeSettingsPatch = Partial<
     | 'useMarksTerminology'
     | 'features'
     | 'studentCustomFields'
+    | 'transportSchoolLocation'
   >
 >;
 

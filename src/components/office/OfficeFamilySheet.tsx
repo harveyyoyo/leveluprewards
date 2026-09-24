@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,6 +44,7 @@ function newContact(): OfficeFamilyContact {
     phone: null,
     email: null,
     isPrimary: false,
+    pickupAuthorized: true,
     notes: null,
   };
 }
@@ -262,6 +264,17 @@ export function OfficeFamilySheet({
                     }
                     className="rounded-xl"
                   />
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Checkbox
+                      checked={c.pickupAuthorized !== false}
+                      onCheckedChange={(checked) =>
+                        setContacts((prev) =>
+                          prev.map((x) => (x.id === c.id ? { ...x, pickupAuthorized: checked === true } : x)),
+                        )
+                      }
+                    />
+                    Allowed to receive bus riders
+                  </label>
                 </div>
               ))}
               <Button

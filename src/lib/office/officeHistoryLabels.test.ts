@@ -17,9 +17,11 @@ describe('officeHistoryChanges', () => {
 });
 
 describe('officeHistoryGroup', () => {
-  it('puts payments under Billing and families under Students', () => {
+  it('puts payments under Billing, families under Students, and bus records under Transportation', () => {
     expect(officeHistoryGroup({ entityType: 'officePayment' })).toBe('billing');
     expect(officeHistoryGroup({ entityType: 'officeFamily' })).toBe('students');
+    expect(officeHistoryGroup({ entityType: 'officeBusRoute' })).toBe('transportation');
+    expect(officeHistoryGroup({ entityType: 'officeBusTrip' })).toBe('transportation');
   });
 });
 

@@ -6,7 +6,17 @@ import { isAllowedGoogleEmailOnAllowlist } from "./googleAllowlist";
 
 import "./init";
 
-const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
+const SUBCOLLECTIONS = [
+  "students",
+  "classes",
+  "teachers",
+  "staffAccounts",
+  "categories",
+  "prizes",
+  "coupons",
+  "officeBusRoutes",
+  "officeBusTrips",
+];
 const RETENTION_DAYS = 30;
 
 // ========================================================================

@@ -1,19 +1,34 @@
 import {
+  arrayUnion,
   collection,
+  deleteField,
   doc,
   getDoc,
+  getDocs,
   increment,
+  query,
   runTransaction,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 import { officeAuditSnapshot, writeOfficeAuditEntry } from '@/lib/office/officeAuditLog';
+import { riderSnapshotFromStudents } from '@/lib/office/officeTransport';
 import { billingStatusForAccount } from '@/lib/office/officeUtils';
 import type {
   OfficeAttendanceEntry,
   OfficeAuditEntityType,
   OfficeBillingAccount,
+  OfficeBusLocation,
+  OfficeBusRiderStatus,
+  OfficeBusRoute,
+  OfficeBusRouteSnapshot,
+  OfficeBusRun,
+  OfficeBusStop,
+  OfficeBusTrip,
+  OfficeBusTripAlert,
+  OfficeBusVehicleDetails,
   OfficeClass,
   OfficeDeskLogEntry,
   OfficeEvent,
@@ -883,6 +898,389 @@ export async function archiveOfficeDeskLog(
     summary: `Removed ${DESK_KIND_LABEL[entry.kind].toLowerCase()} for ${studentName} (${entry.date} ${entry.time})`,
     before: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
     after: officeAuditSnapshot(fields),
+  });
+}
+
+function busLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): string {
+  return route.busNumber?.trim() ? `Bus ${route.busNumber.trim()} (${route.name})` : route.name;
+}
+
+const RUN_WORD: Record<OfficeBusRun, string> = { am: 'morning', pm: 'afternoon' };
+
+function assertSafeFieldId(value: string, label: string): void {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error(`${label} is not valid.`);
+}
+
+async function activeRouteIds(ctx: OfficeWriteContext, routeIds: string[]): Promise<Set<string>> {
+  const active = new Set<string>();
+  const unique = [...new Set(routeIds.map((id) => id.trim()).filter(Boolean))];
+  for (let start = 0; start < unique.length; start += 20) {
+    const chunk = unique.slice(start, start + 20);
+    const snap = await getDocs(
+      query(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBusTrips'), where('routeId', 'in', chunk)),
+    );
+    for (const doc of snap.docs) {
+      const trip = doc.data() as Pick<OfficeBusTrip, 'routeId' | 'status'>;
+      if (trip.status === 'active') active.add(trip.routeId);
+    }
+  }
+  return active;
+}
+
+function assertValidVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): void {
+  if (vehicle == null) return;
+  if (typeof vehicle !== 'object' || Array.isArray(vehicle)) throw new Error('Vehicle information is invalid.');
+  for (const [key, label, max] of [
+    ['make', 'Vehicle make', 80],
+    ['model', 'Vehicle model', 80],
+    ['plate', 'Vehicle plate', 20],
+    ['vin', 'Vehicle VIN', 32],
+    ['notes', 'Vehicle notes', 500],
+  ] as const) {
+    const value = vehicle[key];
+    if (value != null && (typeof value !== 'string' || value.trim().length > max)) throw new Error(`${label} is invalid.`);
+  }
+  if (vehicle.year != null && (!Number.isInteger(vehicle.year) || vehicle.year < 1900 || vehicle.year > 2100)) throw new Error('Vehicle year is invalid.');
+  for (const [key, label] of [['inspectionDue', 'Inspection date'], ['insuranceDue', 'Insurance date']] as const) {
+    const value = vehicle[key];
+    if (value != null && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${label} is invalid.`);
+  }
+}
+
+function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'stops'>): void {
+  if (!data.name.trim() || data.name.trim().length > 100) throw new Error('Give the route a name under 100 characters.');
+  if (!/^#[0-9a-f]{6}$/i.test(data.color)) throw new Error('Choose a valid route color.');
+  if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1 || data.capacity > 200)) {
+    throw new Error('Bus capacity must be between 1 and 200.');
+  }
+  assertValidVehicle(data.vehicle);
+  if (!Array.isArray(data.stops) || data.stops.length > 100) throw new Error('A route can have up to 100 stops.');
+  let schoolStops = 0;
+  const ids = new Set<string>();
+  for (const stop of data.stops) {
+    assertSafeFieldId(stop.id, 'Stop');
+    if (ids.has(stop.id)) throw new Error('A route cannot contain the same stop twice.');
+    ids.add(stop.id);
+    if (!stop.name.trim() || stop.name.trim().length > 120) throw new Error('Give every stop a name under 120 characters.');
+    if (!Number.isFinite(stop.lat) || !Number.isFinite(stop.lng) || stop.lat < -90 || stop.lat > 90 || stop.lng < -180 || stop.lng > 180) {
+      throw new Error('Every stop must have a valid map location.');
+    }
+    for (const time of [stop.amTime, stop.pmTime]) {
+      if (time != null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new Error('Stop times must use a valid time.');
+    }
+    if (stop.isSchool) schoolStops += 1;
+  }
+  if (schoolStops > 1) throw new Error('A route can have only one school stop.');
+}
+
+export async function upsertOfficeBusRoute(
+  ctx: OfficeWriteContext,
+  data: Omit<OfficeBusRoute, 'id' | 'updatedAt' | 'updatedBy'> & { id?: string; expectedUpdatedAt?: number | null },
+): Promise<string> {
+  assertValidBusRoute(data);
+  const col = collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBusRoutes');
+  if (data.id && (await activeRouteIds(ctx, [data.id])).has(data.id)) {
+    throw new Error('This bus is on the road. Wait until the run ends before changing its route.');
+  }
+  const ref = data.id ? doc(col, data.id) : doc(col);
+  const { id: _id, expectedUpdatedAt: _expectedUpdatedAt, ...rest } = data;
+  const payload = { ...rest, updatedAt: Date.now(), updatedBy: ctx.changedBy?.trim() || null };
+  let before: OfficeBusRoute | null = null;
+  await runTransaction(ctx.firestore, async (transaction) => {
+    const beforeSnap = await transaction.get(ref);
+    before = beforeSnap.exists() ? (beforeSnap.data() as OfficeBusRoute) : null;
+    if (data.id && data.expectedUpdatedAt != null && before && before.updatedAt !== data.expectedUpdatedAt) {
+      throw new Error('This route changed in another window. Refresh it before saving.');
+    }
+    transaction.set(ref, payload, { merge: true });
+  });
+  await audit(ctx, {
+    entityType: 'officeBusRoute',
+    entityId: ref.id,
+    action: before ? 'update' : 'create',
+    summary: before ? `Updated bus route ${busLabel(data)}` : `Added bus route ${busLabel(data)}`,
+    before: before ? officeAuditSnapshot(before as unknown as Record<string, unknown>) : null,
+    after: officeAuditSnapshot(payload as unknown as Record<string, unknown>),
+  });
+  return ref.id;
+}
+
+export async function archiveOfficeBusRoute(ctx: OfficeWriteContext, route: OfficeBusRoute): Promise<void> {
+  if ((await activeRouteIds(ctx, [route.id])).has(route.id)) {
+    throw new Error('This bus is on the road. Wait until the run ends before removing its route.');
+  }
+  const fields = await archiveOfficeDoc(ctx, 'officeBusRoutes', route.id);
+  await audit(ctx, {
+    entityType: 'officeBusRoute',
+    entityId: route.id,
+    action: 'delete',
+    summary: `Removed bus route ${busLabel(route)}`,
+    before: officeAuditSnapshot(route as unknown as Record<string, unknown>),
+    after: officeAuditSnapshot(fields),
+  });
+}
+
+/** Sets how several students get home in one save (e.g. assigning riders to a route). */
+export async function setOfficeStudentsTransport(
+  ctx: OfficeWriteContext,
+  changes: Array<{
+    student: OfficeStudent;
+    studentName: string;
+    patch: Pick<OfficeStudent, 'transportMode' | 'busRouteId' | 'busStopId'>;
+  }>,
+  describe: (studentName: string) => string,
+): Promise<void> {
+  if (changes.length === 0) return;
+  if (changes.some((change) => change.patch.transportMode !== 'bus' && (change.patch.busRouteId || change.patch.busStopId))) {
+    throw new Error('Choose “Not set” before saving a different pickup plan.');
+  }
+  const busChanges = changes.filter((change) => change.patch.transportMode === 'bus');
+  const routeIds = [...new Set(busChanges.map((change) => change.patch.busRouteId).filter((id): id is string => !!id))];
+  const affectedRouteIds = [
+    ...new Set([...routeIds, ...changes.flatMap((change) => [change.student.busRouteId, change.patch.busRouteId].filter((id): id is string => !!id))]),
+  ];
+  const active = await activeRouteIds(ctx, affectedRouteIds);
+  if (changes.some((change) => active.has(change.student.busRouteId ?? '') || active.has(change.patch.busRouteId ?? ''))) {
+    throw new Error('A rider on that bus is currently on a run. Wait until the run ends before changing riders.');
+  }
+  if (busChanges.some((change) => !change.patch.busRouteId)) {
+    throw new Error('Choose a bus route before saving a bus rider.');
+  }
+  const routeSnaps = await Promise.all(routeIds.map((id) => getDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBusRoutes', id))));
+  const routesById = new Map(routeIds.map((id, index) => [id, routeSnaps[index]]));
+  for (const change of busChanges) {
+    const route = routesById.get(change.patch.busRouteId!);
+    const routeData = route?.data() as OfficeBusRoute | undefined;
+    if (!route?.exists() || routeData?.archived) throw new Error('That bus route is no longer available.');
+    if (change.patch.busStopId && !routeData?.stops?.some((stop: OfficeBusStop) => stop.id === change.patch.busStopId && !stop.isSchool)) {
+      throw new Error('Choose a current stop on this bus route.');
+    }
+  }
+
+  const now = Date.now();
+  const chunkSize = 400;
+  for (let start = 0; start < changes.length; start += chunkSize) {
+    const chunk = changes.slice(start, start + chunkSize);
+    const batch = writeBatch(ctx.firestore);
+    for (const c of chunk) {
+      batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', c.student.id), { ...c.patch, updatedAt: now });
+    }
+    await batch.commit();
+    for (const c of chunk) {
+      await audit(ctx, {
+        entityType: 'officeStudent',
+        entityId: c.student.id,
+        action: 'update',
+        summary: describe(c.studentName),
+        before: officeAuditSnapshot({
+          transportMode: c.student.transportMode ?? null,
+          busRouteId: c.student.busRouteId ?? null,
+          busStopId: c.student.busStopId ?? null,
+        }),
+        after: officeAuditSnapshot(c.patch as Record<string, unknown>),
+      });
+    }
+  }
+}
+
+/** @deprecated Trip writes go through /api/office/transport; these helpers remain for older callers. */
+function tripRef(ctx: OfficeWriteContext, tripId: string) {
+  return doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBusTrips', tripId);
+}
+
+function routeSnapshot(route: OfficeBusRoute): OfficeBusRouteSnapshot {
+  return {
+    name: route.name,
+    busNumber: route.busNumber ?? null,
+    color: route.color,
+    stops: route.stops ?? [],
+  };
+}
+
+/** Starts (or resumes) a run. A completed run is never overwritten. Returns the trip id. */
+export async function startOfficeBusTrip(
+  ctx: OfficeWriteContext,
+  route: OfficeBusRoute,
+  params: { tripId: string; date: string; run: OfficeBusRun },
+): Promise<string> {
+  const now = Date.now();
+  const riderSnapshot = riderSnapshotFromStudents(
+    (await getDocs(query(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents'), where('busRouteId', '==', route.id)))).docs.map((snap) => ({
+      ...(snap.data() as OfficeStudent),
+      id: snap.id,
+    })),
+  );
+  let tripId = params.tripId;
+  let resumed = false;
+
+  await runTransaction(ctx.firestore, async (transaction) => {
+    let ref = tripRef(ctx, tripId);
+    let snap = await transaction.get(ref);
+
+    // The normal id is one run per route/day. If it was already completed, make a new
+    // attempt instead of replacing the saved history (important for child safety records).
+    while (snap.exists() && snap.data().status === 'done') {
+      const suffix = `${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      tripId = `${params.tripId}_retry-${suffix}`;
+      ref = tripRef(ctx, tripId);
+      snap = await transaction.get(ref);
+    }
+
+    if (snap.exists()) {
+      const existingTrip = snap.data() as OfficeBusTrip;
+      transaction.update(ref, {
+        status: 'active',
+        endedAt: null,
+        updatedAt: now,
+        ...(existingTrip.routeSnapshot ? {} : { routeSnapshot: routeSnapshot(route) }),
+        ...(existingTrip.riderSnapshot ? {} : { riderSnapshot }),
+      });
+      resumed = true;
+    } else {
+      transaction.set(ref, {
+        routeId: route.id,
+        routeSnapshot: routeSnapshot(route),
+        riderSnapshot,
+        date: params.date,
+        run: params.run,
+        status: 'active',
+        driverName: ctx.changedBy?.trim() || route.driverName || null,
+        startedAt: now,
+        endedAt: null,
+        location: null,
+        stopArrivals: {},
+        riders: {},
+        alerts: [],
+        childCheckDone: null,
+        updatedAt: now,
+      } satisfies Omit<OfficeBusTrip, 'id'>);
+      resumed = false;
+    }
+  });
+
+  await audit(ctx, {
+    entityType: 'officeBusTrip',
+    entityId: tripId,
+    action: resumed ? 'update' : 'create',
+    summary: `${busLabel(route)} ${resumed ? 'resumed' : 'started'} the ${RUN_WORD[params.run]} run`,
+  });
+  return tripId;
+}
+
+/** Live position from the driver's phone. Sent often, so it is not written to the change history. */
+export async function updateOfficeBusTripLocation(
+  ctx: OfficeWriteContext,
+  tripId: string,
+  location: OfficeBusLocation,
+  reachedStopId?: string | null,
+): Promise<void> {
+  if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng) || location.lat < -90 || location.lat > 90 || location.lng < -180 || location.lng > 180) {
+    throw new Error('The bus location is outside the map.');
+  }
+  const patch: Record<string, unknown> = { location, updatedAt: Date.now() };
+  if (reachedStopId) patch[`stopArrivals.${reachedStopId}`] = location.at;
+  await updateDoc(tripRef(ctx, tripId), patch);
+}
+
+export async function setOfficeBusStopReached(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'routeSnapshot'>,
+  stopId: string,
+  reached: boolean,
+): Promise<void> {
+  assertSafeFieldId(stopId, 'Stop');
+  if (trip.routeSnapshot && !trip.routeSnapshot.stops?.some((stop) => stop.id === stopId)) {
+    throw new Error('That stop is not part of this saved run.');
+  }
+  await updateDoc(tripRef(ctx, trip.id), {
+    [`stopArrivals.${stopId}`]: reached ? Date.now() : deleteField(),
+    updatedAt: Date.now(),
+  });
+}
+
+const RIDER_WORD: Record<OfficeBusRiderStatus, string> = { on: 'got on', off: 'got off', absent: 'was marked not riding' };
+
+/** Who got on or off. Filed under the student so it shows on their card's History. */
+export async function setOfficeBusRiders(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'run' | 'riderSnapshot'>,
+  route: OfficeBusRoute,
+  changes: Array<{ studentId: string; studentName: string; status: OfficeBusRiderStatus | null }>,
+): Promise<void> {
+  if (changes.length === 0) return;
+  if (trip.riderSnapshot) {
+    const allowed = new Set(trip.riderSnapshot);
+    if (changes.some((change) => !allowed.has(change.studentId))) {
+      throw new Error('That student was not assigned to this bus when the run began.');
+    }
+  }
+  const now = Date.now();
+  const patch: Record<string, unknown> = { updatedAt: now };
+  for (const c of changes) {
+    assertSafeFieldId(c.studentId, 'Student');
+    patch[`riders.${c.studentId}`] = c.status ? { status: c.status, at: now } : deleteField();
+  }
+  await updateDoc(tripRef(ctx, trip.id), patch);
+  for (const c of changes) {
+    await audit(ctx, {
+      entityType: 'officeBusTrip',
+      entityId: c.studentId,
+      action: 'update',
+      summary: c.status
+        ? `${c.studentName} ${RIDER_WORD[c.status]} ${busLabel(route)} (${RUN_WORD[trip.run]})`
+        : `Cleared ${c.studentName}'s ride mark on ${busLabel(route)} (${RUN_WORD[trip.run]})`,
+      after: officeAuditSnapshot({ tripId: trip.id, status: c.status }),
+    });
+  }
+}
+
+export async function addOfficeBusTripAlert(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'run'>,
+  route: OfficeBusRoute,
+  alert: Omit<OfficeBusTripAlert, 'id' | 'at' | 'by'>,
+): Promise<void> {
+  if (!['delay', 'breakdown', 'accident', 'behavior', 'other'].includes(alert.kind)) throw new Error('Choose a valid problem type.');
+  if (alert.message && alert.message.length > 500) throw new Error('Keep the problem note under 500 characters.');
+  if (alert.minutes != null && (!Number.isInteger(alert.minutes) || alert.minutes < 1 || alert.minutes > 240)) {
+    throw new Error('Delay must be between 1 and 240 minutes.');
+  }
+  const entry: OfficeBusTripAlert = {
+    ...alert,
+    id: `alert-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    at: Date.now(),
+    by: ctx.changedBy?.trim() || null,
+  };
+  await updateDoc(tripRef(ctx, trip.id), { alerts: arrayUnion(entry), updatedAt: Date.now() });
+  await audit(ctx, {
+    entityType: 'officeBusTrip',
+    entityId: trip.id,
+    action: 'update',
+    summary: `${busLabel(route)} reported: ${alert.kind === 'delay' ? `running late${alert.minutes ? ` (${alert.minutes} min)` : ''}` : alert.kind}${alert.message ? ` — ${alert.message}` : ''}`,
+    after: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
+  });
+}
+
+export async function endOfficeBusTrip(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'run'>,
+  route: OfficeBusRoute,
+  childCheckDone: boolean,
+): Promise<void> {
+  const now = Date.now();
+  const snap = await getDoc(tripRef(ctx, trip.id));
+  if (!snap.exists() || snap.data().status !== 'active') throw new Error('This bus run is not active.');
+  const riders = (snap.data().riders ?? {}) as Record<string, { status?: string }>;
+  if (Object.values(riders).some((rider) => rider.status === 'on')) {
+    throw new Error('Mark every rider off before ending the run.');
+  }
+  if (!childCheckDone) throw new Error('Confirm that you walked the bus before ending the run.');
+  await updateDoc(tripRef(ctx, trip.id), { status: 'done', endedAt: now, childCheckDone, updatedAt: now });
+  await audit(ctx, {
+    entityType: 'officeBusTrip',
+    entityId: trip.id,
+    action: 'update',
+    summary: `${busLabel(route)} finished the ${RUN_WORD[trip.run]} run${childCheckDone ? ' · bus checked, nobody left on' : ' · end-of-run bus check not confirmed'}`,
   });
 }
 

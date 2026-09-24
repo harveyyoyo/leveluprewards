@@ -26,6 +26,8 @@ export type OfficeFamilyContact = {
   phone?: string | null;
   email?: string | null;
   isPrimary?: boolean;
+  /** Undefined means allowed; false blocks bus release confirmation. */
+  pickupAuthorized?: boolean;
   notes?: string | null;
 };
 
@@ -85,6 +87,12 @@ export type OfficeStudent = {
   allergies?: string | null;
   healthNotes?: string | null;
   pickupNotes?: string | null;
+  /** How the student gets to and from school (Transportation page). Unset = not chosen yet. */
+  transportMode?: OfficeTransportMode | null;
+  /** Bus route they ride (`officeBusRoutes` doc id) when `transportMode` is `bus`. */
+  busRouteId?: string | null;
+  /** Their stop on that route (`OfficeBusStop.id`). */
+  busStopId?: string | null;
   /** Values for school-defined fields, keyed by `OfficeCustomFieldDef.id`. */
   customFields?: Record<string, OfficeCustomFieldValue> | null;
   updatedAt: number;
@@ -161,6 +169,146 @@ export type OfficeDeskLogEntry = {
   createdAt: number;
   archived?: boolean;
   archivedAt?: number;
+};
+
+export type OfficeTransportMode = 'bus' | 'car' | 'walk' | 'aftercare';
+
+/** One pickup / drop-off point on a bus route. */
+export type OfficeBusStop = {
+  id: string;
+  name: string;
+  address?: string | null;
+  lat: number;
+  lng: number;
+  /** Planned morning time, 24-hour "HH:MM". */
+  amTime?: string | null;
+  /** Planned afternoon time, 24-hour "HH:MM". */
+  pmTime?: string | null;
+  /** The school itself: the end of the morning run and the start of the afternoon run. */
+  isSchool?: boolean;
+};
+
+export type OfficeBusVehicleDetails = {
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  plate?: string | null;
+  vin?: string | null;
+  inspectionDue?: string | null;
+  insuranceDue?: string | null;
+  notes?: string | null;
+};
+
+/** A bus route (`schools/{id}/officeBusRoutes`). Morning runs the stops in order, afternoon in reverse. */
+export type OfficeBusRoute = {
+  id: string;
+  name: string;
+  busNumber?: string | null;
+  /** Hex colour for the map and chips. */
+  color: string;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  /** Seats on the bus; used for the "full" warning only. */
+  capacity?: number | null;
+  /** Optional vehicle identity and maintenance dates. */
+  vehicle?: OfficeBusVehicleDetails | null;
+  stops: OfficeBusStop[];
+  notes?: string | null;
+  updatedAt: number;
+  updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+/** The route details needed to read a past trip after the route is edited or removed. */
+export type OfficeBusRouteSnapshot = Pick<OfficeBusRoute, 'name' | 'busNumber' | 'color' | 'vehicle' | 'stops'>;
+
+export type OfficeBusRun = 'am' | 'pm';
+export type OfficeBusRiderStatus = 'on' | 'off' | 'absent';
+export type OfficeBusAlertKind = 'delay' | 'breakdown' | 'accident' | 'behavior' | 'other';
+
+export type OfficeBusTripAlert = {
+  id: string;
+  kind: OfficeBusAlertKind;
+  message?: string | null;
+  /** Delay reports: extra minutes expected. */
+  minutes?: number | null;
+  at: number;
+  by?: string | null;
+};
+
+export type OfficeBusLocation = {
+  lat: number;
+  lng: number;
+  /** Metres. */
+  accuracy?: number | null;
+  /** Metres per second. */
+  speed?: number | null;
+  heading?: number | null;
+  at: number;
+};
+
+export type OfficeBusReleaseMethod = 'authorized_contact' | 'id_checked' | 'office_override';
+
+export type OfficeBusRelease = {
+  studentId: string;
+  contactId?: string | null;
+  contactName: string;
+  method: OfficeBusReleaseMethod;
+  note?: string | null;
+  occurredAt: number;
+  by: string;
+};
+
+export type OfficeBusEvent =
+  | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
+  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string }
+  | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string };
+
+export type OfficeBusRiderManifestEntry = {
+  studentId: string;
+  displayName: string;
+  familyId?: string | null;
+  busStopId?: string | null;
+};
+
+/**
+ * One bus run on one day (`schools/{id}/officeBusTrips`, id starts with `{date}_{routeId}_{run}`):
+ * live location, stops reached, and who got on and off. Never erased or overwritten.
+ */
+export type OfficeBusTrip = {
+  id: string;
+  routeId: string;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  run: OfficeBusRun;
+  /** Keeps old history readable if the route is later renamed, moved, or removed. */
+  routeSnapshot?: OfficeBusRouteSnapshot | null;
+  /** Student ids assigned when the run began, so later roster edits do not change this run. */
+  riderSnapshot?: string[] | null;
+  /** Immutable names, family links, and stops captured when the run began. */
+  riderManifest?: OfficeBusRiderManifestEntry[] | null;
+  /** Retry bookkeeping lives on the base trip so concurrent starts cannot create two active runs. */
+  retryCount?: number;
+  activeRetryId?: string | null;
+  status: 'active' | 'done';
+  driverId?: string | null;
+  driverName?: string | null;
+  startedAt: number;
+  endedAt?: number | null;
+  location?: OfficeBusLocation | null;
+  /** stopId -> time the bus reached it. */
+  stopArrivals?: Record<string, number> | null;
+  /** studentId -> latest status on this run. */
+  riders?: Record<string, { status: OfficeBusRiderStatus; at: number }> | null;
+  /** Release confirmation for each rider who was marked off. */
+  releases?: Record<string, OfficeBusRelease> | null;
+  alerts?: OfficeBusTripAlert[] | null;
+  /** Append-only rider and stop events kept for the safety record. */
+  events?: OfficeBusEvent[] | null;
+  /** Driver walked the bus at the end and confirmed nobody was left on. */
+  childCheckDone?: boolean | null;
+  updatedAt: number;
 };
 
 export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -262,6 +410,7 @@ export type OfficeInvoiceInput = Omit<OfficeInvoice, 'id' | 'createdAt' | 'paidA
 export type OfficeFeatureFlags = {
   familyProfiles?: boolean;
   studentPhotos?: boolean;
+  /** Bus fields on families and students, and the Transportation page. */
   busInfo?: boolean;
   medicalNotes?: boolean;
   aiHelp?: boolean;
@@ -289,6 +438,8 @@ export type OfficeAuditEntityType =
   | 'officePayment'
   | 'officeAttendanceEntry'
   | 'officeDeskLog'
+  | 'officeBusRoute'
+  | 'officeBusTrip'
   | 'officeForm'
   | 'officeEvent'
   | 'officeStudentDocument'
@@ -374,6 +525,8 @@ export type OfficeSettings = {
   features?: OfficeFeatureFlags | null;
   /** Extra student fields this school added in Settings. */
   studentCustomFields?: OfficeCustomFieldDef[] | null;
+  /** Where the school is, so the Transportation map opens there. */
+  transportSchoolLocation?: { address?: string | null; lat: number; lng: number } | null;
   updatedAt: number;
   updatedBy?: string | null;
 };
