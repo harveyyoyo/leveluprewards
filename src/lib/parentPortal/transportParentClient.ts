@@ -1,3 +1,10 @@
+export type TransportParentArrivalPreferences = {
+  email: boolean;
+  sms: boolean;
+  whatsapp: boolean;
+  updatedAt: number;
+};
+
 export type TransportParentBus = {
   routeId: string;
   busLabel: string;
@@ -12,6 +19,7 @@ export type TransportParentBus = {
 
 export type TransportParentStatus = {
   familyName: string;
+  arrivalPreferences: TransportParentArrivalPreferences;
   buses: TransportParentBus[];
   checkedAt: number;
 };
@@ -38,6 +46,19 @@ export async function fetchTransportParentStatus(schoolId: string) {
     cache: 'no-store',
   });
   return readJson<TransportParentStatus>(response);
+}
+
+export async function updateTransportParentPreferences(
+  schoolId: string,
+  preferences: Pick<TransportParentArrivalPreferences, 'email' | 'sms' | 'whatsapp'>,
+) {
+  const response = await fetch('/api/office/transport/parent-preferences', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ schoolId, ...preferences }),
+  });
+  return readJson<{ ok: boolean; arrivalPreferences: TransportParentArrivalPreferences }>(response);
 }
 
 export async function signOutTransportParent() {

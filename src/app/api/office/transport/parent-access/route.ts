@@ -118,6 +118,7 @@ async function createAccess(auth: AuthContext, schoolId: string, body: Body) {
     updatedAt: now,
     updatedBy: auth.uid,
     consentVersion: 1,
+    arrivalPreferences: { email: false, sms: false, whatsapp: false, updatedAt: now },
     codeHash: codeHash(code),
     codeHint: code.slice(-4),
   };

@@ -578,6 +578,7 @@ export function exampleRoutes(school: LatLng): Array<Omit<OfficeBusRoute, 'id' |
     driverPhone: null,
     capacity: 48,
     notifyFamiliesOnAlert: false,
+    notifyFamiliesOnArrival: false,
     requireReleaseConfirmations: false,
     notes: null,
     stops: [

@@ -245,6 +245,8 @@ export type OfficeBusRoute = {
   vehicle?: OfficeBusVehicleDetails | null;
   /** When enabled, a driver problem report queues an update for opted-in family contacts. */
   notifyFamiliesOnAlert?: boolean;
+  /** When enabled, a confirmed stop arrival can queue one message for opted-in family contacts. */
+  notifyFamiliesOnArrival?: boolean;
   /** When enabled, every rider marked off needs a recorded release before the run ends. */
   requireReleaseConfirmations?: boolean;
   stops: OfficeBusStop[];

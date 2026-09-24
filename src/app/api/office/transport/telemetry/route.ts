@@ -2,8 +2,9 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import { queueOfficeArrivalNotifications, type ArrivalNotificationStatus } from '@/lib/server/officeArrivalNotifications';
 import { distanceMeters, nextStop, STOP_ARRIVAL_RADIUS_M } from '@/lib/office/officeTransport';
-import type { OfficeBusGpsDevice, OfficeBusLocation, OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
+import type { OfficeBusGpsDevice, OfficeBusLocation, OfficeBusRoute, OfficeBusStop, OfficeBusTrip } from '@/lib/office/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,6 +114,10 @@ function routeForTelemetry(trip: OfficeBusTrip): OfficeBusRoute | null {
   };
 }
 
+function arrivalEventId(schoolId: string, tripId: string, stopId: string, receivedAt: number): string {
+  return `arr_${createHash('sha256').update(`${schoolId}|${tripId}|${stopId}|${receivedAt}`).digest('hex').slice(0, 48)}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Body;
@@ -123,14 +128,16 @@ export async function POST(req: NextRequest) {
     const tripId = stringValue(body.tripId, 'Trip', 120);
     if (!/^[A-Za-z0-9_-]+$/.test(tripId)) throw new Error('Trip is invalid.');
     const sample = parseSample(body);
-    const tripRef = db.collection('schools').doc(schoolId).collection('officeBusTrips').doc(tripId);
-    const locationRef = db.collection('schools').doc(schoolId).collection('officeBusGpsLocations').doc(auth.id);
-    const deviceRef = db.collection('schools').doc(schoolId).collection('officeBusGpsDevices').doc(auth.id);
-    const keyRef = db.collection('schools').doc(schoolId).collection('officeBusGpsDeviceKeys').doc(auth.id);
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const tripRef = schoolRef.collection('officeBusTrips').doc(tripId);
+    const locationRef = schoolRef.collection('officeBusGpsLocations').doc(auth.id);
+    const deviceRef = schoolRef.collection('officeBusGpsDevices').doc(auth.id);
+    const keyRef = schoolRef.collection('officeBusGpsDeviceKeys').doc(auth.id);
     const receivedAt = Date.now();
     let duplicate = false;
     let ignored = false;
     let arrivedStopId: string | null = null;
+    const arrivalContext: { eventId: string | null; trip: OfficeBusTrip | null; stop: OfficeBusStop | null } = { eventId: null, trip: null, stop: null };
     await db.runTransaction(async (transaction) => {
       const [tripSnap, locationSnap, deviceSnap, keySnap] = await Promise.all([transaction.get(tripRef), transaction.get(locationRef), transaction.get(deviceRef), transaction.get(keyRef)]);
       const currentDevice = deviceSnap.exists ? ({ id: deviceSnap.id, ...deviceSnap.data() } as OfficeBusGpsDevice) : null;
@@ -191,13 +198,59 @@ export async function POST(req: NextRequest) {
       transaction.update(deviceRef, { lastSeenAt: receivedAt, lastSequence: sample.sequence, updatedAt: receivedAt, updatedBy: 'gps_device' });
       const tripPatch: Record<string, unknown> = { location, locationSource: 'gps_device', updatedAt: receivedAt };
       if (shouldArrive && next) {
+        arrivalContext.eventId = arrivalEventId(schoolId, tripId, next.id, receivedAt);
+        arrivalContext.trip = trip;
+        arrivalContext.stop = next;
         tripPatch[`stopArrivals.${next.id}`] = receivedAt;
         tripPatch[`stopArrivalDetails.${next.id}`] = { at: receivedAt, source: 'gps_device', deviceId: auth.id, sampleId: sample.sampleId, accuracyM: sample.accuracyM, distanceM };
         tripPatch.events = FieldValue.arrayUnion({ kind: 'stop', stopId: next.id, reached: true, at: receivedAt, by: 'gps_device', source: 'gps_device', deviceId: auth.id, sampleId: sample.sampleId, accuracyM: sample.accuracyM, distanceM });
+        transaction.set(schoolRef.collection('officeBusArrivalEvents').doc(arrivalContext.eventId), {
+          id: arrivalContext.eventId,
+          tripId,
+          routeId: trip.routeId,
+          stopId: next.id,
+          stopName: next.name,
+          arrivedAt: receivedAt,
+          source: 'gps_device',
+          deviceId: auth.id,
+          sampleId: sample.sampleId,
+          accuracyM: sample.accuracyM,
+          distanceM,
+          notificationStatus: 'pending',
+          createdAt: receivedAt,
+        });
       }
       transaction.update(tripRef, tripPatch);
     });
-    return NextResponse.json({ ok: true, duplicate, ignored, arrivedStopId, receivedAt }, { headers: { 'Cache-Control': 'no-store' } });
+    let notificationsQueued = 0;
+    let notificationStatus: ArrivalNotificationStatus = 'not_configured';
+    if (arrivalContext.eventId && arrivalContext.trip && arrivalContext.stop) {
+      try {
+        const currentRouteSnap = await schoolRef.collection('officeBusRoutes').doc(arrivalContext.trip.routeId).get();
+        const currentRoute = currentRouteSnap.exists ? ({ id: currentRouteSnap.id, ...currentRouteSnap.data() } as OfficeBusRoute) : null;
+        if (currentRoute) {
+          const result = await queueOfficeArrivalNotifications({
+            db,
+            schoolId,
+            eventId: arrivalContext.eventId,
+            tripId,
+            route: currentRoute,
+            stop: arrivalContext.stop,
+            receivedAt,
+            riderManifest: arrivalContext.trip.riderManifest ?? [],
+          });
+          notificationsQueued = result.queued;
+          notificationStatus = result.status;
+          await schoolRef.collection('officeBusArrivalEvents').doc(arrivalContext.eventId).update({ notificationStatus, notificationsQueued, notificationUpdatedAt: Date.now() });
+        }
+      } catch {
+        notificationStatus = 'failed';
+        if (arrivalContext.eventId) {
+          await schoolRef.collection('officeBusArrivalEvents').doc(arrivalContext.eventId).update({ notificationStatus: 'failed', notificationUpdatedAt: Date.now() }).catch(() => undefined);
+        }
+      }
+    }
+    return NextResponse.json({ ok: true, duplicate, ignored, arrivedStopId, arrivalEventId: arrivalContext.eventId, notificationsQueued, notificationStatus, receivedAt }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not accept the GPS update.';
     return NextResponse.json({ error: message }, { status: errorStatus(message), headers: { 'Cache-Control': 'no-store' } });

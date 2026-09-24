@@ -1,5 +1,12 @@
 export type OfficeTransportParentAccessStatus = 'active' | 'revoked';
 
+export type OfficeTransportArrivalPreferences = {
+  email: boolean;
+  sms: boolean;
+  whatsapp: boolean;
+  updatedAt: number;
+};
+
 export type OfficeTransportParentAccess = {
   id: string;
   familyId: string;
@@ -13,6 +20,7 @@ export type OfficeTransportParentAccess = {
   updatedAt: number;
   updatedBy: string;
   consentVersion: number;
+  arrivalPreferences: OfficeTransportArrivalPreferences;
 };
 
 export const TRANSPORT_PARENT_ACCESS_DEFAULT_DAYS = 30;
@@ -40,5 +48,6 @@ export function transportParentAccessSafeSummary(
     lastUsedAt: access.lastUsedAt ?? null,
     revokedAt: access.revokedAt ?? null,
     consentVersion: access.consentVersion,
+    arrivalPreferences: access.arrivalPreferences ?? { email: false, sms: false, whatsapp: false, updatedAt: access.updatedAt },
   };
 }

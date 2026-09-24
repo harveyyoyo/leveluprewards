@@ -27,6 +27,7 @@ type AccessSummary = {
   lastUsedAt: number | null;
   revokedAt: number | null;
   consentVersion: number;
+  arrivalPreferences: { email: boolean; sms: boolean; whatsapp: boolean; updatedAt: number };
 };
 
 type AccessResponse = { accesses?: AccessSummary[]; access?: AccessSummary; code?: string; error?: string };
@@ -38,6 +39,11 @@ function familyHasBusStudent(familyId: string, students: OfficeStudent[]): boole
 function dateLabel(value: number | null): string {
   if (!value) return 'Never';
   return new Date(value).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function preferenceLabel(preferences: AccessSummary['arrivalPreferences']): string {
+  const choices = [preferences.email && 'email', preferences.sms && 'text', preferences.whatsapp && 'WhatsApp'].filter(Boolean);
+  return choices.length > 0 ? `Messages: ${choices.join(', ')}` : 'Arrival messages off';
 }
 
 export function OfficeTransportParentAccessPanel({ schoolId, familyById, students, isLoading: parentLoading = false }: Props) {
@@ -180,7 +186,7 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
         <ul className="space-y-2">
           {accesses.map((access) => (
             <li key={access.id} className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5 text-sm dark:border-slate-800">
-              <div className="min-w-[180px] flex-1"><p className="font-medium">{access.familyName || access.label}</p><p className="text-xs text-muted-foreground">{access.status === 'revoked' ? `Revoked ${dateLabel(access.revokedAt)}` : `Expires ${dateLabel(access.expiresAt)} · Last used ${dateLabel(access.lastUsedAt)}`}</p></div>
+              <div className="min-w-[180px] flex-1"><p className="font-medium">{access.familyName || access.label}</p><p className="text-xs text-muted-foreground">{access.status === 'revoked' ? `Revoked ${dateLabel(access.revokedAt)}` : `Expires ${dateLabel(access.expiresAt)} · Last used ${dateLabel(access.lastUsedAt)}`}</p><p className="text-xs text-muted-foreground">{preferenceLabel(access.arrivalPreferences)}</p></div>
               {access.status === 'active' ? <Button type="button" variant="ghost" size="sm" className="gap-1.5 rounded-lg text-red-700 disabled:opacity-50 dark:text-red-400" disabled={busy} onClick={() => void revoke(access)}><Trash2 className="h-3.5 w-3.5" /> Revoke</Button> : <span className="text-xs text-muted-foreground">No longer active</span>}
             </li>
           ))}

@@ -17,6 +17,7 @@ const SUBCOLLECTIONS = [
   "officeBusRoutes",
   "officeBusTrips",
   "officeBusGpsDevices",
+  "officeBusArrivalEvents",
   // Private family bus access codes are intentionally not copied into ordinary backups.
 ];
 const RETENTION_DAYS = 30;

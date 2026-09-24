@@ -90,6 +90,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       familyName: family.displayName,
+      arrivalPreferences: access.arrivalPreferences ?? { email: false, sms: false, whatsapp: false, updatedAt: access.updatedAt },
       buses: buses.filter((bus): bus is NonNullable<typeof bus> => bus !== null),
       checkedAt: Date.now(),
     }, { headers: noStore() });

@@ -127,6 +127,7 @@ function assertRoute(route: OfficeBusRoute): void {
     throw new Error('Bus capacity is invalid.');
   }
   if (route.notifyFamiliesOnAlert != null && typeof route.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
+  if (route.notifyFamiliesOnArrival != null && typeof route.notifyFamiliesOnArrival !== 'boolean') throw new Error('Arrival notification choice is invalid.');
   if (route.requireReleaseConfirmations != null && typeof route.requireReleaseConfirmations !== 'boolean') throw new Error('Release confirmation choice is invalid.');
   assertVehicle(route.vehicle);
   if (!Array.isArray(route.stops) || route.stops.length > MAX_STOPS) throw new Error('This route has too many stops.');

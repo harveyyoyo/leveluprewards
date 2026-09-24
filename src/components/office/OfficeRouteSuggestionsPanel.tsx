@@ -125,6 +125,7 @@ export function OfficeRouteSuggestionsPanel({ schoolId, school, routes, onRouteC
         capacity: Math.min(200, Math.max(1, Math.round(suggestion.capacity))),
         vehicle: null,
         notifyFamiliesOnAlert: false,
+        notifyFamiliesOnArrival: false,
         requireReleaseConfirmations: false,
         stops: [...(pickupStop ? [pickupStop] : []), schoolStop(school)],
         notes: 'Draft created from family roster suggestions. No riders are assigned.',

@@ -13,6 +13,7 @@ describe('transport parent access', () => {
     const access: OfficeTransportParentAccess = {
       id: 'access-1', familyId: 'family-1', label: 'Bus access', status: 'active', createdAt: 1,
       createdBy: 'staff', expiresAt: 10, updatedAt: 1, updatedBy: 'staff', consentVersion: 1,
+      arrivalPreferences: { email: false, sms: false, whatsapp: false, updatedAt: 1 },
     };
     const summary = transportParentAccessSafeSummary(access, 'Klein family');
     expect(summary).toEqual(expect.objectContaining({ id: 'access-1', familyName: 'Klein family', status: 'active' }));

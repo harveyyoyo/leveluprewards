@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BusFront, Clock3, Loader2, LogOut, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,8 @@ import {
   fetchTransportParentStatus,
   signInTransportParent,
   signOutTransportParent,
+  updateTransportParentPreferences,
+  type TransportParentArrivalPreferences,
   type TransportParentStatus,
 } from '@/lib/parentPortal/transportParentClient';
 import { cn } from '@/lib/utils';
@@ -29,6 +32,9 @@ export default function TransportParentPage() {
   const [signingIn, setSigningIn] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<TransportParentArrivalPreferences>({ email: false, sms: false, whatsapp: false, updatedAt: 0 });
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [preferencesSaved, setPreferencesSaved] = useState(false);
 
   const loadStatus = useCallback(async () => {
     if (!schoolId) return;
@@ -66,6 +72,29 @@ export default function TransportParentPage() {
       setError(cause instanceof Error ? cause.message : 'That bus access code could not be used.');
     } finally {
       setSigningIn(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status?.arrivalPreferences) setPreferences(status.arrivalPreferences);
+  }, [status]);
+
+  const savePreferences = async () => {
+    setSavingPreferences(true);
+    setPreferencesSaved(false);
+    setError(null);
+    try {
+      const result = await updateTransportParentPreferences(schoolId, {
+        email: preferences.email,
+        sms: preferences.sms,
+        whatsapp: preferences.whatsapp,
+      });
+      setPreferences(result.arrivalPreferences);
+      setPreferencesSaved(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save bus message choices.');
+    } finally {
+      setSavingPreferences(false);
     }
   };
 
@@ -151,6 +180,22 @@ export default function TransportParentPage() {
                 ))}
               </div>
             )}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Arrival messages</CardTitle>
+                <CardDescription>These choices are off unless you turn them on. The school must also turn on arrival messages for the route and connect its delivery service.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.email} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, email: checked === true }))} disabled={savingPreferences} /> Email arrival messages</label>
+                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.sms} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, sms: checked === true }))} disabled={savingPreferences} /> Text arrival messages</label>
+                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.whatsapp} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, whatsapp: checked === true }))} disabled={savingPreferences} /> WhatsApp arrival messages</label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" className="rounded-xl" onClick={() => void savePreferences()} disabled={savingPreferences}>{savingPreferences ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</> : 'Save message choices'}</Button>
+                  {preferencesSaved ? <span className="text-sm text-teal-700 dark:text-teal-300">Choices saved.</span> : null}
+                </div>
+                <p className="text-xs text-muted-foreground">Messages are about the bus and stop only. They do not report that a child got on or off.</p>
+              </CardContent>
+            </Card>
             {error ? <p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">{error}</p> : null}
           </div>
         ) : (

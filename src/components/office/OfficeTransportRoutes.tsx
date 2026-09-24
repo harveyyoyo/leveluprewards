@@ -211,6 +211,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
                     {lastService ? <span className="mt-1 block text-xs text-muted-foreground">Last service: {lastService}</span> : null}
                     {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
+                    {route.notifyFamiliesOnArrival ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Arrival messages on</span> : null}
                     {route.requireReleaseConfirmations ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Release check required</span> : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
@@ -298,6 +299,7 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     capacity: null,
     vehicle: {},
     notifyFamiliesOnAlert: false,
+    notifyFamiliesOnArrival: false,
     requireReleaseConfirmations: false,
     stops: [],
     notes: '',
