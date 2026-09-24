@@ -20,7 +20,9 @@ import {
 import {
   getFirestore,
   initializeFirestore,
+  memoryLocalCache,
   persistentLocalCache,
+  persistentMultipleTabManager,
   connectFirestoreEmulator,
 } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
@@ -77,8 +79,11 @@ export function getSdks(firebaseApp: FirebaseApp) {
     if (useEmulators) {
       firestore = getFirestore(firebaseApp);
     } else if (isBrowser) {
+      const localHost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
       firestore = initializeFirestore(firebaseApp, {
-        localCache: persistentLocalCache(),
+        // The local browser has several development tabs open. Memory cache avoids a known
+        // Firestore v11 persistent-cache assertion crash during listener setup/teardown.
+        localCache: localHost ? memoryLocalCache() : persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
       });
     } else {
       firestore = getFirestore(firebaseApp);
