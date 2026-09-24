@@ -643,6 +643,38 @@ function ClassroomPointsPanelInner({
     [classStudents],
   );
 
+  const themeKitStyle = useMemo(() => {
+    const s = prefs.themeKitSettings;
+    if (!s) return undefined;
+    const style: React.CSSProperties = {};
+    if (s.bodyFont && s.bodyFont !== 'Theme default') {
+      style.fontFamily = `'${s.bodyFont}', sans-serif`;
+    }
+    const filterParts: string[] = [];
+    if (s.darkMode) {
+      const totalHue = (180 + (s.hue || 0)) % 360;
+      filterParts.push(`invert(0.92) hue-rotate(${totalHue}deg) saturate(${Math.round((s.vivid || 100) * 1.05)}%)`);
+    } else if (s.hue !== 0 || s.vivid !== 100) {
+      if (s.hue) filterParts.push(`hue-rotate(${s.hue}deg)`);
+      if (s.vivid && s.vivid !== 100) filterParts.push(`saturate(${s.vivid}%)`);
+    }
+    if (filterParts.length > 0) {
+      style.filter = filterParts.join(' ');
+    }
+    return Object.keys(style).length > 0 ? style : undefined;
+  }, [prefs.themeKitSettings]);
+
+  const customFontLink = useMemo(() => {
+    const s = prefs.themeKitSettings;
+    if (!s) return null;
+    const fonts = [s.headingFont, s.bodyFont].filter((f) => f && f !== 'Theme default');
+    if (!fonts.length) return null;
+    const href = `https://fonts.googleapis.com/css2?${fonts
+      .map((f) => `family=${f.replaceAll(' ', '+')}:wght@400;600;700`)
+      .join('&')}&display=swap`;
+    return <link rel="stylesheet" href={href} />;
+  }, [prefs.themeKitSettings]);
+
   const studentById = useMemo(() => {
     const map = new Map<string, Student>();
     classStudents.forEach((s) => map.set(s.id, s));
@@ -2476,14 +2508,17 @@ function ClassroomPointsPanelInner({
 
   return (
     <div
+      style={themeKitStyle}
       className={cn(
         'classroom-native-colors classroom-readable',
-        design !== 'midnight' && 'text-foreground',
+        prefs.themeKitSettings?.darkMode && 'dark',
+        design !== 'midnight' && !prefs.themeKitSettings?.darkMode && 'text-foreground',
         classroomDesignShellClass(design, isFullscreen),
         isFullscreen && 'h-full min-h-0 w-full gap-0 p-0',
         !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-1 flex-col',
       )}
     >
+      {customFontLink}
       {isStudentAudience && effectiveClassName ? (
         <div className="shrink-0 px-3 py-2 text-center">
           <p className="classroom-readable text-base font-bold tracking-normal text-foreground">

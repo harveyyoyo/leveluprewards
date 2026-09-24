@@ -22,28 +22,28 @@
 <body class="dmsans text-[#3B3222]">
 <div class="flex h-full">
 
-  <!-- SIDEBAR : game box lid -->
+  <!-- SIDEBAR : classroom controls -->
   <aside class="w-[290px] shrink-0 flex flex-col px-5 pt-6 pb-5 bg-[#EDE4CE] border-r-4 border-[#D8C9A6]">
     <div class="mat px-5 py-5 mb-4">
-      <div class="grotesk text-[24px] font-bold leading-tight text-[#2E2716]">Game Night</div>
-      <div class="mt-1 text-[11px] font-bold uppercase tracking-[0.25em] text-[#B08D3E]">roll to play</div>
+      <div class="grotesk text-[24px] font-bold leading-tight text-[#2E2716]">Classroom Tools</div>
+      <div class="mt-1 text-[11px] font-bold uppercase tracking-[0.25em] text-[#B08D3E]">Level Up Rewards</div>
     </div>
 
-    <div class="mat px-5 py-4 mb-4 flex items-center gap-4">
-      <div class="die"><span class="pip"></span><span></span><span class="pip"></span><span></span><span class="pip"></span><span></span><span class="pip"></span><span></span><span class="pip"></span></div>
+    <div class="mat px-5 py-4 mb-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-b from-[#5FC4A0] to-[#3BA57F] text-white flex items-center justify-center grotesk font-bold text-xs chip">🏆</div>
       <div class="flex-1">
-        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Roll the die</div>
-        <div class="text-[11px] font-bold text-[#2E2716] mt-0.5">Sarah O'Neill's turn</div>
+        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Class Goal</div>
+        <div class="text-[11px] font-bold text-[#2E2716] mt-0.5">850 / 1000 PTS (85%)</div>
       </div>
     </div>
 
     <div class="flex-1 space-y-5 overflow-hidden px-1">
-      <button class="btn3d w-full py-4 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white grotesk font-bold text-sm tracking-wide">🎪 Arrange Seats</button>
+      <button class="btn3d w-full py-4 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white grotesk font-bold text-sm tracking-wide">Arrange Seats</button>
 
       <div>
         <div class="flex items-center justify-between mb-3 px-1">
-          <span class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Move Tokens</span>
-          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#C43D2E] text-white px-2 py-1 rounded-full chip">+5 steps</span>
+          <span class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Add Points</span>
+          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#C43D2E] text-white px-2 py-1 rounded-full chip">+5 to class</span>
         </div>
         <div class="grid grid-cols-3 gap-3">
           <button class="btn3d py-3 bg-gradient-to-b from-[#FFE9B8] to-[#FFD57E] text-[#7A5410] grotesk font-bold">+1</button>
@@ -60,7 +60,7 @@
       </div>
 
       <div>
-        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A] mb-2 px-1">⏳ Sand Timer</div>
+        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A] mb-2 px-1">⏳ Focus Timer</div>
         <div class="mat p-4 text-center">
           <div class="grotesk text-[38px] font-bold text-[#2E2716] leading-none">15:00</div>
           <div class="flex gap-2 mt-3">
@@ -71,7 +71,7 @@
       </div>
     </div>
 
-    <button class="btn3d w-full py-3.5 mt-4 bg-gradient-to-b from-[#FFFCF2] to-[#EFE4CC] text-[#8A7A5A] grotesk font-bold text-xs uppercase tracking-widest">📖 Rulebook</button>
+    <button class="btn3d w-full py-3.5 mt-4 bg-gradient-to-b from-[#FFFCF2] to-[#EFE4CC] text-[#8A7A5A] grotesk font-bold text-xs uppercase tracking-widest">⚙️ Room Settings</button>
   </aside>
 
   <!-- CANVAS : the board -->
@@ -92,8 +92,8 @@
       <div class="board-path -top-1" aria-hidden="true"></div>
       <div class="flex justify-center mb-9">
         <div class="mat px-12 py-4 text-center relative">
-          <div class="absolute -top-3 -left-3 w-9 h-9 rounded-xl bg-gradient-to-b from-[#5FC4A0] to-[#3BA57F] text-white grotesk font-bold text-[9px] flex items-center justify-center rotate-[-8deg] chip">GO</div>
-          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] text-[#B08D3E]">Start space</div>
+          <div class="absolute -top-3 -left-3 w-9 h-9 rounded-xl bg-gradient-to-b from-[#5FC4A0] to-[#3BA57F] text-white grotesk font-bold text-[9px] flex items-center justify-center rotate-[-8deg] chip">FRONT</div>
+          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] text-[#B08D3E]">Front of class</div>
           <div class="grotesk text-lg font-bold uppercase tracking-[0.18em] text-[#2E2716]">Teacher Desk</div>
         </div>
       </div>
@@ -129,7 +129,7 @@ for (let i=0;i<3;i++) {
   grid.insertAdjacentHTML('beforeend', `
   <div class="relative px-3 py-6 text-center border-2 border-dashed border-[#CDBD98] bg-white/30" style="border-radius:18px">
     <div class="w-16 h-16 mx-auto rounded-2xl border-2 border-dashed border-[#CDBD98]"></div>
-    <div class="mt-3 grotesk font-bold text-[11px] uppercase tracking-[0.25em] text-[#B3A382]">Free spot</div>
+    <div class="mt-3 grotesk font-bold text-[11px] uppercase tracking-[0.25em] text-[#B3A382]">Empty desk</div>
   </div>`);
 }
 </script>

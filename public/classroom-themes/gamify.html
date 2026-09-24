@@ -20,29 +20,29 @@
 <body class="dmsans text-[#3B3222]">
 <div class="flex h-full">
 
-  <!-- SIDEBAR : player controls -->
+  <!-- SIDEBAR : classroom controls -->
   <aside class="w-[290px] shrink-0 flex flex-col px-5 pt-6 pb-5 border-r-2 border-dashed border-[#E0D5BC]">
     <div class="panel px-5 py-5 mb-4">
-      <div class="grotesk text-[24px] font-bold leading-tight text-[#2E2716]">Game Controls</div>
-      <div class="mt-1 text-[11px] font-bold uppercase tracking-[0.25em] text-[#B08D3E]">▶ press start</div>
+      <div class="grotesk text-[24px] font-bold leading-tight text-[#2E2716]">Classroom Tools</div>
+      <div class="mt-1 text-[11px] font-bold uppercase tracking-[0.25em] text-[#B08D3E]">Level Up Rewards</div>
     </div>
 
     <div class="panel px-5 py-4 mb-4">
       <div class="flex items-center justify-between mb-2">
-        <span class="grotesk font-bold text-[10px] uppercase tracking-[0.2em] text-[#8A7A5A]">Class XP</span>
-        <span class="text-[10px] grotesk font-bold text-[#1E6B4C]">LVL 12</span>
+        <span class="grotesk font-bold text-[10px] uppercase tracking-[0.2em] text-[#8A7A5A]">Class Goal</span>
+        <span class="text-[10px] grotesk font-bold text-[#1E6B4C]">840 / 1200 PTS</span>
       </div>
-      <div class="xp-track"><div class="xp-fill" style="width:68%; background:linear-gradient(90deg,#5FC4A0,#3BA57F)"></div></div>
-      <div class="mt-2 text-[10px] font-bold text-[#8A7A5A]">680 / 1000 XP to Level 13</div>
+      <div class="xp-track"><div class="xp-fill" style="width:70%; background:linear-gradient(90deg,#5FC4A0,#3BA57F)"></div></div>
+      <div class="mt-2 text-[10px] font-bold text-[#8A7A5A]">Classroom Progress · 70% reached</div>
     </div>
 
     <div class="flex-1 space-y-5 overflow-hidden px-1">
-      <button class="btn3d w-full py-4 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white grotesk font-bold text-sm tracking-wide">🗺 Arrange Seats</button>
+      <button class="btn3d w-full py-4 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white grotesk font-bold text-sm tracking-wide">Arrange Seats</button>
 
       <div>
         <div class="flex items-center justify-between mb-3 px-1">
-          <span class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Award XP</span>
-          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#5FC4A0] text-white px-2 py-1 rounded-full chip">+combo x3</span>
+          <span class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Add Points</span>
+          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#5FC4A0] text-white px-2 py-1 rounded-full chip">+5 to class</span>
         </div>
         <div class="grid grid-cols-3 gap-3">
           <button class="btn3d py-3 bg-gradient-to-b from-[#FFE9B8] to-[#FFD57E] text-[#7A5410] grotesk font-bold">+1</button>
@@ -61,7 +61,7 @@
           <span class="text-[10px] font-bold text-[#B08D3E]">GO ▸</span>
         </button>
         <button class="btn3d w-full py-3 px-4 bg-[#FFFDF6] flex items-center justify-between grotesk font-bold text-sm text-[#3B3222]">
-          <span class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-gradient-to-b from-[#FFAB95] to-[#F97F62] flex items-center justify-center">⚠️</span>Behavior Log</span>
+          <span class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-gradient-to-b from-[#FFAB95] to-[#F97F62] flex items-center justify-center">📋</span>Behavior Log</span>
           <span class="text-[10px] font-bold text-[#B08D3E]">GO ▸</span>
         </button>
         <button class="btn3d w-full py-3 px-4 bg-[#FFFDF6] flex items-center justify-between grotesk font-bold text-sm text-[#3B3222]">
@@ -71,7 +71,7 @@
       </div>
 
       <div>
-        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A] mb-2 px-1">⏱ Boss Timer</div>
+        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A] mb-2 px-1">⏱ Class Timer</div>
         <div class="panel p-4 text-center">
           <div class="grotesk text-[38px] font-bold text-[#2E2716] leading-none">15:00</div>
           <div class="flex gap-2 mt-3">
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <button class="btn3d w-full py-3.5 mt-4 bg-gradient-to-b from-[#FFFDF6] to-[#EFE6D2] text-[#8A7A5A] grotesk font-bold text-xs uppercase tracking-widest">⚙ Setup & More</button>
+    <button class="btn3d w-full py-3.5 mt-4 bg-gradient-to-b from-[#FFFDF6] to-[#EFE6D2] text-[#8A7A5A] grotesk font-bold text-xs uppercase tracking-widest">⚙ Room Settings</button>
   </aside>
 
   <!-- CANVAS -->
@@ -102,7 +102,7 @@
     <div class="flex-1 relative overflow-auto px-10 pt-8 pb-10">
       <div class="flex justify-center mb-9">
         <div class="panel px-12 py-4 text-center">
-          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] text-[#B08D3E]">Start zone</div>
+          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] text-[#B08D3E]">Front of class</div>
           <div class="grotesk text-lg font-bold uppercase tracking-[0.18em] text-[#2E2716]">Teacher Desk</div>
         </div>
       </div>
@@ -128,7 +128,7 @@ const grid = document.getElementById('grid');
 students.forEach(([init,name,pts,lvl,xp,c,cLight,cText]) => {
   grid.insertAdjacentHTML('beforeend', `
   <div class="panel relative px-3 pt-6 pb-4 text-center cursor-pointer hover:-translate-y-1.5 transition-transform">
-    <div class="absolute top-2.5 left-2.5 text-[9px] grotesk font-bold px-2 py-0.5 rounded-full chip" style="background:${c};color:${cText}">LV ${lvl}</div>
+    <div class="absolute top-2.5 left-2.5 text-[9px] grotesk font-bold px-2 py-0.5 rounded-full chip" style="background:${c};color:${cText}">+${lvl * 5} PTS</div>
     <div class="absolute top-2.5 right-2.5 text-[11px]">⭐</div>
     <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center grotesk text-xl font-bold chip" style="background:linear-gradient(to bottom right, ${cLight}, ${c});color:${cText}">${init}</div>
     <div class="mt-3 grotesk font-bold text-[15px] leading-tight text-[#2E2716]">${name}</div>
