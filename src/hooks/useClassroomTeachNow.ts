@@ -194,6 +194,7 @@ export function useClassroomTeachNow({
     attendanceStats,
     allActivePasses,
     classActivePasses,
+    attendanceMap,
     handleEndPass,
     handleRandomAward,
   };

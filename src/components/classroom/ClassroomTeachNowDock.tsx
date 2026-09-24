@@ -225,6 +225,7 @@ export function ClassroomTeachNowDock({
         isOpen={isRandomModalOpen}
         onClose={() => setIsRandomModalOpen(false)}
         students={teach.classStudents}
+        attendanceMap={teach.attendanceMap}
         onAward={teach.handleRandomAward}
         defaultPoints={5}
         defaultReason="Random student spotlight"

@@ -54,4 +54,23 @@ describe('RandomStudentPickerModal', () => {
 
     expect(screen.queryByText('Random Student Picker')).toBeNull();
   });
+
+  it('shows present students filter when attendanceMap contains absent students', () => {
+    const attendanceMap = new Map<string, string>([
+      ['student-1', 'on-time'],
+      ['student-2', 'absent'],
+    ]);
+
+    render(
+      <RandomStudentPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        students={mockStudents}
+        attendanceMap={attendanceMap}
+        onAward={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Present students only/i)).toBeDefined();
+  });
 });

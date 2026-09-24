@@ -631,6 +631,7 @@ export function ClassroomCommandCenter({
         isOpen={isRandomModalOpen}
         onClose={() => setIsRandomModalOpen(false)}
         students={classStudents}
+        attendanceMap={attendanceMap}
         onAward={handleRandomAward}
         defaultPoints={5}
         defaultReason="Random student spotlight"
