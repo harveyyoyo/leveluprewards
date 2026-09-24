@@ -50,26 +50,30 @@ export function OfficeTransportDeliveryStatus({ schoolId, routes }: { schoolId: 
   const api = useOfficeTransportDeliveryApi(schoolId);
   const { toast } = useToast();
   const [events, setEvents] = useState<OfficeDeliveryEvent[]>([]);
+  const [checkedAt, setCheckedAt] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const routeNameById = useMemo(() => new Map(routes.map((route) => [route.id, route.name])), [routes]);
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (background = false) => {
+    if (!background) setIsLoading(true);
     setError(null);
     try {
       const result = await api.list();
       setEvents(result.events);
+      setCheckedAt(result.checkedAt || null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load message delivery records.');
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   }, [api]);
 
   useEffect(() => {
     void load();
+    const timer = window.setInterval(() => void load(true), 30_000);
+    return () => window.clearInterval(timer);
   }, [load]);
 
   const retry = async (event: OfficeDeliveryEvent) => {
@@ -98,6 +102,7 @@ export function OfficeTransportDeliveryStatus({ schoolId, routes }: { schoolId: 
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="h-4 w-4" /> Arrival message delivery</h2>
           <p className="mt-1 text-xs text-muted-foreground">This checks the same message lists used elsewhere in Level Up Rewards. Only bus stop and delivery totals are shown here; child names and contact details stay private.</p>
+           {checkedAt ? <p className="mt-1 text-[11px] text-muted-foreground">Last checked {clockLabel(checkedAt)}</p> : null}
         </div>
         <Button type="button" variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => void load()} disabled={isLoading}>
           <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} /> Refresh
