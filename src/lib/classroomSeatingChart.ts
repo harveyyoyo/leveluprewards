@@ -89,6 +89,8 @@ export type ClassroomSeatingPrefs = {
   attendanceSource: ClassroomAttendanceSource;
   /** Which setting menus appear on the fullscreen monitor toolbar. */
   monitorMenuTabs: ClassroomMonitorMenuTabs;
+  /** Optional custom title override for the teacher desk (defaults to teacher's name). */
+  teacherDeskLabel?: string;
   /** Internal — bumps when defaults change. */
   prefsVersion?: number;
 };
@@ -179,6 +181,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   awardSounds: true,
   attendanceSource: 'card-scan',
   monitorMenuTabs: { ...DEFAULT_MONITOR_MENU_TABS },
+  teacherDeskLabel: '',
   prefsVersion: CLASSROOM_PREFS_VERSION,
 };
 
@@ -339,6 +342,10 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       attendanceSource: normalizeClassroomAttendanceSource(parsed.attendanceSource),
       monitorMenuTabs: normalizeMonitorMenuTabs(parsed.monitorMenuTabs),
+      teacherDeskLabel:
+        typeof parsed.teacherDeskLabel === 'string'
+          ? parsed.teacherDeskLabel
+          : DEFAULT_CLASSROOM_PREFS.teacherDeskLabel,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
     if (parsedVersion < 18) {

@@ -78,6 +78,7 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
     loginState,
     activeTeacherId,
     currentTeacher,
+    teachers: teachers ?? undefined,
     students,
     studentsLoading,
     classes,

@@ -232,6 +232,7 @@ type ClassroomPointsPanelProps = {
   schoolId: string;
   students: Student[];
   classes: Class[];
+  teachers?: Teacher[];
   /** School point categories (same list as Points → Categories). */
   categories?: Category[];
   storageScope: string;
@@ -270,6 +271,7 @@ function ClassroomPointsPanelInner({
   schoolId,
   students,
   classes,
+  teachers: teachersProp,
   categories = [],
   storageScope,
   variant = 'embedded',
@@ -353,6 +355,12 @@ function ClassroomPointsPanelInner({
   const activeRecessPasses = useActiveRecessPasses(schoolId, true);
   const operatorId = teacherDocId || storageScope;
   const operatorName = userName || storageScope;
+  const teachersQuery = useMemoFirebase(
+    () => (firestore && schoolId && !teachersProp ? collection(firestore, 'schools', schoolId, 'teachers') : null),
+    [firestore, schoolId, teachersProp],
+  );
+  const { data: queriedTeachers } = useCollection<Teacher>(teachersQuery);
+  const allTeachers = useMemo(() => teachersProp || queriedTeachers || [], [teachersProp, queriedTeachers]);
   const [behaviorNoteStudent, setBehaviorNoteStudent] = useState<Student | null>(null);
   const [behaviorNotePoints, setBehaviorNotePoints] = useState<{ label?: string; amount?: number }>({});
   const [behaviorNoteShortcutKey, setBehaviorNoteShortcutKey] =
@@ -671,6 +679,49 @@ function ClassroomPointsPanelInner({
     if (viewingAllStudents) return CLASSROOM_ALL_STUDENTS_LABEL;
     return effectiveClassId ? classes.find((c) => c.id === effectiveClassId)?.name : undefined;
   }, [classes, effectiveClassId, viewingAllStudents]);
+
+  const activeTeacherName = useMemo(() => {
+    if (prefs.teacherDeskLabel?.trim()) {
+      return prefs.teacherDeskLabel.trim();
+    }
+
+    if (effectiveClassId && effectiveClassId !== CLASSROOM_ALL_STUDENTS_FILTER_ID) {
+      const activeClassObj = classes.find((c) => c.id === effectiveClassId);
+      if (activeClassObj?.primaryTeacherId) {
+        const classTeacher = allTeachers.find((t) => t.id === activeClassObj.primaryTeacherId);
+        if (classTeacher?.name?.trim()) {
+          return classTeacher.name.trim();
+        }
+      }
+    }
+
+    if (budgetOptions?.currentTeacher?.name?.trim()) {
+      return budgetOptions.currentTeacher.name.trim();
+    }
+
+    if (loginState === 'teacher' && userName?.trim() && userName.toLowerCase() !== 'teacher') {
+      return userName.trim();
+    }
+
+    if (operatorName?.trim() && !['admin', 'staff', 'developer'].includes(operatorName.toLowerCase())) {
+      const match = allTeachers.find(
+        (t) => t.id === operatorId || t.name.toLowerCase() === operatorName.toLowerCase(),
+      );
+      if (match?.name) return match.name;
+    }
+
+    return null;
+  }, [
+    prefs.teacherDeskLabel,
+    effectiveClassId,
+    classes,
+    allTeachers,
+    budgetOptions?.currentTeacher,
+    loginState,
+    userName,
+    operatorName,
+    operatorId,
+  ]);
 
   const classScreenUrl = useMemo(() => {
     if (!isFullscreen || isStudentAudience) return null;
@@ -2419,6 +2470,7 @@ function ClassroomPointsPanelInner({
       design={design}
       frontAtBottom={frontAtBottom}
       showFrontHint={!isStudentAudience}
+      teacherName={activeTeacherName}
       trailingAction={
         !isStudentAudience && !editMode ? (
           <ClassroomLiveCheatsheetDesk

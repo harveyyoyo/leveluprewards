@@ -53,6 +53,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     studentsLoading,
     classes,
     classesLoading,
+    teachers,
     categories: rawCategories,
     categoriesLoading,
     canReadRoster,
@@ -248,6 +249,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
             schoolId={schoolId}
             students={deferredStudents}
             classes={classes}
+            teachers={teachers}
             categories={categories}
             storageScope={storageScope}
             initialClassId={monitorClassId || undefined}
