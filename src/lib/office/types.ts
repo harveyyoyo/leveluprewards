@@ -251,6 +251,8 @@ export type OfficeBusRoute = {
   requireReleaseConfirmations?: boolean;
   stops: OfficeBusStop[];
   notes?: string | null;
+  /** Server-only lock for the one active run on this route. */
+  activeTripId?: string | null;
   updatedAt: number;
   updatedBy?: string | null;
   archived?: boolean;
@@ -300,12 +302,15 @@ export type OfficeBusRelease = {
   note?: string | null;
   occurredAt: number;
   by: string;
+  /** Set when Office staff explicitly corrects an earlier release. */
+  correctsReleaseAt?: number;
+  correctionReason?: string | null;
 };
 
 export type OfficeBusEvent =
   | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
   | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string; source?: 'browser' | 'gps_device' | 'manual'; deviceId?: string | null; sampleId?: string | null; accuracyM?: number | null; distanceM?: number | null }
-  | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string };
+  | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string; correctsReleaseAt?: number; correctionReason?: string | null };
 
 export type OfficeBusRiderManifestEntry = {
   studentId: string;

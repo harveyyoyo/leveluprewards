@@ -29,7 +29,7 @@ import {
   BUS_ALERT_LABEL,
   BUS_RUN_LABEL,
   LATE_THRESHOLD_MIN,
-  LOCATION_STALE_MS,
+  isFreshLocation,
   agoLabel,
   clockLabel,
   currentRun,
@@ -252,7 +252,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
     const trip = tripFor(route.id);
     if (!trip?.location || (selected && selected.id !== route.id)) continue;
     const displayRoute = routeForTrip(route, trip) ?? route;
-    const stale = now - trip.location.at > LOCATION_STALE_MS;
+    const stale = !isFreshLocation(trip.location, now);
     markers.push({
       id: `bus:${route.id}`,
       kind: 'bus',
@@ -460,7 +460,7 @@ function Stat({ label, value, tone = 'plain' }: { label: string; value: number; 
 function statusOf(route: OfficeBusRoute, trip: OfficeBusTrip | null, now: number): { text: string; tone: 'idle' | 'live' | 'late' | 'done' | 'stale' } {
   if (!trip) return { text: 'Not started', tone: 'idle' };
   if (trip.status === 'done') return { text: trip.closedByOffice ? 'Closed by School Office' : `Finished ${clockLabel(trip.endedAt ?? trip.updatedAt)}`, tone: 'done' };
-  if (!trip.location || now - trip.location.at > LOCATION_STALE_MS) return { text: 'On the road · no signal', tone: 'stale' };
+  if (!isFreshLocation(trip.location, now)) return { text: 'On the road · no signal', tone: 'stale' };
   const late = minutesLate(route, trip, now) ?? 0;
   if (late >= LATE_THRESHOLD_MIN) return { text: `About ${late} min late`, tone: 'late' };
   return { text: 'On the road · on time', tone: 'live' };
@@ -578,6 +578,12 @@ function RouteDetail({
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        {trip?.status === 'active' && !trip.location ? (
+          <div className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
+            <p className="font-medium">Waiting for a bus update</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Tracking source: {trackerSourceLabel(trip)}</p>
+          </div>
+        ) : null}
         {trip?.location && trip.status === 'active' ? (
           <div className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
             {next ? (
@@ -590,7 +596,7 @@ function RouteDetail({
             )}
             <p className="mt-0.5 text-xs text-muted-foreground">
               Location {agoLabel(trip.location.at, now)} · {trackerSourceLabel(trip)}
-              {now - trip.location.at > LOCATION_STALE_MS ? ' · signal stale' : ' · updating'}
+              {!isFreshLocation(trip.location, now) ? ' · signal stale' : ' · updating'}
               {trip.location.speed ? ` · ${Math.round(trip.location.speed * 2.237)} mph` : ''}
               {trip.driverName ? ` · Driver ${trip.driverName}` : ''}
             </p>

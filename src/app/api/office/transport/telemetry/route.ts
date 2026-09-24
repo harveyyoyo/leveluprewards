@@ -97,6 +97,18 @@ function errorStatus(message: string): number {
   return 400;
 }
 
+async function cleanupExpiredTrackerLocations(db: Firestore, schoolId: string): Promise<void> {
+  try {
+    const expired = await db.collection('schools').doc(schoolId).collection('officeBusGpsLocations').where('expiresAt', '<=', Date.now()).limit(100).get();
+    if (expired.empty) return;
+    const batch = db.batch();
+    for (const doc of expired.docs) batch.delete(doc.ref);
+    await batch.commit();
+  } catch {
+    // A cleanup failure must not reject a fresh tracker reading.
+  }
+}
+
 function routeForTelemetry(trip: OfficeBusTrip): OfficeBusRoute | null {
   const snapshot = trip.routeSnapshot;
   if (!snapshot) return null;
@@ -133,6 +145,7 @@ export async function POST(req: NextRequest) {
     if (!/^[A-Za-z0-9_-]+$/.test(tripId)) throw new Error('Trip is invalid.');
     const sample = parseSample(body);
     const schoolRef = db.collection('schools').doc(schoolId);
+    await cleanupExpiredTrackerLocations(db, schoolId);
     const tripRef = schoolRef.collection('officeBusTrips').doc(tripId);
     const locationRef = schoolRef.collection('officeBusGpsLocations').doc(auth.id);
     const deviceRef = schoolRef.collection('officeBusGpsDevices').doc(auth.id);

@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
-import { checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
+import { sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
+import { hasOfficeTransportRole } from '@/lib/server/officeTransportRole';
 import { clientIp, jsonError, rateLimit } from '@/lib/server/apiSecurity';
 import {
   TRANSPORT_PARENT_ACCESS_DEFAULT_DAYS,
@@ -61,8 +62,9 @@ async function authenticate(req: NextRequest, body: Body): Promise<AuthContext> 
   const verified = idToken ? await verifyIdToken(idToken) : null;
   if (!idToken || !verified) throw new Error('Unauthorized');
   const schoolId = schoolIdFrom(body.schoolId);
-  if (!(await checkSchoolRole(idToken, verified.uid, schoolId))) throw new Error('Forbidden');
-  return { uid: verified.uid, db: await getFirebaseAdminFirestore() };
+  const db = await getFirebaseAdminFirestore();
+  if (!(await hasOfficeTransportRole(db, idToken, verified.uid, schoolId))) throw new Error('Forbidden');
+  return { uid: verified.uid, db };
 }
 
 function familyDoc(db: AuthContext['db'], schoolId: string, familyId: string) {

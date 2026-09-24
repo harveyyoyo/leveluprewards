@@ -73,10 +73,12 @@ describe('office arrival notification queue', () => {
       { familyId: 'family-1', status: 'active', expiresAt: now + 60_000, arrivalPreferences: { email: true, sms: true, whatsapp: false, updatedAt: now } },
       { familyId: 'family-2', status: 'active', expiresAt: now + 60_000, arrivalPreferences: { email: false, sms: false, whatsapp: true, updatedAt: now } },
       { familyId: 'family-3', status: 'active', expiresAt: now + 60_000, arrivalPreferences: { email: true, sms: true, whatsapp: true, updatedAt: now } },
+      { familyId: 'family-4', status: 'active', expiresAt: now + 60_000, arrivalPreferences: { email: true, sms: true, whatsapp: true, updatedAt: now } },
     ], {
-      'family-1': { displayName: 'Family One', contacts: [{ id: 'c1', name: 'Parent', email: 'parent@example.com', phone: '+15550000001', isPrimary: true, transportNotificationsEnabled: true }, { id: 'c1b', name: 'Another contact', email: 'other@example.com', phone: '+15550000009', transportNotificationsEnabled: true }] },
+      'family-1': { displayName: 'Family One', contacts: [{ id: 'c1', name: 'Parent', email: 'parent@example.com', phone: '+15550000001', isPrimary: true, transportNotificationsEnabled: true }, { id: 'c1b', name: 'Another contact', email: 'other@example.com', phone: '+15550000009', isPrimary: true, transportNotificationsEnabled: true }] },
       'family-2': { displayName: 'Family Two', contacts: [{ id: 'c2', name: 'Parent', phone: '+15550000002', transportNotificationsEnabled: true }] },
       'family-3': { displayName: 'Family Three', contacts: [{ id: 'c3', name: 'Parent', email: 'other-stop@example.com', phone: '+15550000003', transportNotificationsEnabled: true }] },
+      'family-4': { displayName: 'Family Four', contacts: [{ id: 'c4', name: 'Parent', email: 'no-primary@example.com', transportNotificationsEnabled: true }, { id: 'c4b', name: 'Other', email: 'no-primary-2@example.com', transportNotificationsEnabled: true }] },
     });
     const result = await queueOfficeArrivalNotifications({
       db,
@@ -90,6 +92,7 @@ describe('office arrival notification queue', () => {
         { studentId: 's1', displayName: 'One', familyId: 'family-1', busStopId: stop.id },
         { studentId: 's2', displayName: 'Two', familyId: 'family-2', busStopId: stop.id },
         { studentId: 's3', displayName: 'Other stop', familyId: 'family-3', busStopId: 'another-stop' },
+        { studentId: 's4', displayName: 'No primary', familyId: 'family-4', busStopId: stop.id },
       ],
     });
     expect(result.status).toBe('queued');

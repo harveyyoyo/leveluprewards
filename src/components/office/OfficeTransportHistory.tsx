@@ -70,9 +70,11 @@ export function OfficeTransportHistory({
   const closeStaleRun = async (trip: OfficeBusTrip) => {
     if (trip.status !== 'active' || trip.date >= today) return;
     if (!window.confirm('Close this older bus run? It will stay in History, but it will no longer block this bus.')) return;
+    const reason = window.prompt('Why is the office closing this run? This note will stay in the record.')?.trim();
+    if (!reason) return;
     setClosingId(trip.id);
     try {
-      await transport.closeStaleOfficeBusTrip(trip.id);
+      await transport.closeStaleOfficeBusTrip(trip.id, reason);
       toast({ title: 'Older run closed', description: 'The bus is free to start a new run.' });
     } catch (cause) {
       toast({ variant: 'destructive', title: 'Could not close the old run', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
@@ -394,7 +396,7 @@ function TripRow({
                     <li key={`${event.studentId}-${event.at}-${index}`} className="flex items-center justify-between gap-2 text-xs">
                       <span>{riderNameForTrip(trip, event.studentId, studentNameById)}</span>
                       <span className="text-muted-foreground">
-                        {BUS_RELEASE_METHOD_LABEL[event.method]} · {event.contactName} · {clockLabel(event.at)}
+                        {BUS_RELEASE_METHOD_LABEL[event.method]} · {event.contactName} · {clockLabel(event.at)}{event.correctionReason ? ` · corrected: ${event.correctionReason}` : ''}
                       </span>
                     </li>
                   ))}

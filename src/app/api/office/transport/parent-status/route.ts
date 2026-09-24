@@ -14,7 +14,7 @@ import {
   routeForTrip,
   routeLabel,
   transportPhoneStatusText,
-  LOCATION_STALE_MS,
+  isFreshLocation,
 } from '@/lib/office/officeTransport';
 import type { OfficeBusLocation, OfficeBusRoute, OfficeBusTrip, OfficeFamily, OfficeStudent } from '@/lib/office/types';
 import type { OfficeTransportParentAccess } from '@/lib/office/transportParentAccess';
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     const students = studentSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as OfficeStudent));
     const routeIds = [...new Set(students
       .filter((student) => student.archived !== true && (student.status == null || student.status === 'active') && (student.transportMode == null || student.transportMode === 'bus') && typeof student.busRouteId === 'string')
-      .map((student) => student.busRouteId as string))].slice(0, 10);
+      .map((student) => student.busRouteId as string))];
 
     const buses = await Promise.all(routeIds.map(async (routeId) => {
       const [routeSnap, tripSnap] = await Promise.all([
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
         nextStopName: stop?.name ?? null,
         etaMinutes: eta,
         lastUpdateAt: safeNumber(location?.at),
-        stale: Boolean(location && now - location.at > LOCATION_STALE_MS),
+        stale: Boolean(location && !isFreshLocation(location, now)),
       };
     }));
 
@@ -95,6 +95,7 @@ export async function GET(req: NextRequest) {
       familyName: family.displayName,
       arrivalPreferences: access.arrivalPreferences ?? { email: false, sms: false, whatsapp: false, updatedAt: access.updatedAt },
       buses: buses.filter((bus): bus is NonNullable<typeof bus> => bus !== null),
+      timeZone: timeZone ?? null,
       checkedAt: now,
     }, { headers: noStore() });
   } catch {

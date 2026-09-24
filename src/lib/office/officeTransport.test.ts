@@ -4,6 +4,7 @@ import {
   exampleRoutes,
   familyUpdateMessage,
   gpsMissedStopWarning,
+  isFreshLocation,
   latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
@@ -144,9 +145,16 @@ describe('officeTransport', () => {
   });
 
   it('says how late a bus is against the next planned stop', () => {
-    const onStop = { lat: 40.72, lng: -74.32, at: at(7, 20) };
+    const onStop = { lat: 40.72, lng: -74.32, at: at(7, 9) };
     expect(minutesLate(route, trip({ location: onStop }), at(7, 10))).toBe(0);
-    expect(minutesLate(route, trip({ location: onStop }), at(7, 24))).toBe(10);
+    expect(minutesLate(route, trip({ location: { ...onStop, at: at(7, 21) } }), at(7, 24))).toBe(10);
+  });
+
+  it('does not call a run late without a fresh location', () => {
+    expect(minutesLate(route, trip(), at(7, 30))).toBeNull();
+    expect(minutesLate(route, trip({ location: { lat: 40.72, lng: -74.32, at: at(7, 0) } }), at(7, 30))).toBeNull();
+    expect(isFreshLocation({ at: at(7, 40) }, at(7, 30))).toBe(false);
+    expect(minutesLate(route, trip({ location: { lat: 40.72, lng: -74.32, at: at(7, 40) } }), at(7, 30))).toBeNull();
   });
 
   it('creates a safe phone status message without exposing coordinates', () => {

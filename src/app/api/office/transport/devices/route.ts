@@ -2,7 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
-import { checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
+import { sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
+import { hasOfficeTransportRole } from '@/lib/server/officeTransportRole';
 import { clientIp, jsonError, rateLimit } from '@/lib/server/apiSecurity';
 import type { OfficeBusGpsDevice } from '@/lib/office/types';
 
@@ -67,15 +68,25 @@ async function authenticate(req: NextRequest, body: Body): Promise<AuthContext> 
   const verified = token ? await verifyIdToken(token) : null;
   if (!token || !verified) throw new Error('Unauthorized');
   const schoolId = schoolIdFrom(body);
-  if (!(await checkSchoolRole(token, verified.uid, schoolId))) throw new Error('Forbidden');
   await getFirebaseAdminAuth();
-  return { uid: verified.uid, db: getFirestore() };
+  const db = getFirestore();
+  if (!(await hasOfficeTransportRole(db, token, verified.uid, schoolId))) throw new Error('Forbidden');
+  return { uid: verified.uid, db };
 }
 
 async function getDevice(db: Firestore, schoolId: string, id: string): Promise<OfficeBusGpsDevice> {
   const snap = await devices(db, schoolId).doc(id).get();
   if (!snap.exists) throw new Error('GPS device not found.');
   return { id: snap.id, ...snap.data() } as OfficeBusGpsDevice;
+}
+
+async function assertNoActiveTripForDevice(db: Firestore, schoolId: string, device: OfficeBusGpsDevice): Promise<void> {
+  const activeTrips = await db.collection('schools').doc(schoolId).collection('officeBusTrips').where('status', '==', 'active').get();
+  const hasActiveTrip = activeTrips.docs.some((doc) => {
+    const data = doc.data();
+    return data.gpsDeviceId === device.id || (Boolean(device.assignedRouteId) && data.routeId === device.assignedRouteId);
+  });
+  if (hasActiveTrip) throw new Error('Finish the active bus run before changing this GPS tracker.');
 }
 
 async function routeExists(db: Firestore, schoolId: string, routeId: string): Promise<void> {
@@ -116,6 +127,7 @@ async function rotate(auth: AuthContext, schoolId: string, body: Body) {
   const id = deviceIdFrom(body.deviceId);
   const current = await getDevice(auth.db, schoolId, id);
   if (current.status !== 'active') throw new Error('This GPS device is revoked.');
+  await assertNoActiveTripForDevice(auth.db, schoolId, current);
   const deviceKey = `gpk_${randomBytes(32).toString('base64url')}`;
   const keyVersion = current.keyVersion + 1;
   const now = Date.now();
@@ -131,6 +143,7 @@ async function revoke(auth: AuthContext, schoolId: string, body: Body) {
   const id = deviceIdFrom(body.deviceId);
   const current = await getDevice(auth.db, schoolId, id);
   if (current.status === 'revoked') return { device: safeDevice(current) };
+  await assertNoActiveTripForDevice(auth.db, schoolId, current);
   const now = Date.now();
   const batch = auth.db.batch();
   batch.update(devices(auth.db, schoolId).doc(id), { status: 'revoked', revokedAt: now, updatedAt: now, updatedBy: auth.uid });

@@ -121,16 +121,21 @@ export function OfficeFamilySheet({
     }
     setBusy(true);
     try {
-      const cleanedContacts = contacts
-        .map((c) => ({
+      const namedContacts = contacts.filter((contact) => contact.name.trim());
+      let primaryAssigned = false;
+      const cleanedContacts = namedContacts.map((c) => {
+        const isPrimary = c.isPrimary === true && !primaryAssigned;
+        if (isPrimary) primaryAssigned = true;
+        return {
           ...c,
           name: c.name.trim(),
           relationship: safeString(c.relationship) || null,
           phone: safeString(c.phone) || null,
           email: safeString(c.email) || null,
           notes: safeString(c.notes) || null,
-        }))
-        .filter((c) => c.name);
+          isPrimary,
+        };
+      });
 
       await write.upsertOfficeFamily(write.ctx, family?.id ?? null, {
         displayName: displayName.trim(),
@@ -287,6 +292,21 @@ export function OfficeFamilySheet({
                     />
                     Receive transportation emails
                   </label>
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={c.isPrimary === true}
+                      onCheckedChange={(checked) =>
+                        setContacts((prev) =>
+                          prev.map((x) => ({
+                            ...x,
+                            isPrimary: checked === true && x.id === c.id,
+                          })),
+                        )
+                      }
+                    />
+                    <span>Main contact for bus arrival messages</span>
+                  </label>
                 </div>
               ))}
               <Button
@@ -297,6 +317,7 @@ export function OfficeFamilySheet({
               >
                 <Plus className="h-4 w-4" /> Add contact
               </Button>
+              <p className="text-xs text-muted-foreground">If a family has more than one contact, choose one main contact for bus arrival messages. The other contacts will not receive those arrival messages.</p>
             </div>
           ) : null}
 

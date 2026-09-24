@@ -101,9 +101,10 @@ export async function queueOfficeArrivalNotifications(args: ArrivalNotificationA
     if (!prefs) continue;
     const contacts = family.contacts ?? [];
     // A family code does not identify a particular guardian. Never broadcast to
-    // every contact when a family has more than one; use the primary contact,
+    // every contact when a family has more than one; use the first primary contact,
     // or the sole contact when the family has only one.
-    const allowedContacts = contacts.length <= 1 ? contacts : contacts.filter((contact) => contact.isPrimary === true);
+    const primaryContacts = contacts.filter((contact) => contact.isPrimary === true);
+    const allowedContacts = contacts.length <= 1 ? contacts : primaryContacts.slice(0, 1);
     for (const contact of allowedContacts) {
       if (contact.transportNotificationsEnabled === false) continue;
       if (prefs.email) {

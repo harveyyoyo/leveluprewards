@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { useToast } from '@/hooks/use-toast';
 import { OfficeTransportMap, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
 import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
+import { useAppContext } from '@/components/AppProvider';
 import {
   BUS_ALERT_LABEL,
   BUS_RUN_LABEL,
@@ -62,6 +63,7 @@ export function OfficeBusDriverMode({
   onClose: () => void;
 }) {
   const transport = useOfficeTransportApi(schoolId);
+  const { isOffice, isAdmin, userId } = useAppContext();
   const { toast } = useToast();
   const [routeId, setRouteId] = useState(routes[0]?.id ?? '');
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
@@ -143,6 +145,8 @@ export function OfficeBusDriverMode({
           familyById={familyById}
           center={center}
           readOnly={offlineOpen}
+          canApproveOffice={isOffice || isAdmin}
+          currentUserId={userId}
           onOfflineSaved={() => setOfflinePacket(readDriverOfflinePacket(schoolId))}
           onFinished={() => {
             if (offlinePacket?.trip.id === trip.id) {
@@ -281,6 +285,8 @@ function DrivingScreen({
   familyById,
   center,
   readOnly = false,
+  canApproveOffice = false,
+  currentUserId = null,
   onOfflineSaved,
   onFinished,
 }: {
@@ -291,6 +297,8 @@ function DrivingScreen({
   familyById: Map<string, OfficeFamily>;
   center: LatLng;
   readOnly?: boolean;
+  canApproveOffice?: boolean;
+  currentUserId?: string | null;
   onOfflineSaved?: () => void;
   onFinished: () => void;
 }) {
@@ -299,6 +307,7 @@ function DrivingScreen({
   const [geo, setGeo] = useState<GeoState>('waiting');
   const [lastServerAt, setLastServerAt] = useState<number | null>(trip.location?.at ?? null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [trackerIgnored, setTrackerIgnored] = useState(Boolean(trip.gpsDeviceId));
   const [me, setMe] = useState<(LatLng & { speed?: number | null }) | null>(trip.location ?? null);
   const [showAll, setShowAll] = useState(false);
   const [report, setReport] = useState<OfficeBusAlertKind | null>(null);
@@ -317,6 +326,7 @@ function DrivingScreen({
 
   useEffect(() => {
     setLastServerAt(trip.location?.at ?? null);
+    setTrackerIgnored(Boolean(trip.gpsDeviceId));
     setSyncError(null);
     // Reset only when the run changes; live location updates should not reset the sync badge.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -381,7 +391,13 @@ function DrivingScreen({
             { lat: p.lat, lng: p.lng, accuracy: pos.coords.accuracy ?? null, speed: pos.coords.speed ?? null, heading: pos.coords.heading ?? null, at: now },
             reached,
           )
-          .then(() => {
+          .then((result) => {
+            if (result.ignored) {
+              setTrackerIgnored(true);
+              setSyncError(null);
+              return;
+            }
+            setTrackerIgnored(false);
             setLastServerAt(now);
             setSyncError(null);
           })
@@ -435,7 +451,8 @@ function DrivingScreen({
   const openRelease = (rider: DriverRider) => {
     const contacts = driverFamilyContacts(rider, trip, students, familyById);
     setReleaseRider(rider);
-    setReleaseMethod(contacts.length ? 'authorized_contact' : 'id_checked');
+    const canUseOfficeApproval = canApproveOffice && trip.driverId !== currentUserId;
+    setReleaseMethod(contacts.length ? 'authorized_contact' : canUseOfficeApproval ? 'office_override' : 'id_checked');
     setReleaseContactId(contacts[0]?.id ?? '');
     setReleaseRecipientName('');
     setReleaseNote('');
@@ -455,6 +472,16 @@ function DrivingScreen({
       toast({ variant: 'destructive', title: 'Add an office note' });
       return;
     }
+    let correctionReason: string | null = null;
+    if (trip.releases?.[releaseRider.id]) {
+      if (!canApproveOffice || trip.driverId === currentUserId) {
+        toast({ variant: 'destructive', title: 'Ask another Office staff member to correct this release' });
+        return;
+      }
+      const enteredReason = window.prompt('Why is the Office correcting this release? This note will stay in the trip record.')?.trim();
+      if (!enteredReason) return;
+      correctionReason = enteredReason;
+    }
     setReleaseSaving(true);
     try {
       await transport.recordOfficeBusRelease(trip, releaseRider.id, {
@@ -462,6 +489,7 @@ function DrivingScreen({
         contactId: releaseMethod === 'authorized_contact' ? releaseContactId : null,
         recipientName: releaseMethod === 'authorized_contact' ? null : releaseRecipientName.trim(),
         note: releaseNote.trim() || null,
+        correctionReason,
       });
       toast({ title: 'Release recorded', description: 'The office can now see who received this rider.' });
       setReleaseRider(null);
@@ -494,9 +522,11 @@ function DrivingScreen({
         description:
           result.notificationStatus === 'failed'
             ? 'The report is safe, but the family update could not be queued. Please tell the office.'
-            : result.notificationStatus === 'no_recipients'
-              ? 'The report is safe, but no opted-in family email was found.'
-              : result.notificationsQueued > 0
+            : result.notificationStatus === 'office_only'
+              ? 'The report is safe and stays with the School Office. No family message was sent.'
+              : result.notificationStatus === 'no_recipients'
+                ? 'The report is safe, but no opted-in family email was found.'
+                : result.notificationsQueued > 0
                 ? `It will appear on the live page, and ${result.notificationsQueued} family update${result.notificationsQueued === 1 ? '' : 's'} will be queued.`
                 : 'It will appear on the live Transportation page.',
       });
@@ -570,7 +600,7 @@ function DrivingScreen({
             ? 'bg-blue-800 text-white'
             : !isOnline
               ? 'bg-slate-700 text-white'
-              : geo === 'on' && !syncError
+              : geo === 'on' && !syncError && !trackerIgnored
               ? 'bg-teal-700 text-white'
             : geo === 'waiting'
               ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
@@ -583,7 +613,9 @@ function DrivingScreen({
           ? 'Saved copy. Reopen the live run before making changes.'
           : !isOnline
             ? 'No internet connection. Reconnect before saving rider changes or ending this run.'
-            : geo === 'on' && syncError
+            : geo === 'on' && trackerIgnored
+              ? 'A GPS tracker is assigned to this bus. The driver phone will not send location.'
+              : geo === 'on' && syncError
             ? 'Location found, but the office has not received it yet. Trying again…'
             : geo === 'on' && lastServerAt
               ? 'Sharing bus location with the office'
@@ -868,6 +900,19 @@ function DrivingScreen({
                     {label}
                   </button>
                 ))}
+                {canApproveOffice && trip.driverId !== currentUserId ? (
+                  <button
+                    type="button"
+                    aria-pressed={releaseMethod === 'office_override'}
+                    onClick={() => setReleaseMethod('office_override')}
+                    className={cn(
+                      'rounded-lg border px-2 py-2 text-xs font-medium',
+                      releaseMethod === 'office_override' ? 'border-teal-700 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-100' : 'border-slate-200 dark:border-slate-700',
+                    )}
+                  >
+                    Office approved
+                  </button>
+                ) : null}
               </div>
               {releaseMethod !== 'authorized_contact' ? (
                 <Input value={releaseRecipientName} onChange={(e) => setReleaseRecipientName(e.target.value)} placeholder="Recipient's name" className="rounded-xl" />

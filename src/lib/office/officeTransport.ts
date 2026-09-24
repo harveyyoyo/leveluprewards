@@ -1,5 +1,6 @@
 import type {
   OfficeBusAlertKind,
+  OfficeBusLocation,
   OfficeBusReleaseMethod,
   OfficeBusRiderManifestEntry,
   OfficeBusRoute,
@@ -46,6 +47,12 @@ export const BUS_ROUTE_COLORS = ['#0f766e', '#2563eb', '#c2410c', '#7c3aed', '#b
 export const STOP_ARRIVAL_RADIUS_M = 120;
 /** No location for this long while on the road → "not updating" warning. */
 export const LOCATION_STALE_MS = 3 * 60_000;
+
+/** A location is usable only when it is not from the future and is recent enough. */
+export function isFreshLocation(location: Pick<OfficeBusLocation, 'at'> | null | undefined, now = Date.now()): boolean {
+  return Boolean(location && Number.isFinite(location.at) && now >= location.at && now - location.at <= LOCATION_STALE_MS);
+}
+
 /** Minutes behind plan before the office sees "late". */
 export const LATE_THRESHOLD_MIN = 5;
 /** Typical in-town bus speed when the phone does not report one (metres per second ≈ 25 km/h). */
@@ -123,7 +130,7 @@ function minutesOfDay(ms: number, timeZone?: string): number {
  * planned time versus now + drive time. Null when there is nothing to compare against.
  */
 export function minutesLate(route: OfficeBusRoute, trip: OfficeBusTrip, now = Date.now(), timeZone?: string): number | null {
-  if (trip.status !== 'active') return null;
+  if (trip.status !== 'active' || !isFreshLocation(trip.location, now)) return null;
   const stop = nextStop(route, trip);
   const planned = stop ? stopTime(stop, trip.run) : null;
   if (!stop || !planned) return null;
@@ -151,7 +158,7 @@ export function gpsMissedStopWarning(
   if (trip.status !== 'active' || trip.id.startsWith('practice-')) return null;
   const location = trip.location;
   const trustedTracker = trip.locationSource === 'gps_device' || location?.source === 'gps_device';
-  if (!trustedTracker || !location || now < location.at || now - location.at > LOCATION_STALE_MS) return null;
+  if (!trustedTracker || !isFreshLocation(location, now)) return null;
   const next = nextStop(route, trip);
   if (!next || trip.stopArrivalDetails?.[next.id]) return null;
   const planned = stopTime(next, trip.run);
@@ -223,15 +230,16 @@ export function tripWarnings(
         text: `${bus}: ${BUS_ALERT_LABEL[alert.kind]}${alert.minutes ? ` (about ${alert.minutes} min)` : ''}${alert.message ? ` — ${alert.message}` : ''}`,
       });
     }
-    if (!trip.location || now - trip.location.at > LOCATION_STALE_MS) {
+    if (!isFreshLocation(trip.location, now)) {
+      const locationAgeMinutes = trip.location ? Math.max(0, Math.round((now - trip.location.at) / 60_000)) : 0;
       out.push({
         id: `${trip.id}-stale`,
         tone: 'caution',
         routeId: route.id,
         text: trip.location
           ? trip.locationSource === 'gps_device' || trip.location.source === 'gps_device'
-            ? `${bus} GPS tracker has not sent a location for ${Math.round((now - trip.location.at) / 60_000)} min.`
-            : `${bus} driver phone has not sent a location for ${Math.round((now - trip.location.at) / 60_000)} min.`
+            ? `${bus} GPS tracker has not sent a location for ${locationAgeMinutes} min.`
+            : `${bus} driver phone has not sent a location for ${locationAgeMinutes} min.`
           : trip.locationSource === 'gps_device'
             ? `${bus} started, but the GPS tracker has not sent a location yet.`
             : `${bus} started, but the driver's phone has not sent a location yet.`,
@@ -468,7 +476,7 @@ export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusT
   if (!trip.location) {
     return { status: 'unavailable', asOf: now, text: `${bus} started the ${BUS_RUN_LABEL[trip.run].toLowerCase()} run, but its location is not available yet. ${disclaimer}` };
   }
-  if (now - trip.location.at > LOCATION_STALE_MS) {
+  if (!isFreshLocation(trip.location, now)) {
     return { status: 'unavailable', asOf: trip.location.at, text: `${bus} tracking is temporarily unavailable. Last update: ${clockLabel(trip.location.at, timeZone)}. ${disclaimer}` };
   }
   const next = nextStop(activeRoute, trip);
@@ -558,7 +566,7 @@ export function familyUpdateMessage(route: OfficeBusRoute, trip: OfficeBusTrip |
       ? `${bus} had an older run closed by the School Office without a finishing check.`
       : `${bus} finished its ${BUS_RUN_LABEL[trip.run].toLowerCase()} run at ${clockLabel(trip.endedAt ?? trip.updatedAt, timeZone)}.`;
   }
-  const hasFreshLocation = Boolean(trip.location && now - trip.location.at <= LOCATION_STALE_MS);
+  const hasFreshLocation = isFreshLocation(trip.location, now);
   const late = hasFreshLocation ? minutesLate(route, trip, now, timeZone) ?? 0 : null;
   const recentDelay = [...(trip.alerts ?? [])].reverse().find((a) => a.kind === 'delay' && a.at <= now && now - a.at <= 2 * 60 * 60_000);
   const lateText = !hasFreshLocation
