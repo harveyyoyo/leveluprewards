@@ -38,9 +38,10 @@ function requestToken(req: NextRequest): string {
   return (req.headers.get('x-phone-status-token') ?? '').trim();
 }
 
-function parseRun(value: string | null): OfficeBusRun {
+function parseRun(value: string | null): OfficeBusRun | null {
+  if (value == null || value === '') return null;
   if (value === 'am' || value === 'pm') return value;
-  return new Date().getHours() >= 12 ? 'pm' : 'am';
+  throw new Error('The bus run must be am or pm.');
 }
 
 export async function GET(req: NextRequest) {
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
   const format: ResponseFormat = formatParam;
 
   try {
+    const run = parseRun(req.nextUrl.searchParams.get('run'));
     const firestore = await getFirebaseAdminFirestore();
     const routeRef = firestore.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(routeId);
     const routeSnap = await routeRef.get();
@@ -75,10 +77,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'That bus route was not found.' }, { status: 404, headers: responseHeaders() });
     }
     const route = { id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute;
-    const run = parseRun(req.nextUrl.searchParams.get('run'));
     const tripSnap = await firestore.collection('schools').doc(schoolId).collection('officeBusTrips').where('routeId', '==', routeId).limit(100).get();
     const trips = tripSnap.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as OfficeBusTrip));
-    const trip = latestTripForRoute(trips, routeId, run);
+    const trip = run
+      ? latestTripForRoute(trips, routeId, run)
+      : trips.slice().sort((a, b) => {
+          if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+          return b.startedAt - a.startedAt;
+        })[0] ?? null;
     const status = transportPhoneStatusText(route, trip);
 
     if (format === 'twilio') {
@@ -86,7 +92,10 @@ export async function GET(req: NextRequest) {
       return new NextResponse(xml, { status: 200, headers: responseHeaders('text/xml; charset=utf-8') });
     }
     return NextResponse.json(status, { status: 200, headers: responseHeaders() });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'The bus run must be am or pm.') {
+      return NextResponse.json({ error: error.message }, { status: 400, headers: responseHeaders() });
+    }
     return NextResponse.json({ error: 'The phone status is temporarily unavailable.' }, { status: 503, headers: responseHeaders() });
   }
 }
