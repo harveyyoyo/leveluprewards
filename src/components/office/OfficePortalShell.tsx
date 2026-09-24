@@ -16,6 +16,8 @@ import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { useApplyOfficeAppearance, useApplyOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
+import { useOfficeLevelUpAutoSync } from '@/lib/office/useOfficeLevelUpAutoSync';
+import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { OfficeAssistant } from '@/components/office/OfficeAiHelpButton';
 import { OfficeHeaderAskBox } from '@/components/office/OfficeHomeAskBox';
 import {
@@ -51,6 +53,9 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
 
   const displaySchool = schoolName?.trim() || schoolId;
   const { settings, marksLabels } = useOfficePortalChrome();
+  // Keeps what's shared with levelUp (Settings → levelUp sync) up to date while the Office is open.
+  const { students: officeStudents } = useOfficeSharedData(schoolId, true);
+  useOfficeLevelUpAutoSync(schoolId, settings?.levelUpSync, officeStudents);
   const { allowedSections } = useCurrentOfficeStaffAccess(schoolId, userName);
   const navItems = useMemo(() => {
     const all = getOfficeNavItems(settings);

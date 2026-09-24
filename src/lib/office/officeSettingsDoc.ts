@@ -19,6 +19,7 @@ export type OfficeSettingsPatch = Partial<
     | 'features'
     | 'studentCustomFields'
     | 'transportSchoolLocation'
+    | 'levelUpSync'
   >
 >;
 
