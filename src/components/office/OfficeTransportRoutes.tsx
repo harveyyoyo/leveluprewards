@@ -17,6 +17,7 @@ import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider'
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { OfficeRouteSuggestionsPanel } from '@/components/office/OfficeRouteSuggestionsPanel';
+import { OfficeGpsDevicePanel } from '@/components/office/OfficeGpsDevicePanel';
 import { OfficeStudentPicker } from '@/components/office/OfficeStudentPicker';
 import { OfficePlaceSearch } from '@/components/office/OfficePlaceSearch';
 import { OfficeTransportMap, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
@@ -144,6 +145,8 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
           onRouteCreated={(routeId) => setOpenId(routeId)}
         />
       ) : null}
+
+      <OfficeGpsDevicePanel schoolId={schoolId} routes={routes} isLoading={isLoading} />
 
       {routes.length === 0 ? (
         <OfficeEmptyState
