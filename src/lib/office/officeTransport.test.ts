@@ -15,6 +15,8 @@ import {
   transportDaySummary,
   transportDaySummaryText,
   tripWarnings,
+  vehicleDueLabel,
+  vehicleLabel,
 } from '@/lib/office/officeTransport';
 import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
 
@@ -65,6 +67,12 @@ describe('officeTransport', () => {
       ready: false,
       missing: ['the school stop'],
     });
+  });
+
+  it('summarizes vehicle identity and overdue dates', () => {
+    const vehicle = { year: 2022, make: 'Ford', model: 'Transit', plate: 'BUS-4', inspectionDue: '2026-01-01' };
+    expect(vehicleLabel(vehicle)).toBe('2022 Ford Transit · BUS-4');
+    expect(vehicleDueLabel(vehicle, at(2, 0))).toBe('Inspection overdue');
   });
 
   it('finds the first stop not reached yet', () => {

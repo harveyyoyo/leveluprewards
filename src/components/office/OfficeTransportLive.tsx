@@ -43,6 +43,8 @@ import {
   routeLabel,
   stopTime,
   tripWarnings,
+  vehicleDueLabel,
+  vehicleLabel,
   type LatLng,
 } from '@/lib/office/officeTransport';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
@@ -430,6 +432,8 @@ function RouteDetail({
     else counts.waiting += 1;
   }
   const alerts = [...(trip?.alerts ?? [])].reverse();
+  const vehicle = vehicleLabel(route.vehicle);
+  const vehicleDue = vehicleDueLabel(route.vehicle, now);
 
   return (
     <div className="flex max-h-[560px] flex-col">
@@ -461,6 +465,13 @@ function RouteDetail({
               {trip.driverName ? ` · Driver ${trip.driverName}` : ''}
             </p>
           </div>
+        ) : null}
+
+        {vehicle ? (
+          <p className={cn('rounded-xl px-3 py-2 text-xs', vehicleDue ? 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-100' : 'bg-slate-50 text-muted-foreground dark:bg-slate-800/60')}>
+            Vehicle: {vehicle}
+            {vehicleDue ? ` · ${vehicleDue}` : ''}
+          </p>
         ) : null}
 
         <div className="flex flex-wrap gap-2">

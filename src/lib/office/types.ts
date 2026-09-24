@@ -186,6 +186,17 @@ export type OfficeBusStop = {
   isSchool?: boolean;
 };
 
+export type OfficeBusVehicleDetails = {
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  plate?: string | null;
+  vin?: string | null;
+  inspectionDue?: string | null;
+  insuranceDue?: string | null;
+  notes?: string | null;
+};
+
 /** A bus route (`schools/{id}/officeBusRoutes`). Morning runs the stops in order, afternoon in reverse. */
 export type OfficeBusRoute = {
   id: string;
@@ -197,6 +208,8 @@ export type OfficeBusRoute = {
   driverPhone?: string | null;
   /** Seats on the bus; used for the "full" warning only. */
   capacity?: number | null;
+  /** Optional vehicle identity and maintenance dates. */
+  vehicle?: OfficeBusVehicleDetails | null;
   stops: OfficeBusStop[];
   notes?: string | null;
   updatedAt: number;
@@ -206,7 +219,7 @@ export type OfficeBusRoute = {
 };
 
 /** The route details needed to read a past trip after the route is edited or removed. */
-export type OfficeBusRouteSnapshot = Pick<OfficeBusRoute, 'name' | 'busNumber' | 'color' | 'stops'>;
+export type OfficeBusRouteSnapshot = Pick<OfficeBusRoute, 'name' | 'busNumber' | 'color' | 'vehicle' | 'stops'>;
 
 export type OfficeBusRun = 'am' | 'pm';
 export type OfficeBusRiderStatus = 'on' | 'off' | 'absent';

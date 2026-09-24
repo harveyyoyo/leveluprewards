@@ -19,6 +19,7 @@ import {
   routeLabel,
   transportDaySummary,
   transportDaySummaryText,
+  vehicleLabel,
 } from '@/lib/office/officeTransport';
 import type { OfficeBusEvent, OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
@@ -185,6 +186,7 @@ function TripRow({
   const alerts = trip.alerts ?? [];
   const minutes = trip.endedAt ? Math.round((trip.endedAt - trip.startedAt) / 60_000) : null;
   const stops = route ? orderedStops(route, trip.run) : [];
+  const vehicle = vehicleLabel(route?.vehicle);
 
   return (
     <li>
@@ -206,6 +208,7 @@ function TripRow({
               minutes !== null ? `${minutes} min` : null,
               `${rode} rode`,
               trip.driverName ? `Driver ${trip.driverName}` : null,
+              vehicle,
             ]
               .filter(Boolean)
               .join(' · ')}

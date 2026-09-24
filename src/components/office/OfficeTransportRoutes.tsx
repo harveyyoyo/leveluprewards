@@ -27,10 +27,12 @@ import {
   ridersForRoute,
   routeLabel,
   routeReadiness,
+  vehicleDueLabel,
+  vehicleLabel,
   type LatLng,
 } from '@/lib/office/officeTransport';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBusRoute, OfficeBusStop, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
@@ -140,6 +142,8 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
               const riders = ridersForRoute(students, route.id).length;
               const pct = route.capacity ? Math.min(100, Math.round((riders / route.capacity) * 100)) : null;
               const readiness = routeReadiness(route);
+              const vehicle = vehicleLabel(route.vehicle);
+              const vehicleDue = vehicleDueLabel(route.vehicle);
               return (
                 <li key={route.id}>
                   <button
@@ -159,6 +163,8 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
                         Add {readiness.missing.join(' and ')}
                       </span>
                     ) : null}
+                    {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
+                    {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
                         {riders} rider{riders === 1 ? '' : 's'}
@@ -198,6 +204,26 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
 
 type Draft = Omit<OfficeBusRoute, 'id' | 'updatedAt' | 'updatedBy'>;
 
+function vehicleDraftValue(vehicle: OfficeBusVehicleDetails | null | undefined, key: keyof OfficeBusVehicleDetails): string {
+  const value = vehicle?.[key];
+  return value == null ? '' : String(value);
+}
+
+function cleanVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): OfficeBusVehicleDetails | null {
+  if (!vehicle) return null;
+  const clean = {
+    make: vehicle.make?.trim() || null,
+    model: vehicle.model?.trim() || null,
+    year: vehicle.year ?? null,
+    plate: vehicle.plate?.trim() || null,
+    vin: vehicle.vin?.trim() || null,
+    inspectionDue: vehicle.inspectionDue || null,
+    insuranceDue: vehicle.insuranceDue || null,
+    notes: vehicle.notes?.trim() || null,
+  };
+  return Object.values(clean).some((value) => value !== null) ? clean : null;
+}
+
 function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
   if (route) {
     const { id: _id, updatedAt: _u, updatedBy: _b, ...rest } = route;
@@ -210,6 +236,7 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     driverName: '',
     driverPhone: '',
     capacity: null,
+    vehicle: {},
     stops: [],
     notes: '',
   };
@@ -260,6 +287,7 @@ function OfficeBusRouteSheet({
     setDirty(true);
   };
   const setStop = (id: string, p: Partial<OfficeBusStop>) => patch({ stops: draft.stops.map((s) => (s.id === id ? { ...s, ...p } : s)) });
+  const setVehicle = (p: Partial<OfficeBusVehicleDetails>) => patch({ vehicle: { ...(draft.vehicle ?? {}), ...p } });
   const addStop = (at: LatLng & { label?: string }) => {
     const stop: OfficeBusStop = {
       id: newTransportId('stop'),
@@ -317,6 +345,7 @@ function OfficeBusRouteSheet({
         driverPhone: draft.driverPhone?.trim() || null,
         notes: draft.notes?.trim() || null,
         capacity: draft.capacity && draft.capacity > 0 ? Math.round(draft.capacity) : null,
+        vehicle: cleanVehicle(draft.vehicle),
       });
       if (route) {
         const removedStopIds = route.stops.filter((oldStop) => !draft.stops.some((newStop) => newStop.id === oldStop.id)).map((oldStop) => oldStop.id);
@@ -488,6 +517,47 @@ function OfficeBusRouteSheet({
                   />
                 ))}
               </div>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Vehicle details</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Keep the bus identity and important dates with the route.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-make">Make</Label>
+                <Input id="vehicle-make" value={vehicleDraftValue(draft.vehicle, 'make')} onChange={(e) => setVehicle({ make: e.target.value })} placeholder="e.g. Ford" className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-model">Model</Label>
+                <Input id="vehicle-model" value={vehicleDraftValue(draft.vehicle, 'model')} onChange={(e) => setVehicle({ model: e.target.value })} placeholder="e.g. Transit" className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-year">Year</Label>
+                <Input id="vehicle-year" type="number" min={1900} max={2100} value={vehicleDraftValue(draft.vehicle, 'year')} onChange={(e) => setVehicle({ year: e.target.value ? Number(e.target.value) : null })} className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-plate">Plate</Label>
+                <Input id="vehicle-plate" value={vehicleDraftValue(draft.vehicle, 'plate')} onChange={(e) => setVehicle({ plate: e.target.value })} placeholder="e.g. BUS-104" className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-vin">VIN</Label>
+                <Input id="vehicle-vin" value={vehicleDraftValue(draft.vehicle, 'vin')} onChange={(e) => setVehicle({ vin: e.target.value })} placeholder="Optional" className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-inspection">Inspection due</Label>
+                <Input id="vehicle-inspection" type="date" value={vehicleDraftValue(draft.vehicle, 'inspectionDue')} onChange={(e) => setVehicle({ inspectionDue: e.target.value || null })} className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vehicle-insurance">Insurance due</Label>
+                <Input id="vehicle-insurance" type="date" value={vehicleDraftValue(draft.vehicle, 'insuranceDue')} onChange={(e) => setVehicle({ insuranceDue: e.target.value || null })} className="rounded-xl" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="vehicle-notes">Vehicle notes</Label>
+              <Textarea id="vehicle-notes" value={vehicleDraftValue(draft.vehicle, 'notes')} onChange={(e) => setVehicle({ notes: e.target.value })} placeholder="Maintenance or equipment notes" className="min-h-[60px] rounded-xl" />
             </div>
           </section>
 

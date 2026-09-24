@@ -12,6 +12,7 @@ import type {
   OfficeBusStop,
   OfficeBusTrip,
   OfficeBusTripAlert,
+  OfficeBusVehicleDetails,
   OfficeStudent,
 } from '@/lib/office/types';
 
@@ -77,12 +78,31 @@ function assertStop(stop: OfficeBusStop): void {
   }
 }
 
+function assertVehicle(vehicle: OfficeBusRoute['vehicle']): void {
+  if (vehicle == null) return;
+  if (typeof vehicle !== 'object' || Array.isArray(vehicle)) throw new Error('Vehicle information is invalid.');
+  const raw = vehicle as Record<string, unknown>;
+  optionalString(raw.make, 'Vehicle make', 80);
+  optionalString(raw.model, 'Vehicle model', 80);
+  optionalString(raw.plate, 'Vehicle plate', 20);
+  optionalString(raw.vin, 'Vehicle VIN', 32);
+  optionalString(raw.notes, 'Vehicle notes', 500);
+  if (raw.year != null && (!Number.isInteger(raw.year) || (raw.year as number) < 1900 || (raw.year as number) > 2100)) {
+    throw new Error('Vehicle year is invalid.');
+  }
+  for (const [key, label] of [['inspectionDue', 'Inspection date'], ['insuranceDue', 'Insurance date']] as const) {
+    const value = raw[key];
+    if (value != null && (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))) throw new Error(`${label} is invalid.`);
+  }
+}
+
 function assertRoute(route: OfficeBusRoute): void {
   stringValue(route.name, 'Route name', 100);
   if (!/^#[0-9a-f]{6}$/i.test(route.color)) throw new Error('Route color is invalid.');
   if (route.capacity != null && (!Number.isInteger(route.capacity) || route.capacity < 1 || route.capacity > 200)) {
     throw new Error('Bus capacity is invalid.');
   }
+  assertVehicle(route.vehicle);
   if (!Array.isArray(route.stops) || route.stops.length > MAX_STOPS) throw new Error('This route has too many stops.');
   const ids = new Set<string>();
   let schoolStops = 0;
@@ -307,7 +327,7 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
     if (createTarget) {
       transaction.set(targetRef, {
         routeId,
-        routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, stops: route.stops },
+        routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops },
         riderSnapshot,
         riderManifest,
         date,
@@ -337,7 +357,7 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
         status: 'active',
         endedAt: null,
         updatedAt: now,
-        ...(existing.routeSnapshot ? {} : { routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, stops: route.stops } }),
+        ...(existing.routeSnapshot ? {} : { routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops } }),
         ...(existing.riderSnapshot ? {} : { riderSnapshot }),
         driverId: auth.uid,
       });

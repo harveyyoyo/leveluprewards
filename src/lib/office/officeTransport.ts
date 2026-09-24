@@ -5,6 +5,7 @@ import type {
   OfficeBusRun,
   OfficeBusStop,
   OfficeBusTrip,
+  OfficeBusVehicleDetails,
   OfficeStudent,
   OfficeTransportMode,
 } from '@/lib/office/types';
@@ -274,6 +275,20 @@ export function routeReadiness(route: Pick<OfficeBusRoute, 'stops'>): RouteReadi
   return { ready: missing.length === 0, hasPickupStop, hasSchoolStop, missing };
 }
 
+export function vehicleLabel(vehicle: OfficeBusVehicleDetails | null | undefined): string | null {
+  if (!vehicle) return null;
+  const identity = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ');
+  return [identity || vehicle.plate || null, vehicle.plate && identity ? `· ${vehicle.plate}` : ''].filter(Boolean).join(' ') || null;
+}
+
+export function vehicleDueLabel(vehicle: OfficeBusVehicleDetails | null | undefined, now = Date.now()): string | null {
+  if (!vehicle) return null;
+  const today = localIsoDate(new Date(now));
+  if (vehicle.inspectionDue && vehicle.inspectionDue < today) return 'Inspection overdue';
+  if (vehicle.insuranceDue && vehicle.insuranceDue < today) return 'Insurance overdue';
+  return null;
+}
+
 /** "Bus 4 · North" or just the route name. */
 export function routeLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): string {
   const bus = route.busNumber?.trim();
@@ -306,6 +321,7 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     driverName: route?.driverName ?? null,
     driverPhone: route?.driverPhone ?? null,
     capacity: route?.capacity ?? null,
+    vehicle: snapshot.vehicle ?? route?.vehicle ?? null,
     stops: snapshot.stops ?? [],
     notes: route?.notes ?? null,
     updatedAt: route?.updatedAt ?? trip.updatedAt,

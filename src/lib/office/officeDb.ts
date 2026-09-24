@@ -28,6 +28,7 @@ import type {
   OfficeBusStop,
   OfficeBusTrip,
   OfficeBusTripAlert,
+  OfficeBusVehicleDetails,
   OfficeClass,
   OfficeDeskLogEntry,
   OfficeEvent,
@@ -926,12 +927,33 @@ async function activeRouteIds(ctx: OfficeWriteContext, routeIds: string[]): Prom
   return active;
 }
 
-function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'stops'>): void {
+function assertValidVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): void {
+  if (vehicle == null) return;
+  if (typeof vehicle !== 'object' || Array.isArray(vehicle)) throw new Error('Vehicle information is invalid.');
+  for (const [key, label, max] of [
+    ['make', 'Vehicle make', 80],
+    ['model', 'Vehicle model', 80],
+    ['plate', 'Vehicle plate', 20],
+    ['vin', 'Vehicle VIN', 32],
+    ['notes', 'Vehicle notes', 500],
+  ] as const) {
+    const value = vehicle[key];
+    if (value != null && (typeof value !== 'string' || value.trim().length > max)) throw new Error(`${label} is invalid.`);
+  }
+  if (vehicle.year != null && (!Number.isInteger(vehicle.year) || vehicle.year < 1900 || vehicle.year > 2100)) throw new Error('Vehicle year is invalid.');
+  for (const [key, label] of [['inspectionDue', 'Inspection date'], ['insuranceDue', 'Insurance date']] as const) {
+    const value = vehicle[key];
+    if (value != null && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${label} is invalid.`);
+  }
+}
+
+function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'stops'>): void {
   if (!data.name.trim() || data.name.trim().length > 100) throw new Error('Give the route a name under 100 characters.');
   if (!/^#[0-9a-f]{6}$/i.test(data.color)) throw new Error('Choose a valid route color.');
   if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1 || data.capacity > 200)) {
     throw new Error('Bus capacity must be between 1 and 200.');
   }
+  assertValidVehicle(data.vehicle);
   if (!Array.isArray(data.stops) || data.stops.length > 100) throw new Error('A route can have up to 100 stops.');
   let schoolStops = 0;
   const ids = new Set<string>();
