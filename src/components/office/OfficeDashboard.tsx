@@ -85,7 +85,7 @@ export function OfficeDashboard({
   const history = useOfficeRecentHistory(schoolId, 300, features.aiHelp);
   const { hidden } = useOfficeHiddenSections();
   const { allowedSections } = useCurrentOfficeStaffAccess(schoolId, userName);
-  // Home only offers what this person has in their menu: sections switched off in Interface,
+  // Home only offers what this person has in their menu: sections switched off in Customize,
   // not allowed for their sign-in, or turned off for the school don't appear here either.
   const isShown = (id: OfficeNavId) =>
     !hidden.includes(id) &&

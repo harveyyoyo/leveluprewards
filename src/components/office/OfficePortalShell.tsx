@@ -15,7 +15,6 @@ import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
-import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
 import { useApplyOfficeAppearance, useApplyOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
 import { OfficeAssistant } from '@/components/office/OfficeAiHelpButton';
 import { OfficeHeaderAskBox } from '@/components/office/OfficeHomeAskBox';
@@ -63,7 +62,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const { order: menuOrder, setOrder: setMenuOrder } = useOfficeMenuOrder();
   // Everyone's own order, set by dragging items up and down the menu.
   const orderedNavItems = useMemo(() => applyOfficeMenuOrder(navItems, menuOrder), [navItems, menuOrder]);
-  // Sections hidden in Interface drop out of the menu only; the current page always stays listed.
+  // Sections hidden in Customize drop out of the menu only; the current page always stays listed.
   const menuItems = useMemo(
     () => orderedNavItems.filter((item) => item.id === 'home' || item.id === activeId || !hiddenSections.includes(item.id)),
     [orderedNavItems, hiddenSections, activeId],
@@ -150,9 +149,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             >
               <X className="h-5 w-5" />
             </Button>
-          </div>
-          <div className="border-b border-white/10 px-3 py-2">
-            <OfficeInterfaceSettingsSheet schoolId={schoolId} />
           </div>
 
           {/* `min-h-0` overrides a flex item's default `min-height: auto`, which otherwise
