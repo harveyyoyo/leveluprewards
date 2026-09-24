@@ -19,6 +19,12 @@ import {
   CLASSROOM_THEME_DESIGNS,
   type ClassroomThemeDesign,
 } from '@/lib/classroom/classroomThemeKitData';
+import { classroomHref } from '@/lib/classroomRealmUrl';
+import {
+  loadClassroomPrefs,
+  saveClassroomPrefs,
+  type ClassroomDesign,
+} from '@/lib/classroomSeatingChart';
 
 const FONTS = [
   'Theme default',
@@ -247,6 +253,59 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
   const backHref = `/${schoolId.toLowerCase()}/classroom`;
   const standaloneHref = `/classroom-themes/${activeDesign.slug}.html${settings.darkMode ? '?dark=1' : ''}`;
 
+  const [applied, setApplied] = useState(false);
+
+  const handleApplyToClassroom = () => {
+    if (typeof window === 'undefined') return;
+    const THEME_MAP: Record<string, ClassroomDesign> = {
+      'gamify': 'playful',
+      'comic-pop': 'playful',
+      'clay-3d': 'playful',
+      'candy-clay': 'playful',
+      'retro-arcade': 'playful',
+      'board-game': 'playful',
+      'candy-shop': 'playful',
+      'carnival-ticket': 'playful',
+      'neon-arcade': 'midnight',
+      'cyber-grid': 'midnight',
+      'aurora-glow': 'aurora',
+      'gradient-wave': 'aurora',
+      'synthwave': 'midnight',
+      'corporate-clean': 'minimal',
+      'neo-grotesque': 'minimal',
+      'bold-editorial': 'brutalist',
+      'notebook': 'minimal',
+      'neo-brutalism': 'brutalist',
+      'tactile-stationery': 'minimal',
+      'scholastic-gallery': 'minimal',
+      'warm-academic-serif': 'minimal',
+      'precision-blueprint': 'midnight',
+      'riso-print-room': 'playful',
+      'paper-craft-bulletin': 'playful',
+      'retro-chunky-extruded': 'playful',
+      'tactile-offset-grid': 'playful',
+      'tactile-offset-variant': 'playful',
+      'isometric-block-system': 'playful',
+    };
+    const mappedDesign: ClassroomDesign = settings.darkMode
+      ? 'midnight'
+      : (THEME_MAP[activeDesign.slug] || 'playful');
+
+    const scopes = ['admin', 'staff', ''];
+    scopes.forEach((scope) => {
+      const existing = loadClassroomPrefs(schoolId, scope);
+      saveClassroomPrefs(schoolId, scope, {
+        ...existing,
+        design: mappedDesign,
+        themeKitSlug: activeDesign.slug,
+        themeKitSettings: settings,
+      });
+    });
+
+    setApplied(true);
+    setTimeout(() => setApplied(false), 3500);
+  };
+
   return (
     <div className="flex h-screen w-full flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
       {/* Top Header */}
@@ -324,6 +383,26 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
           >
             <Sliders className="h-3.5 w-3.5" />
             <span className="hidden md:inline">{controlsOpen ? 'Hide Tweaks' : 'Customize'}</span>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleApplyToClassroom}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 shadow-md px-3.5 h-8 rounded-lg"
+          >
+            <Check className="h-3.5 w-3.5 stroke-[3]" />
+            <span>{applied ? '✓ Applied to Classroom!' : 'Apply to Classroom'}</span>
+          </Button>
+
+          <Button
+            asChild
+            size="sm"
+            className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs gap-1.5 h-8 rounded-lg"
+          >
+            <Link href={classroomHref(schoolId)}>
+              <span>Open Classroom</span>
+            </Link>
           </Button>
         </div>
       </header>

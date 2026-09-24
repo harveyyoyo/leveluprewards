@@ -243,8 +243,7 @@ export function ClassroomLiveTeachChrome({
               prefs={headerControls.appearance.prefs}
               rewardsPillarOn={headerControls.appearance.rewardsPillarOn}
               onChange={headerControls.appearance.onChange}
-              triggerClassName={iconBtnClass}
-              iconOnly
+              triggerClassName="inline-flex h-8 items-center justify-center rounded-full border border-white/20 bg-white/10 px-2.5 text-xs font-bold text-white hover:bg-white/20 gap-1.5"
             />
             <ClassroomAwardsEffectsPopover
               prefs={headerControls.appearance.prefs}

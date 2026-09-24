@@ -354,6 +354,8 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       attendanceSource: normalizeClassroomAttendanceSource(parsed.attendanceSource),
       monitorMenuTabs: normalizeMonitorMenuTabs(parsed.monitorMenuTabs),
+      themeKitSlug: parsed.themeKitSlug,
+      themeKitSettings: parsed.themeKitSettings,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
     if (parsedVersion < 18) {
