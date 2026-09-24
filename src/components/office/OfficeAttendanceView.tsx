@@ -118,7 +118,7 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
   };
 
   const sortedClasses = useMemo(
-    () => classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
+    () => classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', undefined, { numeric: true })),
     [classes],
   );
 

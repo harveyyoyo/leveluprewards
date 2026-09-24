@@ -12,7 +12,7 @@ import {
   officeStudentsListReport,
   type OfficeRosterFilter,
 } from '@/lib/office/officeAssistantLists';
-import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
+import { ArrowDown, ArrowUp, Clock, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import {
@@ -119,6 +119,31 @@ export function OfficeStudentsView({
   const [homeroomFilter, setHomeroomFilter] = useState('all');
   const [rosterFilter, setRosterFilter] = useState<RosterFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name-asc');
+  // The page opens on a search and ways to narrow down; the whole roster only on "Show all".
+  const [showAll, setShowAll] = useState(false);
+  const recentKey = `school-office-recent-students:${schoolId}`;
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(recentKey) ?? '[]');
+      setRecentIds(Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : []);
+    } catch {
+      setRecentIds([]);
+    }
+  }, [recentKey]);
+  // Remember students whose card was opened, for "Recently opened".
+  useEffect(() => {
+    if (!selectedStudentId) return;
+    setRecentIds((prev) => {
+      const next = [selectedStudentId, ...prev.filter((id) => id !== selectedStudentId)].slice(0, 6);
+      try {
+        window.localStorage.setItem(recentKey, JSON.stringify(next));
+      } catch {
+        // Storage can be blocked; the list then lasts for this visit only.
+      }
+      return next;
+    });
+  }, [selectedStudentId, recentKey]);
   const openedHomeroomFromQuery = useRef(false);
   const importRef = useRef<(() => void) | null>(null);
   // Set when Help → Ask opened this page with a list (e.g. students living in Brooklyn).
@@ -137,7 +162,7 @@ export function OfficeStudentsView({
   const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
 
   const classOptions = useMemo(() => {
-    return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', undefined, { numeric: true }));
   }, [classes]);
 
   // The default roster view is "active students" — withdrawn/graduated students have their
@@ -263,6 +288,7 @@ export function OfficeStudentsView({
   );
 
   const clearAll = () => {
+    setShowAll(false);
     setReportAskAt(null);
     setAskLabel('');
     setQuery('');
@@ -347,6 +373,16 @@ export function OfficeStudentsView({
     !!firstStarts ||
     !!birthMonth ||
     !!idsFilter;
+  const showList = isFiltered || showAll || !!askLabel;
+
+  const studentsById = new Map(students.map((s) => [s.id, s]));
+  const recentStudents = recentIds
+    .map((id) => studentsById.get(id))
+    .filter((s): s is OfficeStudent => !!s);
+  const classCounts = new Map<string, number>();
+  for (const s of activeStudents) if (s.classId) classCounts.set(s.classId, (classCounts.get(s.classId) ?? 0) + 1);
+  const chip =
+    'rounded-full bg-white px-3.5 py-1.5 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-teal-50 hover:text-teal-900 hover:ring-teal-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-teal-950/40';
 
   return (
     <div className="space-y-3">
@@ -402,6 +438,8 @@ export function OfficeStudentsView({
           placeholder="Search students…"
           className="basis-full sm:basis-auto sm:min-w-[12rem] sm:flex-1"
         />
+        {showList ? (
+        <>
         <Select
           value={rosterFilter}
           onValueChange={(v) => {
@@ -436,8 +474,72 @@ export function OfficeStudentsView({
             ))}
           </SelectContent>
         </Select>
+        </>
+        ) : null}
       </div>
 
+      {!showList ? (
+        <div className="space-y-5 rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          {recentStudents.length > 0 ? (
+            <section>
+              <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <Clock className="h-3.5 w-3.5" aria-hidden />
+                Recently opened
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {recentStudents.map((st) => (
+                  <button key={st.id} type="button" className={chip} onClick={() => openStudent(st)}>
+                    {getOfficeStudentLabel(st)} {st.lastName}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          <section>
+            <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">By class</h3>
+            <div className="flex flex-wrap gap-2">
+              {classOptions.map((c) => (
+                <button key={c.id} type="button" className={chip} onClick={() => setClassFilter(c.id)}>
+                  {c.name} <span className="text-muted-foreground">· {classCounts.get(c.id) ?? 0}</span>
+                </button>
+              ))}
+              {unassignedCount > 0 ? (
+                <button
+                  type="button"
+                  className={chip}
+                  onClick={() => {
+                    setRosterFilter('unassigned');
+                    setClassFilter('__unassigned__');
+                  }}
+                >
+                  No class <span className="text-muted-foreground">· {unassignedCount}</span>
+                </button>
+              ) : null}
+            </div>
+          </section>
+          {rosterFilterOptions.length > 1 ? (
+            <section>
+              <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Needs attention</h3>
+              <div className="flex flex-wrap gap-2">
+                {rosterFilterOptions
+                  .filter((opt) => opt.id !== 'all' && opt.id !== 'unassigned')
+                  .map((opt) => (
+                    <button key={opt.id} type="button" className={chip} onClick={() => setRosterFilter(opt.id)}>
+                      {opt.label}
+                    </button>
+                  ))}
+              </div>
+            </section>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            className="text-sm font-medium text-teal-800 hover:underline dark:text-teal-300"
+          >
+            Show all {activeStudents.length} students
+          </button>
+        </div>
+      ) : (
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-sm">
           <thead>
@@ -510,6 +612,7 @@ export function OfficeStudentsView({
           </p>
         ) : null}
       </div>
+      )}
     </div>
   );
 }

@@ -166,6 +166,8 @@ export function OfficeBillingView({
   const [accountAddress, setAccountAddress] = useState('');
   // Each family is one line; its bills show when it's opened.
   const [openAccounts, setOpenAccounts] = useState<Set<string>>(() => new Set());
+  // The page opens on the totals and a search; every family only on "Show all".
+  const [showAllAccounts, setShowAllAccounts] = useState(false);
   const toggleAccount = (id: string) =>
     setOpenAccounts((prev) => {
       const next = new Set(prev);
@@ -284,6 +286,7 @@ export function OfficeBillingView({
   useReportOfficeAssistantResults(reportAskAt, !isLoading, () => officeBillingListReport(filteredAccounts, owedByAccount));
 
   const clearAsk = () => {
+    setShowAllAccounts(false);
     setReportAskAt(null);
     setAskLabel('');
     setMinOwedCents(null);
@@ -1111,7 +1114,7 @@ export function OfficeBillingView({
               ? `${accounts.length} family ${accounts.length === 1 ? 'account' : 'accounts'}`
               : `${filteredAccounts.length} of ${accounts.length} family accounts`}
           </span>
-          {invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null ? (
+          {showAllAccounts || invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null ? (
             <button
               type="button"
               className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
@@ -1194,6 +1197,17 @@ export function OfficeBillingView({
             </Button>
           }
         />
+      ) : !(showAllAccounts || askLabel || invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null) ? (
+        <p className="text-sm text-muted-foreground">
+          Search for a family, or tap a number above to see those families.{' '}
+          <button
+            type="button"
+            onClick={() => setShowAllAccounts(true)}
+            className="font-medium text-teal-800 hover:underline dark:text-teal-300"
+          >
+            Show all {accounts.length} families
+          </button>
+        </p>
       ) : filteredAccounts.length === 0 ? (
         <OfficeEmptyState title="No accounts match" description="Try a different search or filter." />
       ) : (
