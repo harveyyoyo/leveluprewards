@@ -28,6 +28,8 @@ export type OfficeFamilyContact = {
   isPrimary?: boolean;
   /** Undefined means allowed; false blocks bus release confirmation. */
   pickupAuthorized?: boolean;
+  /** Undefined means opted in; false hides this contact from transportation emails. */
+  transportNotificationsEnabled?: boolean;
   notes?: string | null;
 };
 

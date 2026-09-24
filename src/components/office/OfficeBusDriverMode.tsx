@@ -248,6 +248,7 @@ function DrivingScreen({
   const [reportMinutes, setReportMinutes] = useState<number | null>(10);
   const [ending, setEnding] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [releaseRider, setReleaseRider] = useState<DriverRider | null>(null);
   const [releaseMethod, setReleaseMethod] = useState<OfficeBusReleaseMethod>('authorized_contact');
   const [releaseContactId, setReleaseContactId] = useState('');
@@ -261,6 +262,17 @@ function DrivingScreen({
     // Reset only when the run changes; live location updates should not reset the sync badge.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id]);
+
+  useEffect(() => {
+    const updateConnection = () => setIsOnline(navigator.onLine);
+    updateConnection();
+    window.addEventListener('online', updateConnection);
+    window.addEventListener('offline', updateConnection);
+    return () => {
+      window.removeEventListener('online', updateConnection);
+      window.removeEventListener('offline', updateConnection);
+    };
+  }, []);
 
   const activeRoute = useMemo(() => routeForTrip(route, trip) ?? route, [route, trip]);
   const stops = orderedStops(activeRoute, trip.run);
@@ -289,6 +301,10 @@ function DrivingScreen({
         setMe(p);
         const t = tripRef.current;
         const now = Date.now();
+        if (!navigator.onLine) {
+          setSyncError('No internet connection. Location will resume when the phone reconnects.');
+          return;
+        }
         const prev = lastSent.current;
         // Reaching a stop is sent right away so the office sees it without waiting.
         const upcoming = nextStop(activeRoute, t);
@@ -317,7 +333,14 @@ function DrivingScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id]);
 
+  const ensureOnline = () => {
+    if (isOnline) return true;
+    toast({ variant: 'destructive', title: 'No internet connection', description: 'Reconnect before saving this change. The trip will not be marked complete offline.' });
+    return false;
+  };
+
   const mark = async (kids: DriverRider[], st: OfficeBusRiderStatus | null) => {
+    if (!ensureOnline()) return;
     try {
       await transport.setOfficeBusRiders(
         trip,
@@ -366,6 +389,7 @@ function DrivingScreen({
   };
 
   const arrive = async (stopId: string, reached = true) => {
+    if (!ensureOnline()) return;
     try {
       await transport.setOfficeBusStopReached(trip, stopId, reached);
     } catch (e) {
@@ -374,7 +398,7 @@ function DrivingScreen({
   };
 
   const sendReport = async () => {
-    if (!report) return;
+    if (!report || !ensureOnline()) return;
     try {
       await transport.addOfficeBusTripAlert(trip, route, {
         kind: report,
@@ -391,6 +415,7 @@ function DrivingScreen({
 
   const unresolved = riders.filter((k) => status[k.id]?.status !== 'off' && status[k.id]?.status !== 'absent');
   const finish = async () => {
+    if (!ensureOnline()) return;
     if (unresolved.length > 0) {
       toast({ variant: 'destructive', title: 'Some riders are not accounted for', description: 'Mark every rider off or not here before ending the run.' });
       return;
@@ -439,26 +464,30 @@ function DrivingScreen({
       <div
         className={cn(
           'flex items-center gap-2 px-4 py-2 text-sm font-medium',
-          geo === 'on' && !syncError
-            ? 'bg-teal-700 text-white'
+          !isOnline
+            ? 'bg-slate-700 text-white'
+            : geo === 'on' && !syncError
+              ? 'bg-teal-700 text-white'
             : geo === 'waiting'
               ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
               : 'bg-amber-500 text-amber-950',
         )}
         role="status"
       >
-        {geo === 'on' ? <LocateFixed className="h-4 w-4" /> : <LocateOff className="h-4 w-4" />}
-        {geo === 'on' && syncError
-          ? 'Location found, but the office has not received it yet. Trying again…'
-          : geo === 'on' && lastServerAt
-            ? 'Sharing bus location with the office'
-            : geo === 'on'
-              ? 'Sending the first bus location…'
-              : geo === 'waiting'
-                ? 'Finding your location…'
-                : geo === 'denied'
-                  ? 'Location is off. Allow location for this site so the office can see the bus.'
-                  : 'Can’t find your location right now. The rider list still works.'}
+        {!isOnline ? <LocateOff className="h-4 w-4" /> : geo === 'on' ? <LocateFixed className="h-4 w-4" /> : <LocateOff className="h-4 w-4" />}
+        {!isOnline
+          ? 'No internet connection. Reconnect before saving rider changes or ending this run.'
+          : geo === 'on' && syncError
+            ? 'Location found, but the office has not received it yet. Trying again…'
+            : geo === 'on' && lastServerAt
+              ? 'Sharing bus location with the office'
+              : geo === 'on'
+                ? 'Sending the first bus location…'
+                : geo === 'waiting'
+                  ? 'Finding your location…'
+                  : geo === 'denied'
+                    ? 'Location is off. Allow location for this site so the office can see the bus.'
+                    : 'Can’t find your location right now. The rider list still works.'}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -600,7 +629,7 @@ function DrivingScreen({
             </details>
           ) : null}
 
-          <Button type="button" variant="destructive" className="h-12 w-full rounded-xl" onClick={() => setEnding(true)}>
+          <Button type="button" variant="destructive" className="h-12 w-full rounded-xl" disabled={!isOnline} onClick={() => setEnding(true)}>
             End run
           </Button>
         </div>
@@ -680,7 +709,7 @@ function DrivingScreen({
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => setEnding(false)}>
               Keep driving
             </Button>
-            <Button type="button" variant="destructive" className="rounded-xl" disabled={!checked || unresolved.length > 0} onClick={() => void finish()}>
+            <Button type="button" variant="destructive" className="rounded-xl" disabled={!isOnline || !checked || unresolved.length > 0} onClick={() => void finish()}>
               End run
             </Button>
           </DialogFooter>

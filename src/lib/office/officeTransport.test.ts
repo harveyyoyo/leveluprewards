@@ -169,6 +169,7 @@ describe('officeTransport', () => {
       ], updatedAt: 1 }],
       ['f2', { id: 'f2', displayName: 'Cohen family', contacts: [
         { id: 'c3', name: 'Guardian', role: 'guardian' as const, email: 'mom@example.com' },
+        { id: 'c4', name: 'No email', role: 'other' as const, email: 'off@example.com', transportNotificationsEnabled: false },
       ], updatedAt: 1 }],
     ]);
     const students = [
