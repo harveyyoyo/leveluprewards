@@ -129,6 +129,7 @@ export function OfficeTransportationView({ schoolId, students, studentLabelById,
           routes={routes}
           trips={trips}
           students={activeStudents}
+          familyById={familyById}
           center={center}
           onClose={() => setDriving(false)}
         />

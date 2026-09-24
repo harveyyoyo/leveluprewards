@@ -103,6 +103,15 @@ describe('officeTransport', () => {
     expect(stale.some((w) => w.id === 't1-stale')).toBe(true);
   });
 
+  it('warns when a new run has a rider release still missing', () => {
+    const names = new Map([['kid1', 'Maya Lopez']]);
+    const newTrip = trip({
+      riderManifest: [{ studentId: 'kid1', displayName: 'Maya Lopez', familyId: 'f1', busStopId: 'a' }],
+      riders: { kid1: { status: 'off', at: at(7, 30) } },
+    });
+    expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
+  });
+
   it('moves a practice bus along the stops', () => {
     const pts = route.stops;
     expect(pointAlongStops(pts, 0)).toMatchObject({ lat: pts[0].lat, lng: pts[0].lng });

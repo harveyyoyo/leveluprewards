@@ -5,6 +5,7 @@ import { useAuthFetch } from '@/lib/authFetch';
 import type {
   OfficeBusAlertKind,
   OfficeBusLocation,
+  OfficeBusReleaseMethod,
   OfficeBusRiderStatus,
   OfficeBusRoute,
   OfficeBusRun,
@@ -47,6 +48,11 @@ export function useOfficeTransportApi(schoolId: string | null) {
         _route: OfficeBusRoute,
         changes: Array<{ studentId: string; studentName: string; status: OfficeBusRiderStatus | null }>,
       ) => call<{ ok: true }>({ action: 'riders', tripId: trip.id, run: trip.run, changes }),
+      recordOfficeBusRelease: (
+        trip: Pick<OfficeBusTrip, 'id' | 'run'>,
+        studentId: string,
+        release: { method: OfficeBusReleaseMethod; contactId?: string | null; recipientName?: string | null; note?: string | null },
+      ) => call<{ release: unknown }>({ action: 'release', tripId: trip.id, studentId, ...release }),
       addOfficeBusTripAlert: (
         trip: Pick<OfficeBusTrip, 'id' | 'run'>,
         _route: OfficeBusRoute,

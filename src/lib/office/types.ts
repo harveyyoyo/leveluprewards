@@ -26,6 +26,8 @@ export type OfficeFamilyContact = {
   phone?: string | null;
   email?: string | null;
   isPrimary?: boolean;
+  /** Undefined means allowed; false blocks bus release confirmation. */
+  pickupAuthorized?: boolean;
   notes?: string | null;
 };
 
@@ -246,9 +248,22 @@ export type OfficeBusLocation = {
   at: number;
 };
 
+export type OfficeBusReleaseMethod = 'authorized_contact' | 'id_checked' | 'office_override';
+
+export type OfficeBusRelease = {
+  studentId: string;
+  contactId?: string | null;
+  contactName: string;
+  method: OfficeBusReleaseMethod;
+  note?: string | null;
+  occurredAt: number;
+  by: string;
+};
+
 export type OfficeBusEvent =
   | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
-  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string };
+  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string }
+  | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string };
 
 export type OfficeBusRiderManifestEntry = {
   studentId: string;
@@ -286,6 +301,8 @@ export type OfficeBusTrip = {
   stopArrivals?: Record<string, number> | null;
   /** studentId -> latest status on this run. */
   riders?: Record<string, { status: OfficeBusRiderStatus; at: number }> | null;
+  /** Release confirmation for each rider who was marked off. */
+  releases?: Record<string, OfficeBusRelease> | null;
   alerts?: OfficeBusTripAlert[] | null;
   /** Append-only rider and stop events kept for the safety record. */
   events?: OfficeBusEvent[] | null;

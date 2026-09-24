@@ -10,6 +10,7 @@ import { useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
 import { downloadCsv } from '@/lib/office/officeUtils';
 import {
   BUS_ALERT_LABEL,
+  BUS_RELEASE_METHOD_LABEL,
   BUS_RUN_LABEL,
   clockLabel,
   localIsoDate,
@@ -181,6 +182,9 @@ function TripRow({
   const riderEvents = (trip.events ?? []).filter(
     (event): event is Extract<OfficeBusEvent, { kind: 'rider' }> => event.kind === 'rider',
   );
+  const releaseEvents = (trip.events ?? []).filter(
+    (event): event is Extract<OfficeBusEvent, { kind: 'release' }> => event.kind === 'release',
+  );
   const rode = riders.filter(([, r]) => r.status !== 'absent').length;
   const leftOn = riders.filter(([, r]) => r.status === 'on');
   const alerts = trip.alerts ?? [];
@@ -295,6 +299,21 @@ function TripRow({
                       <span>{riderNameForTrip(trip, event.studentId, studentNameById)}</span>
                       <span className="text-muted-foreground">
                         {event.status === 'on' ? 'Got on' : event.status === 'off' ? 'Got off' : event.status === 'absent' ? 'Not riding' : 'Mark cleared'} · {clockLabel(event.at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {releaseEvents.length > 0 ? (
+              <div className="mt-4 border-t pt-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Release confirmations</p>
+                <ul className="mt-1.5 space-y-1">
+                  {releaseEvents.map((event, index) => (
+                    <li key={`${event.studentId}-${event.at}-${index}`} className="flex items-center justify-between gap-2 text-xs">
+                      <span>{riderNameForTrip(trip, event.studentId, studentNameById)}</span>
+                      <span className="text-muted-foreground">
+                        {BUS_RELEASE_METHOD_LABEL[event.method]} · {event.contactName} · {clockLabel(event.at)}
                       </span>
                     </li>
                   ))}

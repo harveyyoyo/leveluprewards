@@ -1,5 +1,6 @@
 import type {
   OfficeBusAlertKind,
+  OfficeBusReleaseMethod,
   OfficeBusRiderManifestEntry,
   OfficeBusRoute,
   OfficeBusRun,
@@ -28,6 +29,12 @@ export const BUS_ALERT_LABEL: Record<OfficeBusAlertKind, string> = {
   accident: 'Accident',
   behavior: 'Student behavior',
   other: 'Note from driver',
+};
+
+export const BUS_RELEASE_METHOD_LABEL: Record<OfficeBusReleaseMethod, string> = {
+  authorized_contact: 'Family contact',
+  id_checked: 'ID checked',
+  office_override: 'Office approved',
 };
 
 /** Route colours that read well on the map in light and dark. */
@@ -193,6 +200,17 @@ export function tripWarnings(
         tone: 'caution',
         routeId: route.id,
         text: `${bus} has ${onBoard} riders on board but only ${route.capacity} seats.`,
+      });
+    }
+    const missingReleases = Object.entries(trip.riders ?? {})
+      .filter(([studentId, rider]) => rider.status === 'off' && !trip.releases?.[studentId])
+      .map(([studentId]) => studentNameById.get(studentId) ?? 'A rider');
+    if ((trip.releases != null || trip.riderManifest != null) && missingReleases.length > 0) {
+      out.push({
+        id: `${trip.id}-release`,
+        tone: 'caution',
+        routeId: route.id,
+        text: `${bus}: release not recorded for ${listNames(missingReleases)}.`,
       });
     }
   }

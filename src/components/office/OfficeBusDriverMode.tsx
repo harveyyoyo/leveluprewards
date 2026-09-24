@@ -29,7 +29,7 @@ import {
 } from '@/lib/office/officeTransport';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBusAlertKind, OfficeBusRiderManifestEntry, OfficeBusRiderStatus, OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBusAlertKind, OfficeBusReleaseMethod, OfficeBusRiderManifestEntry, OfficeBusRiderStatus, OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeFamily, OfficeFamilyContact, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 /** Send the bus position at most this often, unless it moved far. */
@@ -47,6 +47,7 @@ export function OfficeBusDriverMode({
   routes,
   trips,
   students,
+  familyById,
   center,
   onClose,
 }: {
@@ -54,6 +55,7 @@ export function OfficeBusDriverMode({
   routes: OfficeBusRoute[];
   trips: OfficeBusTrip[];
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   center: LatLng;
   onClose: () => void;
 }) {
@@ -114,7 +116,7 @@ export function OfficeBusDriverMode({
       </header>
 
       {trip && route && trip.status === 'active' ? (
-        <DrivingScreen schoolId={schoolId} route={route} trip={trip} students={students} center={center} onFinished={onClose} />
+        <DrivingScreen schoolId={schoolId} route={route} trip={trip} students={students} familyById={familyById} center={center} onFinished={onClose} />
       ) : (
         <div className="mx-auto w-full max-w-md flex-1 space-y-5 overflow-y-auto p-5">
           <div>
@@ -204,11 +206,25 @@ function driverRiders(trip: OfficeBusTrip, students: OfficeStudent[], routeId: s
   return current.map((student) => ({ id: student.id, displayName: getOfficeStudentFullName(student), busStopId: student.busStopId ?? null }));
 }
 
+function driverFamilyContacts(
+  rider: DriverRider,
+  trip: OfficeBusTrip,
+  students: OfficeStudent[],
+  familyById: Map<string, OfficeFamily>,
+): OfficeFamilyContact[] {
+  const familyId =
+    trip.riderManifest?.find((entry) => entry.studentId === rider.id)?.familyId ??
+    students.find((student) => student.id === rider.id)?.familyId ??
+    null;
+  return familyId ? (familyById.get(familyId)?.contacts ?? []).filter((contact) => contact.pickupAuthorized !== false) : [];
+}
+
 function DrivingScreen({
   schoolId,
   route,
   trip,
   students,
+  familyById,
   center,
   onFinished,
 }: {
@@ -216,6 +232,7 @@ function DrivingScreen({
   route: OfficeBusRoute;
   trip: OfficeBusTrip;
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   center: LatLng;
   onFinished: () => void;
 }) {
@@ -231,6 +248,12 @@ function DrivingScreen({
   const [reportMinutes, setReportMinutes] = useState<number | null>(10);
   const [ending, setEnding] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [releaseRider, setReleaseRider] = useState<DriverRider | null>(null);
+  const [releaseMethod, setReleaseMethod] = useState<OfficeBusReleaseMethod>('authorized_contact');
+  const [releaseContactId, setReleaseContactId] = useState('');
+  const [releaseRecipientName, setReleaseRecipientName] = useState('');
+  const [releaseNote, setReleaseNote] = useState('');
+  const [releaseSaving, setReleaseSaving] = useState(false);
 
   useEffect(() => {
     setLastServerAt(trip.location?.at ?? null);
@@ -301,6 +324,42 @@ function DrivingScreen({
       );
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
+    }
+  };
+
+  const openRelease = (rider: DriverRider) => {
+    const contacts = driverFamilyContacts(rider, trip, students, familyById);
+    setReleaseRider(rider);
+    setReleaseMethod(contacts.length ? 'authorized_contact' : 'office_override');
+    setReleaseContactId(contacts[0]?.id ?? '');
+    setReleaseRecipientName('');
+    setReleaseNote('');
+  };
+
+  const saveRelease = async () => {
+    if (!releaseRider) return;
+    if (releaseMethod !== 'office_override' && !releaseContactId) {
+      toast({ variant: 'destructive', title: 'Choose an approved contact' });
+      return;
+    }
+    if (releaseMethod === 'office_override' && (!releaseRecipientName.trim() || !releaseNote.trim())) {
+      toast({ variant: 'destructive', title: 'Add the recipient name and an office note' });
+      return;
+    }
+    setReleaseSaving(true);
+    try {
+      await transport.recordOfficeBusRelease(trip, releaseRider.id, {
+        method: releaseMethod,
+        contactId: releaseMethod === 'office_override' ? null : releaseContactId,
+        recipientName: releaseMethod === 'office_override' ? releaseRecipientName.trim() : null,
+        note: releaseNote.trim() || null,
+      });
+      toast({ title: 'Release recorded', description: 'The office can now see who received this rider.' });
+      setReleaseRider(null);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not save the release', description: (e as Error).message });
+    } finally {
+      setReleaseSaving(false);
     }
   };
 
@@ -496,6 +555,15 @@ function DrivingScreen({
                           </button>
                         ))}
                       </div>
+                      {st === 'off' ? (
+                        trip.releases?.[k.id] ? (
+                          <p className="mt-2 text-xs text-teal-700 dark:text-teal-300">Released to {trip.releases[k.id].contactName}</p>
+                        ) : (
+                          <Button type="button" variant="outline" size="sm" className="mt-2 w-full gap-2 rounded-lg" onClick={() => openRelease(k)}>
+                            <ShieldCheck className="h-3.5 w-3.5" /> Record who received them
+                          </Button>
+                        )
+                      ) : null}
                     </li>
                   );
                 })}
@@ -612,6 +680,66 @@ function DrivingScreen({
             </Button>
             <Button type="button" variant="destructive" className="rounded-xl" disabled={!checked || unresolved.length > 0} onClick={() => void finish()}>
               End run
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!releaseRider} onOpenChange={(open) => (!open ? setReleaseRider(null) : undefined)}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Record release</DialogTitle>
+          </DialogHeader>
+          {releaseRider ? (
+            <div className="space-y-3">
+              <p className="text-sm">Who received <span className="font-semibold">{releaseRider.displayName}</span>?</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  ['authorized_contact', 'Family contact'],
+                  ['id_checked', 'ID checked'],
+                  ['office_override', 'Office approved'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={releaseMethod === value}
+                    onClick={() => setReleaseMethod(value)}
+                    className={cn(
+                      'rounded-lg border px-2 py-2 text-xs font-medium',
+                      releaseMethod === value ? 'border-teal-700 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-100' : 'border-slate-200 dark:border-slate-700',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {releaseMethod === 'office_override' ? (
+                <Input value={releaseRecipientName} onChange={(e) => setReleaseRecipientName(e.target.value)} placeholder="Recipient's name" className="rounded-xl" />
+              ) : (
+                <select
+                  value={releaseContactId}
+                  onChange={(e) => setReleaseContactId(e.target.value)}
+                  className="h-10 w-full rounded-xl border bg-background px-3 text-sm"
+                  aria-label="Approved family contact"
+                >
+                  <option value="">Choose an approved contact</option>
+                  {driverFamilyContacts(releaseRider, trip, students, familyById).map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.name}{contact.relationship ? ` · ${contact.relationship}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <Input value={releaseNote} onChange={(e) => setReleaseNote(e.target.value)} placeholder={releaseMethod === 'office_override' ? 'Why did the office approve this?' : 'Optional note'} className="rounded-xl" />
+              <p className="text-xs text-muted-foreground">This is saved with the trip history. It does not send a message to families.</p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-xl" onClick={() => setReleaseRider(null)}>
+              Cancel
+            </Button>
+            <Button type="button" className="rounded-xl" disabled={releaseSaving} onClick={() => void saveRelease()}>
+              {releaseSaving ? 'Saving…' : 'Save release'}
             </Button>
           </DialogFooter>
         </DialogContent>

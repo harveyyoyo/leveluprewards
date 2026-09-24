@@ -89,6 +89,7 @@ const FIELD_LABELS: Record<string, string> = {
   vin: 'VIN',
   inspectionDue: 'Inspection due',
   insuranceDue: 'Insurance due',
+  pickupAuthorized: 'Allowed for bus pickup',
   displayName: 'Family name',
   familyName: 'Family name',
   contactEmail: 'Email',

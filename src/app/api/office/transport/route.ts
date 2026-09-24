@@ -7,6 +7,8 @@ import { riderManifestFromStudents, riderSnapshotFromStudents, tripDocId } from 
 import type {
   OfficeBusEvent,
   OfficeBusLocation,
+  OfficeBusRelease,
+  OfficeBusReleaseMethod,
   OfficeBusRoute,
   OfficeBusRun,
   OfficeBusStop,
@@ -22,6 +24,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 const MAX_STOPS = 100;
 const MAX_RIDERS = 300;
 const ALERT_KINDS = new Set<OfficeBusTripAlert['kind']>(['delay', 'breakdown', 'accident', 'behavior', 'other']);
+const RELEASE_METHODS = new Set<OfficeBusReleaseMethod>(['authorized_contact', 'id_checked', 'office_override']);
 const locationAttempts = new Map<string, { startedAt: number; count: number }>();
 
 type AuthContext = {
@@ -482,6 +485,82 @@ async function setRiders(auth: AuthContext, schoolId: string, body: Body): Promi
   return { ok: true };
 }
 
+async function recordRelease(auth: AuthContext, schoolId: string, body: Body): Promise<{ release: OfficeBusRelease }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const studentId = safeId(body.studentId, 'Student');
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(trip);
+  assertCanOperate(auth, trip);
+  if (trip.riders?.[studentId]?.status !== 'off') throw new Error('Mark the rider off before recording who received them.');
+  if (trip.riderSnapshot && !trip.riderSnapshot.includes(studentId)) throw new Error('That rider is not part of this run.');
+
+  const method = body.method;
+  if (typeof method !== 'string' || !RELEASE_METHODS.has(method as OfficeBusReleaseMethod)) throw new Error('Release confirmation type is invalid.');
+  const note = optionalString(body.note, 'Release note', 500);
+  const manifestEntry = trip.riderManifest?.find((entry) => entry.studentId === studentId);
+  const studentSnap = await auth.db.collection('schools').doc(schoolId).collection('officeStudents').doc(studentId).get();
+  const student = studentSnap.exists ? (studentSnap.data() as OfficeStudent) : null;
+  const familyId = student?.familyId ?? manifestEntry?.familyId ?? null;
+  let contactId: string | null = null;
+  let contactName = '';
+
+  if (method === 'office_override') {
+    if (!note) throw new Error('Add a note when the office approves someone who is not on the family list.');
+    contactName = stringValue(body.recipientName, 'Recipient name', 120);
+  } else {
+    contactId = safeId(body.contactId, 'Approved contact');
+    const familySnap = familyId ? await auth.db.collection('schools').doc(schoolId).collection('officeFamilies').doc(familyId).get() : null;
+    const familyData = familySnap?.exists
+      ? (familySnap.data() as { contacts?: Array<{ id: string; name: string; pickupAuthorized?: boolean }> })
+      : null;
+    const contact = familyData?.contacts?.find((item) => item.id === contactId) ?? null;
+    if (!contact) throw new Error('Choose an approved family contact.');
+    if (contact.pickupAuthorized === false) throw new Error('That contact is not allowed to receive this student.');
+    contactName = stringValue(contact.name, 'Approved contact', 120);
+  }
+
+  const now = Date.now();
+  const release: OfficeBusRelease = {
+    studentId,
+    contactId,
+    contactName,
+    method: method as OfficeBusReleaseMethod,
+    note,
+    occurredAt: now,
+    by: auth.uid,
+  };
+  const event: OfficeBusEvent = {
+    kind: 'release',
+    studentId,
+    contactId,
+    contactName,
+    method: release.method,
+    at: now,
+    by: auth.uid,
+  };
+  const ref = tripRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.data() as OfficeBusTrip | undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run has already ended.', 409);
+    if (current.riders?.[studentId]?.status !== 'off') throw new Error('Mark the rider off before recording who received them.');
+    transaction.set(ref, {
+      [`releases.${studentId}`]: release,
+      events: FieldValue.arrayUnion(event),
+      updatedAt: now,
+    }, { merge: true });
+  });
+  await audit(auth.db, schoolId, {
+    entityType: 'officeBusTrip',
+    entityId: tripId,
+    action: 'update',
+    summary: `Recorded release for ${studentId}`,
+    after: { studentId, method: release.method, contactName: release.contactName, at: now },
+    changedBy: auth.uid,
+  });
+  return { release };
+}
+
 async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -542,6 +621,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await setStop(auth, schoolId, body));
       case 'riders':
         return NextResponse.json(await setRiders(auth, schoolId, body));
+      case 'release':
+        return NextResponse.json(await recordRelease(auth, schoolId, body));
       case 'alert':
         return NextResponse.json(await addAlert(auth, schoolId, body));
       case 'end':
