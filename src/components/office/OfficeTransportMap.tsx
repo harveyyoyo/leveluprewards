@@ -8,6 +8,7 @@ import type { LatLng } from '@/lib/office/officeTransport';
 const TILE = 256;
 const MIN_ZOOM = 3;
 const MAX_ZOOM = 18;
+const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY?.trim() ?? '';
 
 export type TransportMapMarker = LatLng & {
   id: string;
@@ -134,7 +135,9 @@ export function OfficeTransportMap({
         const sub = 'abcd'[(wx + ty) % 4];
         out.push({
           key: `${zoom}-${tx}-${ty}`,
-          src: `https://${sub}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${wx}/${ty}.png`,
+          src: `https://${sub}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${wx}/${ty}.png${
+            CARTO_API_KEY ? `?key=${encodeURIComponent(CARTO_API_KEY)}` : ''
+          }`,
           x: tx * TILE - left,
           y: ty * TILE - top,
         });
