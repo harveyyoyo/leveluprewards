@@ -9,6 +9,8 @@ export type ArrivalNotificationStatus = 'not_configured' | 'queued' | 'no_recipi
 export type ArrivalNotificationResult = {
   queued: number;
   status: ArrivalNotificationStatus;
+  /** Existing queue records found when a safe retry was made. */
+  alreadyQueued?: number;
 };
 
 type ArrivalNotificationArgs = {
@@ -44,7 +46,15 @@ export async function queueOfficeArrivalNotifications(args: ArrivalNotificationA
   const { db, schoolId, eventId, tripId, route, stop, receivedAt, riderManifest } = args;
   if (route.notifyFamiliesOnArrival !== true) return { queued: 0, status: 'not_configured' };
 
-  const familyIds = [...new Set(riderManifest.map((entry) => entry.familyId?.trim()).filter((value): value is string => Boolean(value)))];
+  // A family hears about a stop only when one of the riders captured for this
+  // run is assigned to that exact stop. This prevents a bus from sending the
+  // same arrival message to every family on the route.
+  const familyIds = [...new Set(
+    riderManifest
+      .filter((entry) => entry.busStopId?.trim() === stop.id)
+      .map((entry) => entry.familyId?.trim())
+      .filter((value): value is string => Boolean(value)),
+  )];
   if (familyIds.length === 0) return { queued: 0, status: 'no_recipients' };
 
   const accessSnapshot = await db.collection('schools').doc(schoolId).collection('officeTransportParentAccess').limit(500).get();
@@ -140,10 +150,36 @@ export async function queueOfficeArrivalNotifications(args: ArrivalNotificationA
   }
   if (writes.length === 0) return { queued: 0, status: 'no_recipients' };
 
+  let queued = 0;
+  let alreadyQueued = 0;
   for (let start = 0; start < writes.length; start += 400) {
-    const batch = db.batch();
-    for (const write of writes.slice(start, start + 400)) batch.set(db.collection(write.collection).doc(write.id), write.data);
-    await batch.commit();
+    const chunk = writes.slice(start, start + 400);
+    const refs = chunk.map((write) => db.collection(write.collection).doc(write.id));
+    if (typeof db.runTransaction === 'function') {
+      let created = 0;
+      let existing = 0;
+      await db.runTransaction(async (transaction) => {
+        created = 0;
+        existing = 0;
+        const snaps = await transaction.getAll(...refs);
+        for (let index = 0; index < refs.length; index += 1) {
+          if (snaps[index].exists) {
+            existing += 1;
+            continue;
+          }
+          transaction.create(refs[index], chunk[index].data);
+          created += 1;
+        }
+      });
+      queued += created;
+      alreadyQueued += existing;
+    } else {
+      // Small test doubles may not expose transactions; production Firestore does.
+      const batch = db.batch();
+      for (const write of chunk) batch.set(db.collection(write.collection).doc(write.id), write.data);
+      await batch.commit();
+      queued += chunk.length;
+    }
   }
-  return { queued: writes.length, status: 'queued' };
+  return { queued, status: 'queued', ...(alreadyQueued > 0 ? { alreadyQueued } : {}) };
 }

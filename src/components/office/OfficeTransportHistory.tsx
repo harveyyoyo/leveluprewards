@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { useToast } from '@/hooks/use-toast';
-import { useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
+import { useOfficeBusActiveTrips, useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
+import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import { downloadCsv } from '@/lib/office/officeUtils';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import {
@@ -48,6 +49,10 @@ export function OfficeTransportHistory({
   const [date, setDate] = useState(today);
   const [openId, setOpenId] = useState<string | null>(null);
   const { trips, isLoading, error } = useOfficeBusTripsForDate(schoolId, date);
+  const { trips: activeTrips } = useOfficeBusActiveTrips(schoolId);
+  const staleTrips = activeTrips.filter((trip) => trip.date < today);
+  const transport = useOfficeTransportApi(schoolId);
+  const [closingId, setClosingId] = useState<string | null>(null);
   const summary = useMemo(() => transportDaySummary(trips, routes), [trips, routes]);
   const { toast } = useToast();
   // Removed routes are still named here so old trips stay readable.
@@ -62,6 +67,20 @@ export function OfficeTransportHistory({
     }
   };
 
+  const closeStaleRun = async (trip: OfficeBusTrip) => {
+    if (trip.status !== 'active' || trip.date >= today) return;
+    if (!window.confirm('Close this older bus run? It will stay in History, but it will no longer block this bus.')) return;
+    setClosingId(trip.id);
+    try {
+      await transport.closeStaleOfficeBusTrip(trip.id);
+      toast({ title: 'Older run closed', description: 'The bus is free to start a new run.' });
+    } catch (cause) {
+      toast({ variant: 'destructive', title: 'Could not close the old run', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
+    } finally {
+      setClosingId(null);
+    }
+  };
+
   const downloadDayCsv = () => {
     const rows = trips.map((trip) => {
       const route = routeForTrip(routeById.get(trip.routeId), trip);
@@ -72,7 +91,7 @@ export function OfficeTransportHistory({
         route ? routeLabel(route) : 'Removed route',
         route?.busNumber ?? '',
         trip.driverName ?? route?.driverName ?? '',
-        trip.status === 'done' ? 'Finished' : 'On the road',
+        trip.closedByOffice ? 'Closed by School Office' : trip.status === 'done' ? 'Finished' : 'On the road',
         clockLabel(trip.startedAt),
         trip.endedAt ? clockLabel(trip.endedAt) : '',
         String(minutes),
@@ -92,6 +111,30 @@ export function OfficeTransportHistory({
 
   return (
     <div className="space-y-3">
+      {staleTrips.length > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100" role="alert">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">An older bus run is still open.</p>
+              <p className="mt-1 text-xs">Close it before starting the bus again. The old record will stay in History.</p>
+              <ul className="mt-2 space-y-1">
+                {staleTrips.map((trip) => {
+                  const route = routeForTrip(routeById.get(trip.routeId), trip);
+                  return (
+                    <li key={trip.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span>{route ? routeLabel(route) : 'Bus route'} · {BUS_RUN_LABEL[trip.run]} · {trip.date}</span>
+                      <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" disabled={closingId === trip.id} onClick={() => void closeStaleRun(trip)}>
+                        {closingId === trip.id ? 'Closing…' : 'Close older run'}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center gap-1">
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Previous day" onClick={() => setDate(shiftDate(date, -1))}>
           <ChevronLeft className="h-4 w-4" />
@@ -151,6 +194,9 @@ export function OfficeTransportHistory({
               open={openId === trip.id}
               onToggle={() => setOpenId(openId === trip.id ? null : trip.id)}
               studentNameById={studentNameById}
+              canCloseStale={trip.status === 'active' && trip.date < today}
+              closing={closingId === trip.id}
+              onCloseStale={() => void closeStaleRun(trip)}
             />
           ))}
         </ul>
@@ -174,12 +220,18 @@ function TripRow({
   open,
   onToggle,
   studentNameById,
+  canCloseStale,
+  closing,
+  onCloseStale,
 }: {
   trip: OfficeBusTrip;
   route: OfficeBusRoute | undefined;
   open: boolean;
   onToggle: () => void;
   studentNameById: Map<string, string>;
+  canCloseStale: boolean;
+  closing: boolean;
+  onCloseStale: () => void;
 }) {
   const riders = Object.entries(trip.riders ?? {});
   const riderEvents = (trip.events ?? []).filter(
@@ -207,6 +259,8 @@ function TripRow({
             </span>
             {trip.status === 'active' ? (
               <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">On the road</span>
+            ) : trip.closedByOffice ? (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">Closed by School Office</span>
             ) : null}
           </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -226,7 +280,9 @@ function TripRow({
             ) : null}
             {alerts.length ? <Flag tone="caution">{alerts.length} report{alerts.length === 1 ? '' : 's'} from driver</Flag> : null}
             {trip.status === 'done' ? (
-              trip.childCheckDone ? (
+              trip.closedByOffice ? (
+                <Flag tone="caution">Closed without finishing check</Flag>
+              ) : trip.childCheckDone ? (
                 <Flag tone="good">
                   <ShieldCheck className="h-3 w-3" /> Bus checked
                 </Flag>
@@ -241,6 +297,21 @@ function TripRow({
 
       {open ? (
         <div className="grid gap-4 border-t bg-slate-50/60 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/60 sm:grid-cols-2">
+          {canCloseStale ? (
+            <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="text-sm font-semibold">This older run is still open.</p>
+              <p className="mt-1 text-xs">Close it so this bus can start today’s run. The old record will stay in History.</p>
+              <Button type="button" variant="outline" size="sm" className="mt-2 gap-2 rounded-xl" disabled={closing} onClick={onCloseStale}>
+                <AlertTriangle className="h-4 w-4" /> {closing ? 'Closing…' : 'Close older run'}
+              </Button>
+            </div>
+          ) : null}
+          {trip.closedByOffice ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:col-span-2">
+              <p className="text-sm font-semibold">Closed by School Office without a finishing check.</p>
+              {trip.closeReason ? <p className="mt-1 text-xs">Office note: {trip.closeReason}</p> : null}
+            </div>
+          ) : null}
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Stops</p>
             <ul className="mt-1.5 space-y-1">

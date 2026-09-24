@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
 import { queueOfficeArrivalNotifications, type ArrivalNotificationStatus } from '@/lib/server/officeArrivalNotifications';
-import { distanceMeters, nextStop, STOP_ARRIVAL_RADIUS_M } from '@/lib/office/officeTransport';
+import { officeArrivalEventId } from '@/lib/server/officeArrivalEvent';
+import { distanceMeters, nextStop, routeForTrip, STOP_ARRIVAL_RADIUS_M } from '@/lib/office/officeTransport';
 import type { OfficeBusGpsDevice, OfficeBusLocation, OfficeBusRoute, OfficeBusStop, OfficeBusTrip } from '@/lib/office/types';
 
 export const dynamic = 'force-dynamic';
@@ -104,18 +105,21 @@ function routeForTelemetry(trip: OfficeBusTrip): OfficeBusRoute | null {
     name: snapshot.name,
     busNumber: snapshot.busNumber ?? null,
     color: snapshot.color,
-    driverName: null,
-    driverPhone: null,
-    capacity: null,
+    driverName: snapshot.driverName ?? null,
+    driverPhone: snapshot.driverPhone ?? null,
+    capacity: snapshot.capacity ?? null,
     vehicle: snapshot.vehicle ?? null,
     stops: snapshot.stops ?? [],
+    notifyFamiliesOnAlert: snapshot.notifyFamiliesOnAlert === true,
+    notifyFamiliesOnArrival: snapshot.notifyFamiliesOnArrival === true,
+    requireReleaseConfirmations: snapshot.requireReleaseConfirmations === true,
     notes: null,
     updatedAt: trip.updatedAt,
   };
 }
 
-function arrivalEventId(schoolId: string, tripId: string, stopId: string, receivedAt: number): string {
-  return `arr_${createHash('sha256').update(`${schoolId}|${tripId}|${stopId}|${receivedAt}`).digest('hex').slice(0, 48)}`;
+function arrivalEventId(schoolId: string, tripId: string, stopId: string): string {
+  return officeArrivalEventId(schoolId, tripId, stopId);
 }
 
 export async function POST(req: NextRequest) {
@@ -170,12 +174,13 @@ export async function POST(req: NextRequest) {
       const next = route ? nextStop(route, trip) : null;
       const distanceM = next ? distanceMeters({ lat: sample.lat, lng: sample.lng }, next) : null;
       const goodAccuracy = sample.accuracyM != null && sample.accuracyM <= 100;
-      const nearStop = next && goodAccuracy && distanceM != null && distanceM <= STOP_ARRIVAL_RADIUS_M;
-      const sameNearStop = nearStop && previous?.nearStopId === next?.id && typeof previous.nearStopFirstAt === 'number' && receivedAt - previous.nearStopFirstAt <= 20_000;
-      const nearStopId = nearStop ? next.id : null;
+      const eligibleStop = Boolean(next && !(trip.run === 'pm' && next.isSchool));
+      const nearStop = Boolean(eligibleStop && next && goodAccuracy && distanceM != null && distanceM <= STOP_ARRIVAL_RADIUS_M);
+      const sameNearStop = Boolean(nearStop && next && previous?.nearStopId === next.id && typeof previous?.nearStopFirstAt === 'number' && receivedAt - previous.nearStopFirstAt <= 20_000);
+      const nearStopId = nearStop && next ? next.id : null;
       const nearStopFirstAt = nearStop ? (sameNearStop ? previous?.nearStopFirstAt ?? receivedAt : receivedAt) : null;
       const nearStopSampleCount = nearStop ? (sameNearStop ? (previous?.nearStopSampleCount ?? 0) + 1 : 1) : 0;
-      const shouldArrive = Boolean(nearStop && nearStopSampleCount >= 2 && !trip.stopArrivals?.[next.id]);
+      const shouldArrive = Boolean(nearStop && next && nearStopSampleCount >= 2 && !trip.stopArrivals?.[next.id]);
       if (shouldArrive && next) arrivedStopId = next.id;
       transaction.set(locationRef, {
         deviceId: auth.id,
@@ -198,7 +203,7 @@ export async function POST(req: NextRequest) {
       transaction.update(deviceRef, { lastSeenAt: receivedAt, lastSequence: sample.sequence, updatedAt: receivedAt, updatedBy: 'gps_device' });
       const tripPatch: Record<string, unknown> = { location, locationSource: 'gps_device', updatedAt: receivedAt };
       if (shouldArrive && next) {
-        arrivalContext.eventId = arrivalEventId(schoolId, tripId, next.id, receivedAt);
+        arrivalContext.eventId = arrivalEventId(schoolId, tripId, next.id);
         arrivalContext.trip = trip;
         arrivalContext.stop = next;
         tripPatch[`stopArrivals.${next.id}`] = receivedAt;
@@ -227,15 +232,17 @@ export async function POST(req: NextRequest) {
     if (arrivalContext.eventId && arrivalContext.trip && arrivalContext.stop) {
       try {
         const currentRouteSnap = await schoolRef.collection('officeBusRoutes').doc(arrivalContext.trip.routeId).get();
-        const currentRoute = currentRouteSnap.exists ? ({ id: currentRouteSnap.id, ...currentRouteSnap.data() } as OfficeBusRoute) : null;
-        if (currentRoute) {
+        const currentRoute = currentRouteSnap.exists ? ({ id: currentRouteSnap.id, ...currentRouteSnap.data() } as OfficeBusRoute) : undefined;
+        const route = routeForTrip(currentRoute, arrivalContext.trip) ?? routeForTelemetry(arrivalContext.trip);
+        if (route) {
+          const stop = route.stops.find((candidate) => candidate.id === arrivalContext.stop?.id) ?? arrivalContext.stop;
           const result = await queueOfficeArrivalNotifications({
             db,
             schoolId,
             eventId: arrivalContext.eventId,
             tripId,
-            route: currentRoute,
-            stop: arrivalContext.stop,
+            route,
+            stop,
             receivedAt,
             riderManifest: arrivalContext.trip.riderManifest ?? [],
           });

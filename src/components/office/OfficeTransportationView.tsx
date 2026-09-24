@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bus, History, MapPinned, Navigation, Route, Users } from 'lucide-react';
+import { Bus, History, MapPinned, MessageSquare, Navigation, Route, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
@@ -9,13 +9,14 @@ import { OfficeTransportLive } from '@/components/office/OfficeTransportLive';
 import { OfficeTransportRoutes } from '@/components/office/OfficeTransportRoutes';
 import { OfficeTransportRiders } from '@/components/office/OfficeTransportRiders';
 import { OfficeTransportHistory } from '@/components/office/OfficeTransportHistory';
+import { OfficeTransportDeliveryStatus } from '@/components/office/OfficeTransportDeliveryStatus';
 import { OfficeBusDriverMode } from '@/components/office/OfficeBusDriverMode';
 import { useOfficeBusRoutes, useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { DEFAULT_MAP_CENTER, localIsoDate, type LatLng } from '@/lib/office/officeTransport';
 import type { OfficeFamily, OfficeStudent } from '@/lib/office/types';
 
-type Section = 'live' | 'routes' | 'riders' | 'history';
+type Section = 'live' | 'routes' | 'riders' | 'history' | 'messages';
 
 type Props = {
   schoolId: string;
@@ -74,6 +75,7 @@ export function OfficeTransportationView({ schoolId, students, studentLabelById,
             { id: 'routes', label: routes.length ? `Routes (${routes.length})` : 'Routes', icon: Route },
             { id: 'riders', label: noPlan ? `Riders · ${noPlan} not set` : 'Riders', icon: Users },
             { id: 'history', label: 'History', icon: History },
+            { id: 'messages', label: 'Messages', icon: MessageSquare },
           ]}
           value={section}
           onValueChange={(v) => setSection(v as Section)}
@@ -120,8 +122,10 @@ export function OfficeTransportationView({ schoolId, students, studentLabelById,
           activeRouteIds={activeRouteIds}
           isLoading={isLoading || routesLoading}
         />
-      ) : (
+      ) : section === 'history' ? (
         <OfficeTransportHistory schoolId={schoolId} routes={allRoutes} studentNameById={studentLabelById} />
+      ) : (
+        <OfficeTransportDeliveryStatus schoolId={schoolId} routes={allRoutes} />
       )}
 
       {driving ? (

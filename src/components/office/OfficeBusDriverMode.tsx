@@ -371,7 +371,8 @@ function DrivingScreen({
         const prev = lastSent.current;
         // Reaching a stop is sent right away so the office sees it without waiting.
         const upcoming = nextStop(activeRoute, t);
-        const reached = !t.gpsDeviceId && upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
+        const accurateEnough = pos.coords.accuracy != null && pos.coords.accuracy <= 100;
+        const reached = !t.gpsDeviceId && accurateEnough && !(t.run === 'pm' && upcoming?.isSchool) && upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
         if (!reached && prev && now - prev.at < SEND_EVERY_MS && distanceMeters(prev.p, p) < SEND_IF_MOVED_M) return;
         lastSent.current = { at: now, p };
         void transport
@@ -434,7 +435,7 @@ function DrivingScreen({
   const openRelease = (rider: DriverRider) => {
     const contacts = driverFamilyContacts(rider, trip, students, familyById);
     setReleaseRider(rider);
-    setReleaseMethod(contacts.length ? 'authorized_contact' : 'office_override');
+    setReleaseMethod(contacts.length ? 'authorized_contact' : 'id_checked');
     setReleaseContactId(contacts[0]?.id ?? '');
     setReleaseRecipientName('');
     setReleaseNote('');
@@ -442,20 +443,24 @@ function DrivingScreen({
 
   const saveRelease = async () => {
     if (!releaseRider) return;
-    if (releaseMethod !== 'office_override' && !releaseContactId) {
+    if (releaseMethod === 'authorized_contact' && !releaseContactId) {
       toast({ variant: 'destructive', title: 'Choose an approved contact' });
       return;
     }
-    if (releaseMethod === 'office_override' && (!releaseRecipientName.trim() || !releaseNote.trim())) {
-      toast({ variant: 'destructive', title: 'Add the recipient name and an office note' });
+    if (releaseMethod !== 'authorized_contact' && !releaseRecipientName.trim()) {
+      toast({ variant: 'destructive', title: 'Add the name of the person who received the rider' });
+      return;
+    }
+    if (releaseMethod === 'office_override' && !releaseNote.trim()) {
+      toast({ variant: 'destructive', title: 'Add an office note' });
       return;
     }
     setReleaseSaving(true);
     try {
       await transport.recordOfficeBusRelease(trip, releaseRider.id, {
         method: releaseMethod,
-        contactId: releaseMethod === 'office_override' ? null : releaseContactId,
-        recipientName: releaseMethod === 'office_override' ? releaseRecipientName.trim() : null,
+        contactId: releaseMethod === 'authorized_contact' ? releaseContactId : null,
+        recipientName: releaseMethod === 'authorized_contact' ? null : releaseRecipientName.trim(),
         note: releaseNote.trim() || null,
       });
       toast({ title: 'Release recorded', description: 'The office can now see who received this rider.' });
@@ -849,7 +854,6 @@ function DrivingScreen({
                 {([
                   ['authorized_contact', 'Family contact'],
                   ['id_checked', 'ID checked'],
-                  ['office_override', 'Office approved'],
                 ] as const).map(([value, label]) => (
                   <button
                     key={value}
@@ -865,7 +869,7 @@ function DrivingScreen({
                   </button>
                 ))}
               </div>
-              {releaseMethod === 'office_override' ? (
+              {releaseMethod !== 'authorized_contact' ? (
                 <Input value={releaseRecipientName} onChange={(e) => setReleaseRecipientName(e.target.value)} placeholder="Recipient's name" className="rounded-xl" />
               ) : (
                 <select

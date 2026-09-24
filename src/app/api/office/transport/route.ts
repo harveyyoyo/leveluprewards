@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
-import { familyUpdateMessage, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, tripDocId } from '@/lib/office/officeTransport';
+import { familyUpdateMessage, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, routeSnapshotForRun, tripDocId } from '@/lib/office/officeTransport';
+import { queueOfficeArrivalNotifications, type ArrivalNotificationStatus } from '@/lib/server/officeArrivalNotifications';
+import { officeArrivalEventId } from '@/lib/server/officeArrivalEvent';
+import { getTransportSchoolTimeZone, transportSchoolToday } from '@/lib/server/transportSchoolTime';
 import type {
   OfficeBusEvent,
   OfficeBusGpsDevice,
@@ -28,10 +32,12 @@ const MAX_RIDERS = 300;
 const ALERT_KINDS = new Set<OfficeBusTripAlert['kind']>(['delay', 'breakdown', 'accident', 'behavior', 'other']);
 const RELEASE_METHODS = new Set<OfficeBusReleaseMethod>(['authorized_contact', 'id_checked', 'office_override']);
 const locationAttempts = new Map<string, { startedAt: number; count: number }>();
+const MAX_FAMILY_UPDATES_PER_TRIP = 20;
 
 type AuthContext = {
   uid: string;
   isAdmin: boolean;
+  isOffice: boolean;
   isDeveloper: boolean;
   db: Firestore;
 };
@@ -66,6 +72,16 @@ function numberInRange(value: unknown, label: string, min: number, max: number):
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n) || n < min || n > max) throw new Error(`${label} is outside the allowed range.`);
   return n;
+}
+
+function familyUpdateQueueId(schoolId: string, tripId: string, message: string): string {
+  const digest = createHash('sha256').update(`${schoolId}|${tripId}|${message.trim()}`).digest('hex').slice(0, 48);
+  return `transport_update_${digest}`;
+}
+
+function familyRecipientQueueId(queueId: string, email: string): string {
+  const digest = createHash('sha256').update(`${queueId}|${email.trim().toLowerCase()}`).digest('hex').slice(0, 32);
+  return `${queueId}_${digest}`;
 }
 
 function assertRun(value: unknown): OfficeBusRun {
@@ -142,6 +158,9 @@ function assertRoute(route: OfficeBusRoute): void {
   if (schoolStops > 1 || !route.stops.some((stop) => !stop.isSchool) || schoolStops !== 1) {
     throw new Error('A route needs one school stop and at least one student stop.');
   }
+  if (route.stops[route.stops.length - 1]?.isSchool !== true) {
+    throw new Error('Keep the school as the last stop so afternoon runs start at school.');
+  }
 }
 
 async function authenticate(req: NextRequest, body: Body): Promise<AuthContext> {
@@ -171,10 +190,11 @@ async function authenticate(req: NextRequest, body: Body): Promise<AuthContext> 
     schoolRef.collection('roles_admin').doc(verified.uid).get(),
   ]);
   const isAdmin = adminRole.exists && adminRole.data()?.role === 'admin';
-  if (!isDeveloper && !isAdmin && !(officeRole.exists && officeRole.data()?.role === 'office')) {
+  const isOffice = officeRole.exists && officeRole.data()?.role === 'office';
+  if (!isDeveloper && !isAdmin && !isOffice) {
     throw new AuthError('Only School Office staff can change transportation records.', 403);
   }
-  return { uid: verified.uid, isAdmin, isDeveloper, db };
+  return { uid: verified.uid, isAdmin, isOffice, isDeveloper, db };
 }
 
 class AuthError extends Error {
@@ -213,7 +233,7 @@ async function getTrip(db: Firestore, schoolId: string, tripId: string): Promise
 
 function assertCanOperate(auth: AuthContext, trip: OfficeBusTrip): void {
   const driverId = typeof trip.driverId === 'string' ? trip.driverId : null;
-  if (driverId && driverId !== auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+  if (driverId && driverId !== auth.uid && !auth.isAdmin && !auth.isOffice && !auth.isDeveloper) {
     throw new AuthError('This run belongs to another driver.', 403);
   }
 }
@@ -284,7 +304,10 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
   }
   const existingActive = await activeTripForRoute(auth.db, schoolId, routeId);
   if (existingActive && existingActive.id !== baseId && !existingActive.id.startsWith(`${baseId}_retry-`)) {
-    throw new AuthError('This bus is already on a run.', 409);
+    const message = existingActive.date < date
+      ? 'An older run is still open. Close it from Transportation History before starting this one.'
+      : 'This bus is already on a run.';
+    throw new AuthError(message, 409);
   }
 
   const ridersSnap = await auth.db.collection('schools').doc(schoolId).collection('officeStudents').where('busRouteId', '==', routeId).get();
@@ -356,7 +379,7 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
     if (createTarget) {
       transaction.set(targetRef, {
         routeId,
-        routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops },
+        routeSnapshot: routeSnapshotForRun(route),
         riderSnapshot,
         riderManifest,
         date,
@@ -382,14 +405,14 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
       if (existing.routeId !== routeId || existing.date !== date || existing.run !== run) {
         throw new AuthError('That trip belongs to a different bus run.', 409);
       }
-      if (existing.status === 'active' && existing.driverId && existing.driverId !== auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+      if (existing.status === 'active' && existing.driverId && existing.driverId !== auth.uid && !auth.isAdmin && !auth.isOffice && !auth.isDeveloper) {
         throw new AuthError('This run belongs to another driver.', 403);
       }
       transaction.update(targetRef, {
         status: 'active',
         endedAt: null,
         updatedAt: now,
-        ...(existing.routeSnapshot ? {} : { routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops } }),
+        ...(existing.routeSnapshot ? {} : { routeSnapshot: routeSnapshotForRun(route) }),
         ...(existing.riderSnapshot ? {} : { riderSnapshot }),
         ...(existing.gpsDeviceId ? {} : { gpsDeviceId: assignedGpsDevice?.id ?? null, gpsAssignmentVersion: assignedGpsDevice?.assignmentVersion ?? null, locationSource: existing.locationSource ?? null }),
         driverId: auth.uid,
@@ -418,7 +441,12 @@ function allowLocationUpdate(uid: string): boolean {
   return current.count <= 120;
 }
 
-async function updateLocation(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true; ignored?: boolean }> {
+async function updateLocation(auth: AuthContext, schoolId: string, body: Body): Promise<{
+  ok: true;
+  ignored?: boolean;
+  arrivalNotificationsQueued?: number;
+  arrivalNotificationStatus?: ArrivalNotificationStatus;
+}> {
   if (!allowLocationUpdate(auth.uid)) throw new AuthError('Too many location updates. Try again in a minute.', 429);
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -431,17 +459,21 @@ async function updateLocation(auth: AuthContext, schoolId: string, body: Body): 
   const lat = numberInRange(location.lat, 'Bus latitude', -90, 90);
   const lng = numberInRange(location.lng, 'Bus longitude', -180, 180);
   const now = Date.now();
+  const accuracy = location.accuracy == null ? null : numberInRange(location.accuracy, 'Location accuracy', 0, 100000);
+  let reachedStopId: string | null = null;
   if (body.reachedStopId) {
-    const reachedStopId = safeId(body.reachedStopId, 'Stop');
-    if (trip.routeSnapshot && !trip.routeSnapshot.stops.some((stop) => stop.id === reachedStopId)) {
+    reachedStopId = safeId(body.reachedStopId, 'Stop');
+    const stop = trip.routeSnapshot?.stops.find((candidate) => candidate.id === reachedStopId);
+    if (trip.routeSnapshot && !stop) {
       throw new Error('That stop is not part of this run.');
     }
+    if (trip.run === 'pm' && stop?.isSchool) reachedStopId = null;
   }
   const patch: Record<string, unknown> = {
     location: {
       lat,
       lng,
-      accuracy: location.accuracy == null ? null : numberInRange(location.accuracy, 'Location accuracy', 0, 100000),
+      accuracy,
       speed: location.speed == null ? null : numberInRange(location.speed, 'Bus speed', 0, 200),
       heading: location.heading == null ? null : numberInRange(location.heading, 'Bus heading', 0, 360),
       at: now,
@@ -450,17 +482,84 @@ async function updateLocation(auth: AuthContext, schoolId: string, body: Body): 
     locationSource: 'browser',
     updatedAt: now,
   };
-  if (body.reachedStopId) {
-    const reachedStopId = safeId(body.reachedStopId, 'Stop');
+  if (reachedStopId) {
     patch[`stopArrivals.${reachedStopId}`] = now;
     patch.events = FieldValue.arrayUnion({ kind: 'stop', stopId: reachedStopId, reached: true, at: now, by: auth.uid, source: 'browser' });
     patch[`stopArrivalDetails.${reachedStopId}`] = { at: now, source: 'browser' };
   }
   await tripRef(auth.db, schoolId, tripId).update(patch);
+  if (reachedStopId && accuracy != null && accuracy <= 100) {
+    const result = await queueStopArrival(auth, schoolId, trip, reachedStopId, now, 'browser');
+    return { ok: true, arrivalNotificationsQueued: result.queued, arrivalNotificationStatus: result.status };
+  }
   return { ok: true };
 }
 
-async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+async function queueStopArrival(
+  auth: AuthContext,
+  schoolId: string,
+  trip: OfficeBusTrip,
+  stopId: string,
+  arrivedAt: number,
+  source: 'manual' | 'browser',
+): Promise<{ queued: number; status: ArrivalNotificationStatus }> {
+  const eventId = officeArrivalEventId(schoolId, trip.id, stopId);
+  const schoolRef = auth.db.collection('schools').doc(schoolId);
+  const eventRef = schoolRef.collection('officeBusArrivalEvents').doc(eventId);
+  const existing = await eventRef.get();
+  if (!existing.exists) {
+    await eventRef.set({
+      id: eventId,
+      tripId: trip.id,
+      routeId: trip.routeId,
+      stopId,
+      arrivedAt,
+      source,
+      createdBy: auth.uid,
+      notificationStatus: 'pending',
+      createdAt: arrivedAt,
+    });
+  }
+
+  const routeSnap = await schoolRef.collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? ({ id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute) : undefined;
+  const route = routeForTrip(currentRoute, trip);
+  const stop = route?.stops.find((candidate) => candidate.id === stopId);
+  if (!route || !stop) {
+    const status: ArrivalNotificationStatus = 'not_configured';
+    await eventRef.update({ notificationStatus: status, notificationUpdatedAt: Date.now() });
+    return { queued: 0, status };
+  }
+
+  try {
+    const result = await queueOfficeArrivalNotifications({
+      db: auth.db,
+      schoolId,
+      eventId,
+      tripId: trip.id,
+      route,
+      stop,
+      receivedAt: arrivedAt,
+      riderManifest: trip.riderManifest ?? [],
+    });
+    await eventRef.update({
+      notificationStatus: result.status,
+      notificationsQueued: result.queued,
+      notificationsAlreadyQueued: result.alreadyQueued ?? 0,
+      notificationUpdatedAt: Date.now(),
+    });
+    return result;
+  } catch {
+    await eventRef.update({ notificationStatus: 'failed', notificationUpdatedAt: Date.now() }).catch(() => undefined);
+    return { queued: 0, status: 'failed' };
+  }
+}
+
+async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise<{
+  ok: true;
+  arrivalNotificationsQueued?: number;
+  arrivalNotificationStatus?: ArrivalNotificationStatus;
+}> {
   const tripId = safeId(body.tripId, 'Trip');
   const stopId = safeId(body.stopId, 'Stop');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -475,6 +574,10 @@ async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise
     events: FieldValue.arrayUnion({ kind: 'stop', stopId, reached: body.reached === true, at: now, by: auth.uid, source: 'manual' }),
     updatedAt: now,
   });
+  if (body.reached === true) {
+    const result = await queueStopArrival(auth, schoolId, trip, stopId, now, 'manual');
+    return { ok: true, arrivalNotificationsQueued: result.queued, arrivalNotificationStatus: result.status };
+  }
   return { ok: true };
 }
 
@@ -540,7 +643,15 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
   let contactName = '';
 
   if (method === 'office_override') {
+    if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) {
+      throw new AuthError('Only School Office staff can approve an exception.', 403);
+    }
+    if (trip.driverId === auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+      throw new AuthError('The driver cannot approve their own exception. Ask another School Office staff member to review it.', 403);
+    }
     if (!note) throw new Error('Add a note when the office approves someone who is not on the family list.');
+    contactName = stringValue(body.recipientName, 'Recipient name', 120);
+  } else if (method === 'id_checked') {
     contactName = stringValue(body.recipientName, 'Recipient name', 120);
   } else {
     contactId = safeId(body.contactId, 'Approved contact');
@@ -596,12 +707,18 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
   return { release };
 }
 
-async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body): Promise<{ queued: number }> {
+async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body): Promise<{ queued: number; duplicate?: boolean }> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
   const route = routeForTrip(undefined, trip);
   if (!route) throw new Error('This run has no saved route information.');
-  const message = optionalString(body.message, 'Family update', 1000) ?? familyUpdateMessage(route, trip);
+  const timeZone = await getTransportSchoolTimeZone(auth.db, schoolId);
+  const schoolSnap = await auth.db.collection('schools').doc(schoolId).get();
+  const message = optionalString(body.message, 'Family update', 1000) ?? familyUpdateMessage(route, trip, Date.now(), timeZone);
+  const queueId = familyUpdateQueueId(schoolId, tripId, message);
+  if ((trip.familyUpdateCount ?? 0) >= MAX_FAMILY_UPDATES_PER_TRIP) {
+    throw new AuthError('This run has reached the family update limit. Use the delivery report instead of sending more copies.', 429);
+  }
   const studentIds = [...new Set([
     ...(trip.riderManifest?.map((entry) => entry.studentId) ?? []),
     ...(trip.riderSnapshot ?? []),
@@ -633,37 +750,55 @@ async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body
     }
   }
   if (recipients.size === 0) return { queued: 0 };
-  const schoolSnap = await auth.db.collection('schools').doc(schoolId).get();
   const schoolName = typeof schoolSnap.data()?.name === 'string' && schoolSnap.data()?.name.trim() ? schoolSnap.data()!.name.trim() : 'School';
   const fromEmail = `"${schoolName} Transportation" <alerts@levelup-edu.com>`;
   const subject = `Transportation update: ${routeLabel(route)}`;
   const mail = auth.db.collection('mail');
   const recipientList = [...recipients];
+  const queuedAt = Date.now();
+  let queued = 0;
+  let queuedNewMessage = false;
   for (let start = 0; start < recipientList.length; start += 400) {
-    const batch = auth.db.batch();
-    for (const email of recipientList.slice(start, start + 400)) {
-      batch.set(mail.doc(), {
-        to: email,
-        from: fromEmail,
-        message: { subject, text: message },
-        schoolId,
-        tripId,
-        routeId: trip.routeId,
-        kind: 'transportation',
-        queuedAt: Date.now(),
-        queuedBy: auth.uid,
-      });
-    }
-    await batch.commit();
+    const chunk = recipientList.slice(start, start + 400);
+    const refs = chunk.map((email) => mail.doc(familyRecipientQueueId(queueId, email)));
+    let created = 0;
+    await auth.db.runTransaction(async (transaction) => {
+      const snaps = await transaction.getAll(...refs);
+      for (let index = 0; index < refs.length; index += 1) {
+        if (snaps[index].exists) continue;
+        const email = chunk[index];
+        transaction.create(refs[index], {
+          to: email,
+          from: fromEmail,
+          message: { subject, text: message },
+          schoolId,
+          tripId,
+          routeId: trip.routeId,
+          kind: 'transportation',
+          queueId,
+          queuedAt,
+          queuedBy: auth.uid,
+        });
+        created += 1;
+      }
+    });
+    queued += created;
+    if (created > 0) queuedNewMessage = true;
   }
-  await audit(auth.db, schoolId, {
-    entityType: 'officeBusTrip',
-    entityId: tripId,
-    action: 'update',
-    summary: `Queued a family update for ${recipientList.length} recipient${recipientList.length === 1 ? '' : 's'}`,
-    changedBy: auth.uid,
-  });
-  return { queued: recipientList.length };
+  if (queued > 0) {
+    await tripRef(auth.db, schoolId, tripId).update({
+      familyUpdateCount: FieldValue.increment(queuedNewMessage ? 1 : 0),
+      updatedAt: queuedAt,
+    });
+    await audit(auth.db, schoolId, {
+      entityType: 'officeBusTrip',
+      entityId: tripId,
+      action: 'update',
+      summary: `Queued a family update for ${queued} recipient${queued === 1 ? '' : 's'}`,
+      changedBy: auth.uid,
+    });
+  }
+  return { queued, duplicate: queued === 0 };
 }
 
 function alertFamilyMessage(kind: OfficeBusTripAlert['kind'], minutes: number | null, note: string | null, route: OfficeBusRoute): string {
@@ -703,19 +838,52 @@ async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promis
   const route = routeForTrip(currentRoute, trip);
   if (route?.notifyFamiliesOnAlert) {
     try {
-      notificationsQueued = (
-        await queueFamilyUpdate(auth, schoolId, {
-          tripId,
-          message: alertFamilyMessage(kind as OfficeBusTripAlert['kind'], minutes, message, route),
-        })
-      ).queued;
-      notificationStatus = notificationsQueued > 0 ? 'queued' : 'no_recipients';
+      const result = await queueFamilyUpdate(auth, schoolId, {
+        tripId,
+        message: alertFamilyMessage(kind as OfficeBusTripAlert['kind'], minutes, message, route),
+      });
+      notificationsQueued = result.queued;
+      notificationStatus = result.duplicate || result.queued > 0 ? 'queued' : 'no_recipients';
     } catch {
       // The safety report is already saved. A mail-service problem must not make the driver retry it.
       notificationStatus = 'failed';
     }
   }
   return { ok: true, notificationsQueued, notificationStatus };
+}
+
+async function closeStaleTrip(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+  if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) {
+    throw new AuthError('Only School Office staff can close an old run.', 403);
+  }
+  const tripId = safeId(body.tripId, 'Trip');
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  if (trip.status !== 'active') throw new AuthError('That bus run is already closed.', 409);
+  const timeZone = await getTransportSchoolTimeZone(auth.db, schoolId);
+  const today = transportSchoolToday(Date.now(), timeZone);
+  if (trip.date >= today) {
+    throw new AuthError('Only a run from an earlier school day can be closed this way. End today’s run from the driver screen.', 409);
+  }
+  const reason = optionalString(body.reason, 'Reason', 300) ?? 'Closed by School Office after the driver left the run open.';
+  const now = Date.now();
+  await tripRef(auth.db, schoolId, tripId).update({
+    status: 'done',
+    endedAt: now,
+    closedAt: now,
+    childCheckDone: false,
+    closedByOffice: true,
+    closeReason: reason,
+    updatedAt: now,
+  });
+  await audit(auth.db, schoolId, {
+    entityType: 'officeBusTrip',
+    entityId: tripId,
+    action: 'update',
+    summary: 'School Office closed an older run left open',
+    after: { reason, closedAt: now },
+    changedBy: auth.uid,
+  });
+  return { ok: true };
 }
 
 async function endTrip(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
@@ -732,7 +900,8 @@ async function endTrip(auth: AuthContext, schoolId: string, body: Body): Promise
   if (unresolved.length > 0) throw new Error('Mark every rider off or not here before ending the run.');
   const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
   const currentRoute = routeSnap.exists ? (routeSnap.data() as OfficeBusRoute) : undefined;
-  if (currentRoute?.requireReleaseConfirmations === true) {
+  const effectiveRoute = routeForTrip(currentRoute, trip);
+  if (effectiveRoute?.requireReleaseConfirmations === true) {
     const missingReleases = missingReleaseStudentIds(trip);
     if (missingReleases.length > 0) throw new Error(`Record who received ${missingReleases.length} rider${missingReleases.length === 1 ? '' : 's'} before ending the run.`);
   }
@@ -776,6 +945,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await addAlert(auth, schoolId, body));
       case 'end':
         return NextResponse.json(await endTrip(auth, schoolId, body));
+      case 'close-stale':
+        return NextResponse.json(await closeStaleTrip(auth, schoolId, body));
       case 'reset':
         return NextResponse.json(await resetDemoTransport(auth, schoolId));
       default:

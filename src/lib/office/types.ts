@@ -258,7 +258,11 @@ export type OfficeBusRoute = {
 };
 
 /** The route details needed to read a past trip after the route is edited or removed. */
-export type OfficeBusRouteSnapshot = Pick<OfficeBusRoute, 'name' | 'busNumber' | 'color' | 'vehicle' | 'stops'>;
+export type OfficeBusRouteSnapshot = Pick<
+  OfficeBusRoute,
+  'name' | 'busNumber' | 'color' | 'vehicle' | 'stops' | 'capacity' | 'driverName' | 'driverPhone' |
+    'notifyFamiliesOnAlert' | 'notifyFamiliesOnArrival' | 'requireReleaseConfirmations'
+>;
 
 export type OfficeBusRun = 'am' | 'pm';
 export type OfficeBusRiderStatus = 'on' | 'off' | 'absent';
@@ -352,6 +356,12 @@ export type OfficeBusTrip = {
   events?: OfficeBusEvent[] | null;
   /** Driver walked the bus at the end and confirmed nobody was left on. */
   childCheckDone?: boolean | null;
+  /** School Office closed an old run that a driver left open. */
+  closedByOffice?: boolean;
+  closedAt?: number | null;
+  closeReason?: string | null;
+  /** Number of unique office family updates queued for this run. */
+  familyUpdateCount?: number;
   updatedAt: number;
 };
 

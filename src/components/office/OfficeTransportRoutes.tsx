@@ -430,6 +430,11 @@ function OfficeBusRouteSheet({
       toast({ variant: 'destructive', title: 'Give the route a name', description: 'For example North, Route 3, or Hillside.' });
       return;
     }
+    const schoolIndex = draft.stops.findIndex((stop) => stop.isSchool);
+    if (schoolIndex >= 0 && schoolIndex !== draft.stops.length - 1) {
+      toast({ variant: 'destructive', title: 'Keep school last', description: 'Afternoon runs start at school, so the school must be the final stop in the morning list.' });
+      return;
+    }
     setBusy(true);
     try {
       const id = await write.upsertOfficeBusRoute(write.ctx, {
@@ -803,6 +808,22 @@ function OfficeBusRouteSheet({
                 <span className="block text-sm font-medium">Email families when the driver reports a problem</span>
                 <span className="mt-1 block text-xs text-muted-foreground">
                   Opted-in family contacts are added to the office mail queue. This is off by default.
+                </span>
+              </span>
+            </label>
+          </section>
+
+          <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={draft.notifyFamiliesOnArrival === true}
+                onCheckedChange={(checked) => patch({ notifyFamiliesOnArrival: checked === true })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Send opted-in families a message when the bus reaches their stop</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Each family hears only about their own rider’s stop. This is off by default and does not confirm that a child got on or off.
                 </span>
               </span>
             </label>

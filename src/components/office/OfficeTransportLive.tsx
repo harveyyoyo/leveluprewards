@@ -44,11 +44,13 @@ import {
   orderedStops,
   pointAlongStops,
   ridersForRoute,
+  routeForTrip,
   routeLabel,
   stopTime,
   tripWarnings,
   transportFamilyEmails,
   transportPhoneStatusText,
+  trackerSourceLabel,
   vehicleDueLabel,
   vehicleLabel,
   type LatLng,
@@ -86,30 +88,34 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
   // A practice run stands in for the selected route's real trip while it plays.
   const tripFor = (routeId: string) =>
     practice?.routeId === routeId ? practice : latestTripForRoute(runTrips, routeId, run);
-
   const warnings = useMemo(() => tripWarnings(routes, runTrips, studentNameById, now), [routes, runTrips, studentNameById, now]);
   const selected = routes.find((r) => r.id === selectedId) ?? null;
   const selectedTrip = selected ? tripFor(selected.id) : null;
+  const selectedDisplayRoute = selectedTrip ? routeForTrip(selected ?? undefined, selectedTrip) ?? selected : selected;
   const selectedFamilyEmails = useMemo(
     () => (selected ? transportFamilyEmails(students, familyById, selected.id, selectedTrip) : []),
     [familyById, selected, selectedTrip, students],
   );
+  const selectedRiders = useMemo(
+    () => (selected ? ridersForTrip(selectedTrip, students, selected.id) : []),
+    [selected, selectedTrip, students],
+  );
   const emailSelectedFamilies = () => {
-    if (!selected) return;
+    if (!selectedDisplayRoute) return;
     if (selectedFamilyEmails.length === 0) {
       toast({ title: 'No family email addresses found', description: 'Add an email to a family contact first.' });
       return;
     }
     window.location.href = buildAnnouncementMailto({
       emails: selectedFamilyEmails,
-      subject: `Transportation update: ${routeLabel(selected)}`,
-      body: familyUpdateMessage(selected, selectedTrip, now),
+      subject: `Transportation update: ${routeLabel(selectedDisplayRoute)}`,
+      body: familyUpdateMessage(selectedDisplayRoute, selectedTrip, now),
     });
   };
 
   const copyPhoneStatus = async () => {
-    if (!selected) return;
-    const status = transportPhoneStatusText(selected, selectedTrip, now);
+    if (!selectedDisplayRoute) return;
+    const status = transportPhoneStatusText(selectedDisplayRoute, selectedTrip, now);
     try {
       await navigator.clipboard.writeText(status.text);
       toast({ title: 'Phone status copied', description: 'This short message can be used by the school phone service later.' });
@@ -119,11 +125,11 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
   };
 
   const speakPhoneStatus = () => {
-    if (!selected || !('speechSynthesis' in window)) {
+    if (!selectedDisplayRoute || !('speechSynthesis' in window)) {
       toast({ variant: 'destructive', title: 'Speech preview is not available' });
       return;
     }
-    const status = transportPhoneStatusText(selected, selectedTrip, now);
+    const status = transportPhoneStatusText(selectedDisplayRoute, selectedTrip, now);
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(status.text));
     toast({ title: 'Playing phone-status preview', description: 'This is a preview; no phone number has been connected yet.' });
@@ -137,8 +143,12 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
     try {
       const result = await transport.queueOfficeBusFamilyUpdate(selectedTrip);
       toast({
-        title: result.queued ? 'Update queued' : 'No family emails found',
-        description: result.queued ? `${result.queued} recipient${result.queued === 1 ? '' : 's'} added to the office mail queue.` : 'Add an email to a family contact first.',
+        title: result.duplicate ? 'Already queued' : result.queued ? 'Update queued' : 'No family emails found',
+        description: result.duplicate
+          ? 'This exact update was already added. No second copy was sent.'
+          : result.queued
+            ? `${result.queued} recipient${result.queued === 1 ? '' : 's'} added to the office mail queue.`
+            : 'Add an email to a family contact first.',
       });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not queue the update', description: (error as Error).message });
@@ -147,7 +157,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
 
   const activeTrips = runTrips.filter((t) => t.status === 'active');
   const lateCount = activeTrips.filter((t) => {
-    const r = routes.find((x) => x.id === t.routeId);
+    const r = routeForTrip(routes.find((x) => x.id === t.routeId), t);
     return r ? (minutesLate(r, t, now) ?? 0) >= LATE_THRESHOLD_MIN : false;
   }).length;
   const ridersOn = activeTrips.reduce((n, t) => n + Object.values(t.riders ?? {}).filter((r) => r.status === 'on').length, 0);
@@ -200,6 +210,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
   const startPractice = (route: OfficeBusRoute) => {
     practiceStart.current = Date.now();
     const first = orderedStops(route, run)[0];
+    const startedAt = Date.now();
     setPractice({
       id: `practice-${Date.now()}`,
       routeId: route.id,
@@ -207,8 +218,8 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
       run,
       status: 'active',
       driverName: route.driverName ?? 'Practice driver',
-      startedAt: Date.now(),
-      location: first ? { lat: first.lat, lng: first.lng, at: Date.now() } : null,
+      startedAt,
+      location: first ? { lat: first.lat, lng: first.lng, at: startedAt } : null,
       stopArrivals: {},
       riders: {},
       alerts: [],
@@ -219,16 +230,17 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
   // ---- Map content ----
   const markers: TransportMapMarker[] = [];
   const lines: TransportMapLine[] = [];
-  const visibleRoutes = selected ? [selected] : routes;
+  const visibleRoutes = selected ? [selectedDisplayRoute ?? selected] : routes;
   for (const route of visibleRoutes) {
     const trip = tripFor(route.id);
-    const stops = orderedStops(route, run);
-    lines.push({ id: route.id, color: route.color, points: stops, faded: !selected && !trip });
+    const displayRoute = trip ? routeForTrip(routes.find((candidate) => candidate.id === route.id), trip) ?? route : route;
+    const stops = orderedStops(displayRoute, run);
+    lines.push({ id: route.id, color: displayRoute.color, points: stops, faded: !selected && !trip });
     for (const s of stops) {
       markers.push({
         id: `stop:${route.id}:${s.id}`,
         kind: s.isSchool ? 'school' : 'stop',
-        color: route.color,
+        color: displayRoute.color,
         lat: s.lat,
         lng: s.lng,
         title: `${s.name}${stopTime(s, run) ? ` · ${formatScheduleTime(stopTime(s, run)!)}` : ''}`,
@@ -239,23 +251,27 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
   for (const route of routes) {
     const trip = tripFor(route.id);
     if (!trip?.location || (selected && selected.id !== route.id)) continue;
+    const displayRoute = routeForTrip(route, trip) ?? route;
     const stale = now - trip.location.at > LOCATION_STALE_MS;
     markers.push({
       id: `bus:${route.id}`,
       kind: 'bus',
-      color: route.color,
+      color: displayRoute.color,
       lat: trip.location.lat,
       lng: trip.location.lng,
-      label: route.busNumber || route.name.slice(0, 3),
-      title: `${routeLabel(route)} · ${trip.status === 'done' ? 'finished' : `seen ${agoLabel(trip.location.at, now)}`}`,
+      label: displayRoute.busNumber || displayRoute.name.slice(0, 3),
+      title: `${routeLabel(displayRoute)} · ${trip.closedByOffice ? 'closed by office' : trip.status === 'done' ? 'finished' : `seen ${agoLabel(trip.location.at, now)}`}`,
       active: trip.status === 'active',
       faded: stale || trip.status === 'done',
       selected: selected?.id === route.id,
     });
   }
   const fitPoints: LatLng[] = selected
-    ? [...(selected.stops ?? []), ...(selectedTrip?.location ? [selectedTrip.location] : [])]
-    : routes.flatMap((r) => r.stops ?? []);
+    ? [...(selectedDisplayRoute?.stops ?? []), ...(selectedTrip?.location ? [selectedTrip.location] : [])]
+    : routes.flatMap((r) => {
+        const trip = tripFor(r.id);
+        return trip ? routeForTrip(r, trip)?.stops ?? r.stops ?? [] : r.stops ?? [];
+      });
 
   if (isLoading) return <OfficeLoadingRows cols={3} rows={4} />;
 
@@ -344,11 +360,11 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
         <div className="min-w-0 rounded-2xl border bg-white dark:border-slate-800 dark:bg-slate-900">
           {selected ? (
             <RouteDetail
-              route={selected}
+              route={selectedDisplayRoute ?? selected}
               trip={selectedTrip}
               run={run}
               now={now}
-              riders={ridersForRoute(students, selected.id)}
+              riders={selectedRiders}
               isPractice={practice?.routeId === selected.id}
               onBack={() => {
                 setSelectedId(null);
@@ -361,7 +377,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
               onSpeakPhoneStatus={speakPhoneStatus}
               onCopy={async () => {
                 try {
-                  await navigator.clipboard.writeText(familyUpdateMessage(selected, selectedTrip, now));
+                  await navigator.clipboard.writeText(familyUpdateMessage(selectedDisplayRoute ?? selected, selectedTrip, now));
                   toast({ title: 'Update copied', description: 'Paste it into a text or email to families.' });
                 } catch {
                   toast({ variant: 'destructive', title: 'Could not copy' });
@@ -373,23 +389,55 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
             />
           ) : (
             <ul className="divide-y dark:divide-slate-800">
-              {routes.map((route) => (
-                <li key={route.id}>
-                  <RouteRow
-                    route={route}
-                    trip={tripFor(route.id)}
-                    riderCount={ridersForRoute(students, route.id).length}
-                    now={now}
-                    onClick={() => setSelectedId(route.id)}
-                  />
-                </li>
-              ))}
+              {routes.map((route) => {
+                const trip = tripFor(route.id);
+                const displayRoute = trip ? routeForTrip(route, trip) ?? route : route;
+                return (
+                  <li key={route.id}>
+                    <RouteRow
+                      route={displayRoute}
+                      trip={trip}
+                      riderCount={trip?.riderManifest?.length ?? ridersForRoute(students, route.id).length}
+                      now={now}
+                      onClick={() => setSelectedId(route.id)}
+                    />
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
       </div>
     </div>
   );
+}
+
+function ridersForTrip(trip: OfficeBusTrip | null, students: OfficeStudent[], routeId: string): OfficeStudent[] {
+  if (!trip?.riderManifest?.length) return ridersForRoute(students, routeId);
+  return trip.riderManifest.map((entry) => {
+    const current = students.find((student) => student.id === entry.studentId);
+    if (current) {
+      return {
+        ...current,
+        firstName: entry.displayName,
+        lastName: '',
+        busRouteId: routeId,
+        busStopId: entry.busStopId ?? current.busStopId,
+        transportMode: 'bus' as const,
+      };
+    }
+    return {
+      id: entry.studentId,
+      firstName: entry.displayName,
+      lastName: '',
+      familyId: entry.familyId ?? null,
+      busRouteId: routeId,
+      busStopId: entry.busStopId ?? null,
+      transportMode: 'bus',
+      status: 'active',
+      updatedAt: trip.updatedAt,
+    };
+  });
 }
 
 function Stat({ label, value, tone = 'plain' }: { label: string; value: number; tone?: 'plain' | 'good' | 'warn' }) {
@@ -411,7 +459,7 @@ function Stat({ label, value, tone = 'plain' }: { label: string; value: number; 
 
 function statusOf(route: OfficeBusRoute, trip: OfficeBusTrip | null, now: number): { text: string; tone: 'idle' | 'live' | 'late' | 'done' | 'stale' } {
   if (!trip) return { text: 'Not started', tone: 'idle' };
-  if (trip.status === 'done') return { text: `Finished ${clockLabel(trip.endedAt ?? trip.updatedAt)}`, tone: 'done' };
+  if (trip.status === 'done') return { text: trip.closedByOffice ? 'Closed by School Office' : `Finished ${clockLabel(trip.endedAt ?? trip.updatedAt)}`, tone: 'done' };
   if (!trip.location || now - trip.location.at > LOCATION_STALE_MS) return { text: 'On the road · no signal', tone: 'stale' };
   const late = minutesLate(route, trip, now) ?? 0;
   if (late >= LATE_THRESHOLD_MIN) return { text: `About ${late} min late`, tone: 'late' };
@@ -439,8 +487,9 @@ function RouteRow({
   now: number;
   onClick: () => void;
 }) {
-  const status = statusOf(route, trip, now);
-  const stop = trip?.status === 'active' ? nextStop(route, trip) : null;
+  const displayRoute = trip ? routeForTrip(route, trip) ?? route : route;
+  const status = statusOf(displayRoute, trip, now);
+  const stop = trip?.status === 'active' ? nextStop(displayRoute, trip) : null;
   const onBoard = Object.values(trip?.riders ?? {}).filter((r) => r.status === 'on').length;
   return (
     <button type="button" onClick={onClick} className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
@@ -499,9 +548,10 @@ function RouteDetail({
   familyRecipientCount: number;
   onQueueEmail: () => void;
 }) {
-  const status = statusOf(route, trip, now);
-  const stops = orderedStops(route, run);
-  const next = trip?.status === 'active' ? nextStop(route, trip) : null;
+  const displayRoute = trip ? routeForTrip(route, trip) ?? route : route;
+  const status = statusOf(displayRoute, trip, now);
+  const stops = orderedStops(displayRoute, run);
+  const next = trip?.status === 'active' ? nextStop(displayRoute, trip) : null;
   const riderStatus = trip?.riders ?? {};
   const counts = { on: 0, off: 0, absent: 0, waiting: 0 };
   for (const kid of riders) {
@@ -510,9 +560,9 @@ function RouteDetail({
     else counts.waiting += 1;
   }
   const alerts = [...(trip?.alerts ?? [])].reverse();
-  const vehicle = vehicleLabel(route.vehicle);
-  const vehicleDue = vehicleDueLabel(route.vehicle, now);
-  const lastService = latestMaintenanceLabel(route.vehicle);
+  const vehicle = vehicleLabel(displayRoute.vehicle);
+  const vehicleDue = vehicleDueLabel(displayRoute.vehicle, now);
+  const lastService = latestMaintenanceLabel(displayRoute.vehicle);
 
   return (
     <div className="flex max-h-[560px] flex-col">
@@ -520,8 +570,8 @@ function RouteDetail({
         <button type="button" onClick={onBack} aria-label="All routes" className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: route.color }} aria-hidden />
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold">{routeLabel(route)}</p>
+        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: displayRoute.color }} aria-hidden />
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold">{routeLabel(displayRoute)}</p>
         <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', TONE_CLASS[status.tone])}>
           {isPractice ? 'Practice' : status.text}
         </span>
@@ -539,7 +589,8 @@ function RouteDetail({
               <p>Every stop reached.</p>
             )}
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Location {agoLabel(trip.location.at, now)}
+              Location {agoLabel(trip.location.at, now)} · {trackerSourceLabel(trip)}
+              {now - trip.location.at > LOCATION_STALE_MS ? ' · signal stale' : ' · updating'}
               {trip.location.speed ? ` · ${Math.round(trip.location.speed * 2.237)} mph` : ''}
               {trip.driverName ? ` · Driver ${trip.driverName}` : ''}
             </p>
@@ -555,9 +606,9 @@ function RouteDetail({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          {route.driverPhone ? (
+          {displayRoute.driverPhone ? (
             <Button asChild variant="outline" size="sm" className="gap-1.5 rounded-lg">
-              <a href={`tel:${route.driverPhone.replace(/[^\d+]/g, '')}`}>
+              <a href={`tel:${displayRoute.driverPhone.replace(/[^\d+]/g, '')}`}>
                 <Phone className="h-3.5 w-3.5" /> Call driver
               </a>
             </Button>
@@ -624,7 +675,7 @@ function RouteDetail({
                         'mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2',
                         reached ? 'border-transparent text-white' : isNext ? 'border-current' : 'border-slate-300 dark:border-slate-600',
                       )}
-                      style={reached ? { backgroundColor: route.color } : isNext ? { color: route.color } : undefined}
+                      style={reached ? { backgroundColor: displayRoute.color } : isNext ? { color: displayRoute.color } : undefined}
                     >
                       {reached ? <Check className="h-2.5 w-2.5" /> : isNext ? <CircleDot className="h-2.5 w-2.5" /> : null}
                     </span>
@@ -661,7 +712,7 @@ function RouteDetail({
             <ul className="mt-2 space-y-1">
               {riders.map((kid) => {
                 const st = riderStatus[kid.id];
-                const stop = route.stops.find((s) => s.id === kid.busStopId);
+                const stop = displayRoute.stops.find((s) => s.id === kid.busStopId);
                 return (
                   <li key={kid.id} className="flex items-center justify-between gap-2 text-sm">
                     <button type="button" className="min-w-0 truncate text-left hover:text-teal-800 dark:hover:text-teal-300" onClick={() => onOpenStudent(kid.id)}>

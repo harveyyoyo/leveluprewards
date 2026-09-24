@@ -14,7 +14,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { officeAuditSnapshot, writeOfficeAuditEntry } from '@/lib/office/officeAuditLog';
-import { riderSnapshotFromStudents } from '@/lib/office/officeTransport';
+import { riderSnapshotFromStudents, routeSnapshotForRun } from '@/lib/office/officeTransport';
 import { billingStatusForAccount } from '@/lib/office/officeUtils';
 import type {
   OfficeAttendanceEntry,
@@ -992,6 +992,9 @@ function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capa
     if (stop.isSchool) schoolStops += 1;
   }
   if (schoolStops > 1) throw new Error('A route can have only one school stop.');
+  if (schoolStops === 1 && data.stops[data.stops.length - 1]?.isSchool !== true) {
+    throw new Error('Keep the school as the last stop so afternoon runs start at school.');
+  }
 }
 
 export async function upsertOfficeBusRoute(
@@ -1110,12 +1113,7 @@ function tripRef(ctx: OfficeWriteContext, tripId: string) {
 }
 
 function routeSnapshot(route: OfficeBusRoute): OfficeBusRouteSnapshot {
-  return {
-    name: route.name,
-    busNumber: route.busNumber ?? null,
-    color: route.color,
-    stops: route.stops ?? [],
-  };
+  return routeSnapshotForRun(route);
 }
 
 /** Starts (or resumes) a run. A completed run is never overwritten. Returns the trip id. */

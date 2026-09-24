@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   distanceMeters,
   exampleRoutes,
+  familyUpdateMessage,
+  gpsMissedStopWarning,
   latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
@@ -14,6 +16,7 @@ import {
   riderSnapshotFromStudents,
   routeForTrip,
   routeReadiness,
+  routeSnapshotForRun,
   stopMinutesLate,
   transportDaySummary,
   transportDaySummaryText,
@@ -74,6 +77,13 @@ describe('officeTransport', () => {
     });
   });
 
+  it('flags a school stop that is not last in the morning route', () => {
+    expect(routeReadiness({ ...route, stops: [route.stops[2], route.stops[0], route.stops[1]] })).toMatchObject({
+      ready: false,
+      missing: ['the school as the last stop'],
+    });
+  });
+
   it('summarizes vehicle identity and overdue dates', () => {
     const vehicle = { year: 2022, make: 'Ford', model: 'Transit', plate: 'BUS-4', inspectionDue: '2026-01-01' };
     expect(vehicleLabel(vehicle)).toBe('2022 Ford Transit · BUS-4');
@@ -107,6 +117,25 @@ describe('officeTransport', () => {
     expect(stopMinutesLate(route.stops[0], 'am', at(7, 20))).toBe(5);
     expect(stopMinutesLate(route.stops[0], 'am', at(7, 12))).toBe(-3);
     expect(stopMinutesLate(route.stops[0], 'am', null)).toBeNull();
+  });
+
+  it('uses the school time zone for stop times', () => {
+    const arrival = Date.UTC(2026, 8, 23, 12, 20);
+    expect(stopMinutesLate(route.stops[0], 'am', arrival, 'America/Chicago')).toBe(5);
+  });
+
+  it('does not call an update on time without a fresh bus location', () => {
+    const message = familyUpdateMessage(route, trip(), at(7, 20), 'America/Chicago');
+    expect(message).toContain('location is not available');
+    expect(message).not.toContain('on time');
+  });
+
+  it('ignores an old delay report in the ready-made family message', () => {
+    const message = familyUpdateMessage(route, trip({
+      location: { lat: 40.72, lng: -74.32, at: at(7, 20) },
+      alerts: [{ id: 'old-delay', kind: 'delay', minutes: 30, at: at(5, 0) }],
+    }), at(7, 20));
+    expect(message).not.toContain('30 minutes late');
   });
 
   it('measures distance in metres', () => {
@@ -150,7 +179,32 @@ describe('officeTransport', () => {
       riderManifest: [{ studentId: 'kid1', displayName: 'Maya Lopez', familyId: 'f1', busStopId: 'a' }],
       riders: { kid1: { status: 'off', at: at(7, 30) } },
     });
-    expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
+    expect(tripWarnings([{ ...route, requireReleaseConfirmations: true }], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
+  });
+
+  it('does not warn about releases when the saved route does not require them', () => {
+    const names = new Map([['kid1', 'Maya Lopez']]);
+    const newTrip = trip({
+      riderManifest: [{ studentId: 'kid1', displayName: 'Maya Lopez', familyId: 'f1', busStopId: 'a' }],
+      riders: { kid1: { status: 'off', at: at(7, 30) } },
+    });
+    expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(false);
+  });
+
+  it('keeps the afternoon school as the first boarding step until the driver confirms it', () => {
+    expect(nextStop(route, trip({ run: 'pm' }))?.id).toBe('s');
+  });
+
+  it('warns about a missed stop only from a fresh trusted tracker update', () => {
+    const trusted = trip({
+      location: { lat: 40.72, lng: -74.32, at: at(7, 27), source: 'gps_device' },
+      locationSource: 'gps_device',
+    });
+    expect(gpsMissedStopWarning(route, trusted, at(7, 30))?.id).toBe('t1-gps-missed');
+    expect(gpsMissedStopWarning(route, trusted, at(7, 16))).toBeNull();
+    expect(gpsMissedStopWarning(route, trip({ ...trusted, location: { ...trusted.location!, at: at(7, 0) } }), at(7, 30))).toBeNull();
+    expect(gpsMissedStopWarning(route, trip({ ...trusted, locationSource: 'browser', location: { ...trusted.location!, source: 'browser' } }), at(7, 30))).toBeNull();
+    expect(gpsMissedStopWarning(route, { ...trusted, id: 'practice-1' }, at(7, 30))).toBeNull();
   });
 
   it('finds riders who are off without a release record', () => {
@@ -233,6 +287,15 @@ describe('officeTransport', () => {
 
   it('keeps route safety choices for the active trip view', () => {
     expect(routeForTrip({ ...route, notifyFamiliesOnAlert: true, requireReleaseConfirmations: true }, trip())).toMatchObject({ notifyFamiliesOnAlert: true, requireReleaseConfirmations: true });
+  });
+
+  it('keeps the release rule from the route saved with the run', () => {
+    const savedRoute = { ...route, requireReleaseConfirmations: true, notifyFamiliesOnArrival: true };
+    const historical = trip({ routeSnapshot: routeSnapshotForRun(savedRoute) });
+    expect(routeForTrip({ ...route, requireReleaseConfirmations: false, notifyFamiliesOnArrival: false }, historical)).toMatchObject({
+      requireReleaseConfirmations: true,
+      notifyFamiliesOnArrival: true,
+    });
   });
 
   it('uses the route saved with a trip for past history', () => {

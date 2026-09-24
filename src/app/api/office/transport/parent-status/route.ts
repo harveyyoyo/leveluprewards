@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit } from '@/lib/server/apiSecurity';
+import { getTransportSchoolTimeZone } from '@/lib/server/transportSchoolTime';
 import { transportParentAccessIsUsable } from '@/lib/office/transportParentAccess';
 import {
   TRANSPORT_PARENT_COOKIE_NAME,
@@ -43,6 +44,8 @@ export async function GET(req: NextRequest) {
 
     const db = await getFirebaseAdminFirestore();
     const school = db.collection('schools').doc(schoolId);
+    const timeZone = await getTransportSchoolTimeZone(db, schoolId);
+    const now = Date.now();
     const accessRef = school.collection('officeTransportParentAccess').doc(session.accessId);
     const accessSnap = await accessRef.get();
     const access = accessSnap.exists ? ({ id: accessSnap.id, ...accessSnap.data() } as OfficeTransportParentAccess) : null;
@@ -61,7 +64,7 @@ export async function GET(req: NextRequest) {
     const buses = await Promise.all(routeIds.map(async (routeId) => {
       const [routeSnap, tripSnap] = await Promise.all([
         school.collection('officeBusRoutes').doc(routeId).get(),
-        school.collection('officeBusTrips').where('routeId', '==', routeId).limit(100).get(),
+        school.collection('officeBusTrips').where('routeId', '==', routeId).get(),
       ]);
       if (!routeSnap.exists || routeSnap.data()?.archived === true) return null;
       const route = { id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute;
@@ -70,7 +73,7 @@ export async function GET(req: NextRequest) {
         if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
         return b.startedAt - a.startedAt;
       })[0] ?? latestTripForRoute(trips, routeId, 'am');
-      const status = transportPhoneStatusText(route, trip);
+      const status = transportPhoneStatusText(route, trip, now, timeZone);
       const activeRoute = trip ? routeForTrip(route, trip) ?? route : route;
       const stop = trip ? nextStop(activeRoute, trip) : null;
       const location = trip?.location as OfficeBusLocation | null | undefined;
@@ -84,7 +87,7 @@ export async function GET(req: NextRequest) {
         nextStopName: stop?.name ?? null,
         etaMinutes: eta,
         lastUpdateAt: safeNumber(location?.at),
-        stale: Boolean(location && Date.now() - location.at > LOCATION_STALE_MS),
+        stale: Boolean(location && now - location.at > LOCATION_STALE_MS),
       };
     }));
 
@@ -92,7 +95,7 @@ export async function GET(req: NextRequest) {
       familyName: family.displayName,
       arrivalPreferences: access.arrivalPreferences ?? { email: false, sms: false, whatsapp: false, updatedAt: access.updatedAt },
       buses: buses.filter((bus): bus is NonNullable<typeof bus> => bus !== null),
-      checkedAt: Date.now(),
+      checkedAt: now,
     }, { headers: noStore() });
   } catch {
     return jsonError(503, 'Private bus status is temporarily unavailable.');
