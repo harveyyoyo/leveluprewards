@@ -28,14 +28,6 @@
   animation: slideUp 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 </style>
-<script id="dark-mode-detector">
-try {
-  if (new URLSearchParams(window.location.search).get('dark') === '1') {
-    document.documentElement.style.filter = 'invert(0.92) hue-rotate(180deg)';
-    document.documentElement.style.background = '#111114';
-  }
-} catch (e) {}
-</script>
 </head>
 <body>
 <div class="min-h-screen bg-canvas font-body text-navy/90 flex flex-col">

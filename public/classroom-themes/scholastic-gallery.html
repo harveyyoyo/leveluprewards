@@ -16,14 +16,6 @@
   --font-sans: 'Inter', sans-serif;
 }
 </style>
-<script id="dark-mode-detector">
-try {
-  if (new URLSearchParams(window.location.search).get('dark') === '1') {
-    document.documentElement.style.filter = 'invert(0.92) hue-rotate(180deg)';
-    document.documentElement.style.background = '#111114';
-  }
-} catch (e) {}
-</script>
 </head>
 <body>
 <div class="flex h-screen w-full bg-canvas font-sans text-ink">

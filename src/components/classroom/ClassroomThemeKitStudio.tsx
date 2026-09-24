@@ -198,7 +198,7 @@ function PreviewFrame({
           width={PREVIEW_WIDTH}
           height={PREVIEW_HEIGHT}
           className="block border-0 bg-white"
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts"
         />
       </div>
     </div>
@@ -357,21 +357,21 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
                         key={design.slug}
                         type="button"
                         onClick={() => updateSetting('active', id)}
-                        className={`w-full rounded-xl border p-2.5 text-left transition-all duration-150 ${
+                        className={`group w-full rounded-xl border p-2.5 text-left transition-all duration-150 ${
                           isSelected
-                            ? 'border-emerald-500 bg-emerald-950/30 text-emerald-100 shadow-sm ring-1 ring-emerald-500/40'
-                            : 'border-zinc-800 bg-zinc-900/80 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/80'
+                            ? 'border-emerald-500 bg-emerald-950/50 text-white shadow-sm ring-1 ring-emerald-500/50'
+                            : 'border-zinc-800 bg-zinc-900 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold leading-tight truncate">
+                          <span className="text-xs font-bold leading-tight truncate text-white">
                             {design.name}
                           </span>
                           {isSelected && (
                             <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                           )}
                         </div>
-                        <p className="text-[11px] leading-tight text-zinc-400 mt-1 line-clamp-2">
+                        <p className="text-[11px] leading-tight text-zinc-300 mt-1 line-clamp-2">
                           {design.desc}
                         </p>
                       </button>
