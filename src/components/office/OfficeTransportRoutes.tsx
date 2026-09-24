@@ -16,6 +16,7 @@ import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { OfficeRouteSuggestionsPanel } from '@/components/office/OfficeRouteSuggestionsPanel';
 import { OfficeStudentPicker } from '@/components/office/OfficeStudentPicker';
 import { OfficePlaceSearch } from '@/components/office/OfficePlaceSearch';
 import { OfficeTransportMap, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
@@ -60,6 +61,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
   const [openId, setOpenId] = useState<string | 'new' | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingSchool, setEditingSchool] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [search, setSearch] = useState('');
   const isDemoSchool = isPublicSampleSchoolId(schoolId);
   const visibleRoutes = useMemo(() => {
@@ -120,7 +122,28 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
             </Button>
           </>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-2 rounded-xl"
+          aria-expanded={suggestOpen}
+          aria-controls="office-route-suggestions"
+          onClick={() => setSuggestOpen((open) => !open)}
+        >
+          <Sparkles className="h-4 w-4" aria-hidden />
+          Suggest routes
+        </Button>
       </div>
+
+      {suggestOpen ? (
+        <OfficeRouteSuggestionsPanel
+          schoolId={schoolId}
+          school={school}
+          routes={routes}
+          onRouteCreated={(routeId) => setOpenId(routeId)}
+        />
+      ) : null}
 
       {routes.length === 0 ? (
         <OfficeEmptyState
