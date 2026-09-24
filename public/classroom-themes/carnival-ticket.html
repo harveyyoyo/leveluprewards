@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { width:1440px; height:900px; overflow:hidden; background:#F9EFDC; }
+  .grotesk { font-family:'Space Grotesk',sans-serif; }
+  .dmsans { font-family:'DM Sans',sans-serif; }
+  .stripes { background: repeating-linear-gradient(90deg, #C93A2E 0 26px, #F9EFDC 26px 52px); }
+  .awning { position:relative; }
+  .awning::after { content:''; position:absolute; left:0; right:0; bottom:-14px; height:14px;
+    background: radial-gradient(circle at 13px -4px, #C93A2E 12px, transparent 13px), radial-gradient(circle at 39px -4px, #F9EFDC 12px, transparent 13px);
+    background-size: 52px 14px; background-repeat: repeat-x; }
+  .ticket { position:relative; background:#FFFDF5; border-radius:14px; box-shadow: 0 6px 0 #D9C9A8, 0 12px 20px rgba(120,90,40,0.18); }
+  .ticket::before { content:''; position:absolute; left:64px; top:8px; bottom:8px; border-left:3px dashed #D9C9A8; }
+  .notch { position:absolute; width:18px; height:18px; border-radius:9999px; background:#F9EFDC; left:56px; }
+  .stub-btn { box-shadow: 0 5px 0 #A8321F; transition: transform .1s ease, box-shadow .1s ease; }
+  .stub-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #A8321F; }
+  .marquee-dots { background-image: radial-gradient(circle, #FFE08A 3px, transparent 3.5px); background-size: 24px 24px; }
+  .starburst { clip-path: polygon(50% 0%, 59% 12%, 73% 6%, 75% 21%, 90% 21%, 84% 35%, 98% 41%, 88% 52%, 98% 63%, 84% 69%, 90% 83%, 75% 83%, 73% 98%, 59% 92%, 50% 100%, 41% 92%, 27% 98%, 25% 83%, 10% 83%, 16% 69%, 2% 63%, 12% 52%, 2% 41%, 16% 35%, 10% 21%, 25% 21%, 27% 6%, 41% 12%); }
+</style>
+</head>
+<body class="dmsans text-[#2E2014]">
+<div class="flex h-full">
+
+  <!-- SIDEBAR : prize booth -->
+  <aside class="w-[290px] shrink-0 flex flex-col bg-[#FFF7E6] border-r-4 border-[#2E2014]">
+    <div class="awning stripes h-12 shrink-0 border-b-4 border-[#2E2014]"></div>
+    <div class="px-6 pt-8 pb-4 border-b-4 border-[#2E2014] bg-[#FFC53D]">
+      <div class="grotesk text-[26px] font-bold uppercase leading-none tracking-tight" style="-webkit-text-stroke:1px #2E2014">Prize Booth</div>
+      <div class="mt-2 text-[10px] font-bold uppercase tracking-[0.3em] text-[#7A3A1E]">Step right up!</div>
+    </div>
+
+    <div class="flex-1 px-6 py-6 space-y-7 overflow-hidden">
+      <button class="stub-btn w-full py-4 bg-[#2E2014] text-[#FFE08A] grotesk font-bold uppercase tracking-wider text-sm border-2 border-[#2E2014]" style="border-radius:12px">Arrange Seats</button>
+
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <span class="grotesk font-bold text-xs uppercase tracking-[0.2em]">Add Points</span>
+          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#C93A2E] text-white px-2 py-0.5 rounded-full">+5 to class</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button class="stub-btn py-2.5 bg-[#FFFDF5] border-2 border-[#2E2014] grotesk font-bold text-sm" style="border-radius:10px">+1</button>
+          <button class="stub-btn py-2.5 bg-[#FFE08A] border-2 border-[#2E2014] grotesk font-bold text-sm" style="border-radius:10px">+5</button>
+          <button class="stub-btn py-2.5 bg-[#FFFDF5] border-2 border-[#2E2014] grotesk font-bold text-sm" style="border-radius:10px">+10</button>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <button class="stub-btn w-full py-3 bg-[#FFE08A] border-2 border-[#2E2014] grotesk font-bold text-sm uppercase text-left px-4" style="border-radius:12px">🎡 Random Student</button>
+        <button class="stub-btn w-full py-3 bg-[#7AC7A3] border-2 border-[#2E2014] text-white grotesk font-bold text-sm uppercase text-left px-4" style="border-radius:12px">🎟️ Raffle Draw</button>
+        <button class="stub-btn w-full py-3 bg-[#C93A2E] border-2 border-[#2E2014] text-white grotesk font-bold text-sm uppercase text-left px-4" style="border-radius:12px">📋 Behavior Log</button>
+        <button class="stub-btn w-full py-3 bg-[#3E6FB0] border-2 border-[#2E2014] text-white grotesk font-bold text-sm uppercase text-left px-4" style="border-radius:12px">✅ Attendance Roll</button>
+      </div>
+
+      <div>
+        <div class="grotesk font-bold text-xs uppercase tracking-[0.2em] mb-3">Group Timer</div>
+        <div class="ticket p-4 text-center">
+          <div class="grotesk text-4xl font-bold text-[#C93A2E]">15:00</div>
+          <div class="flex gap-2 mt-3">
+            <button class="stub-btn flex-1 py-2 bg-[#2E2014] text-[#FFE08A] text-xs grotesk font-bold uppercase" style="border-radius:8px">Start</button>
+            <button class="stub-btn flex-1 py-2 bg-[#FFFDF5] border-2 border-[#2E2014] text-xs grotesk font-bold uppercase" style="border-radius:8px">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 py-5 border-t-4 border-[#2E2014] bg-[#FFE08A]/50">
+      <button class="stub-btn w-full py-3 bg-[#FFFDF5] border-2 border-[#2E2014] grotesk font-bold text-xs uppercase tracking-widest" style="border-radius:12px">Setup & More</button>
+    </div>
+  </aside>
+
+  <!-- CANVAS -->
+  <main class="flex-1 flex flex-col">
+    <!-- marquee header -->
+    <header class="shrink-0 bg-[#2E2014] text-[#FFE08A] relative">
+      <div class="marquee-dots absolute inset-0 opacity-40"></div>
+      <div class="relative h-[64px] flex items-center justify-between px-6">
+        <div class="flex items-center gap-5">
+          <button class="px-4 py-1.5 bg-[#C93A2E] text-white grotesk font-bold text-xs uppercase tracking-wider border-2 border-[#FFE08A]" style="border-radius:10px">Grade 5 ▾</button>
+          <span class="text-[11px] font-bold uppercase tracking-[0.25em] flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#7BE3AE]"></span>12/22 present</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-4 py-1.5 border-2 border-[#FFE08A] grotesk font-bold text-[11px] uppercase" style="border-radius:10px">Projector</button>
+          <button class="px-4 py-1.5 border-2 border-[#FFE08A] grotesk font-bold text-[11px] uppercase" style="border-radius:10px">Shortcuts</button>
+          <div class="w-8 h-8 rounded-full bg-[#FFC53D] border-2 border-[#FFE08A] flex items-center justify-center text-[10px] grotesk font-bold text-[#2E2014]">TR</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- seating canvas -->
+    <div class="flex-1 relative overflow-auto px-12 pt-8 pb-10" style="background-image: radial-gradient(#D9C9A8 1px, transparent 1px); background-size: 24px 24px;">
+      <!-- teacher desk marquee -->
+      <div class="flex justify-center mb-10">
+        <div class="relative ticket px-14 py-3.5 text-center">
+          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] text-[#3E6FB0]">Front of class</div>
+          <div class="grotesk text-lg font-bold uppercase tracking-[0.22em]">🎪 Teacher Desk</div>
+          <div class="absolute -right-4 -top-4 starburst w-14 h-14 bg-[#FFC53D] border-2 border-[#2E2014] flex items-center justify-center rotate-12">
+            <span class="text-[8px] font-bold grotesk uppercase text-center leading-tight text-[#2E2014]">Front<br>Row!</span>
+          </div>
+        </div>
+      </div>
+      <div id="grid" class="grid grid-cols-5 gap-x-6 gap-y-8 max-w-[1060px] mx-auto"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const students = [
+  ["JD","John Davis","87 PTS","#3E6FB0"],["EW","Emily Ward","1.2K PTS","#C93A2E"],
+  ["ZJ","Zoe Jenkins","462 PTS","#FFC53D"],["LH","Leo Hayes","890 PTS","#7AC7A3"],
+  ["AB","Ava Brooks","2.1K PTS","#E88A2E"],["KM","Kai Miller","66 PTS","#3E6FB0"],
+  ["SO","Sarah O'Neill","94 PTS","#C93A2E"],["RR","Ryan Reed","118 PTS","#FFC53D"],
+  ["MP","Mia Park","2.4K PTS","#7AC7A3"],["TL","Toby Long","1.9K PTS","#E88A2E"]
+];
+const grid = document.getElementById('grid');
+students.forEach(([init,name,pts,c]) => {
+  grid.insertAdjacentHTML('beforeend', `
+  <div class="ticket group px-3 py-0 cursor-pointer hover:-translate-y-1.5 hover:rotate-[-0.5deg] transition-transform">
+    <div class="flex items-stretch">
+      <div class="w-[64px] shrink-0 flex flex-col items-center justify-center py-4 gap-1.5" style="background:${c};border-radius:11px 0 0 11px">
+        <div class="w-9 h-9 rounded-full bg-[#FFFDF5] border-2 border-[#2E2014] flex items-center justify-center grotesk text-[13px] font-bold text-[#2E2014]">${init}</div>
+      </div>
+      <div class="flex-1 py-4 pl-6 pr-3 text-center relative">
+        <div class="text-[8px] grotesk font-bold uppercase tracking-[0.3em] text-[#A8977A]">Admit one</div>
+        <div class="grotesk font-bold text-[14px] leading-tight mt-0.5">${name}</div>
+        <div class="mt-1.5 inline-block starburst w-9 h-9 flex items-center justify-center" style="background:${c}">
+          <span class="text-[7px] font-bold grotesk text-white text-center leading-none">${pts.split(' ')[0]}</span>
+        </div>
+      </div>
+    </div>
+    <div class="notch" style="top:-9px"></div>
+    <div class="notch" style="bottom:-9px"></div>
+  </div>`);
+});
+for (let i=0;i<3;i++) {
+  grid.insertAdjacentHTML('beforeend', `
+  <div class="relative px-3 py-8 text-center border-[3px] border-dashed border-[#C9B48E] bg-transparent" style="border-radius:14px">
+    <div class="grotesk font-bold text-[11px] uppercase tracking-[0.25em] text-[#B49B6E]">Empty desk</div>
+  </div>`);
+}
+</script>
+</body>
+</html>

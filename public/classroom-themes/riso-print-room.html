@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { width:1440px; height:900px; overflow:hidden; background:#F6F1E4; }
+  .grotesk { font-family:'Space Grotesk',sans-serif; }
+  .dmsans { font-family:'DM Sans',sans-serif; }
+  /* paper grain */
+  .grain { position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.5; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E"); }
+  .halftone { background-image: radial-gradient(#1E2A4A 1.1px, transparent 1.1px); background-size: 22px 22px; }
+  .riso-red { color:#E8442E; } .riso-teal { color:#0E7C7B; }
+  .misreg { position:relative; }
+  .misreg::before { content:attr(data-text); position:absolute; left:3px; top:3px; color:#E8442E; z-index:-1; mix-blend-mode:multiply; }
+  .misreg::after  { content:attr(data-text); position:absolute; left:-3px; top:-2px; color:#0E7C7B; z-index:-2; mix-blend-mode:multiply; }
+  .ink-shadow-red { box-shadow: 6px 6px 0 #E8442E; }
+  .ink-shadow-teal { box-shadow: 6px 6px 0 #0E7C7B; }
+  .ink-shadow-yellow { box-shadow: 6px 6px 0 #E3A008; }
+  .ink-shadow-purple { box-shadow: 6px 6px 0 #6D28D9; }
+</style>
+</head>
+<body class="dmsans text-[#1E2A4A]">
+<div class="flex h-full">
+
+  <!-- SIDEBAR : print margin column -->
+  <aside class="w-[290px] shrink-0 border-r-[3px] border-[#1E2A4A] bg-[#FBF7EC] flex flex-col">
+    <div class="px-6 pt-7 pb-5 border-b-[3px] border-[#1E2A4A]">
+      <div class="misreg grotesk text-[26px] font-bold leading-none uppercase" data-text="Classroom">Classroom</div>
+      <div class="misreg grotesk text-[26px] font-bold leading-none uppercase riso-red" data-text="Tools" style="position:relative">Tools</div>
+      <div class="mt-3 text-[10px] font-bold uppercase tracking-[0.25em] riso-teal">Riso Edition — No. 04</div>
+    </div>
+
+    <div class="flex-1 px-6 py-6 space-y-7 overflow-hidden">
+      <button class="w-full py-3.5 bg-[#1E2A4A] text-[#FBF7EC] grotesk font-bold uppercase tracking-wider text-sm ink-shadow-red active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">Arrange Seats</button>
+
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <span class="grotesk font-bold text-xs uppercase tracking-[0.2em]">Add Points</span>
+          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#0E7C7B] text-[#FBF7EC] px-2 py-0.5">+5 to class</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button class="py-2.5 bg-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-sm ink-shadow-teal active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">+1</button>
+          <button class="py-2.5 bg-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-sm ink-shadow-red active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">+5</button>
+          <button class="py-2.5 bg-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-sm ink-shadow-purple active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">+10</button>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <button class="w-full py-3 bg-[#F2C230] border-2 border-[#1E2A4A] grotesk font-bold text-sm uppercase tracking-wide ink-shadow-teal text-left px-4 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">Random Student</button>
+        <button class="w-full py-3 bg-[#8B5CF6] text-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-sm uppercase tracking-wide ink-shadow-red text-left px-4 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">Raffle Draw</button>
+        <button class="w-full py-3 bg-[#E8442E] text-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-sm uppercase tracking-wide ink-shadow-purple text-left px-4 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">Behavior Log</button>
+        <button class="w-full py-3 bg-[#0E7C7B] text-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-sm uppercase tracking-wide ink-shadow-yellow text-left px-4 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">Attendance Roll</button>
+      </div>
+
+      <div>
+        <div class="grotesk font-bold text-xs uppercase tracking-[0.2em] mb-3">Group Timer</div>
+        <div class="bg-[#FBF7EC] border-2 border-[#1E2A4A] ink-shadow-teal p-4 text-center">
+          <div class="grotesk text-4xl font-bold misreg" data-text="15:00">15:00</div>
+          <div class="flex gap-2 mt-3">
+            <button class="flex-1 py-2 bg-[#1E2A4A] text-[#FBF7EC] text-xs grotesk font-bold uppercase">Start</button>
+            <button class="flex-1 py-2 bg-[#FBF7EC] border-2 border-[#1E2A4A] text-xs grotesk font-bold uppercase">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 py-5 border-t-[3px] border-[#1E2A4A]">
+      <button class="w-full py-3 bg-[#FBF7EC] border-2 border-[#1E2A4A] grotesk font-bold text-xs uppercase tracking-widest ink-shadow-red active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all">Setup & More</button>
+      <div class="mt-3 text-center text-[9px] uppercase tracking-[0.3em] riso-teal font-bold">Printed in 2 inks</div>
+    </div>
+  </aside>
+
+  <!-- CANVAS -->
+  <main class="flex-1 flex flex-col relative">
+    <!-- header bar -->
+    <header class="h-[64px] shrink-0 bg-[#1E2A4A] text-[#FBF7EC] flex items-center justify-between px-6 border-b-[3px] border-[#1E2A4A] relative overflow-hidden">
+      <div class="flex items-center gap-5">
+        <button class="px-4 py-1.5 bg-[#FBF7EC] text-[#1E2A4A] grotesk font-bold text-xs uppercase tracking-wider">Grade 5 ▾</button>
+        <span class="text-[11px] font-bold uppercase tracking-[0.2em] flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#3ECF8E]"></span>12/22 present</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-4 py-1.5 border-2 border-[#FBF7EC] grotesk font-bold text-[11px] uppercase">Projector</button>
+        <button class="px-4 py-1.5 border-2 border-[#FBF7EC] grotesk font-bold text-[11px] uppercase">Shortcuts</button>
+        <div class="w-8 h-8 rounded-full bg-[#E8442E] border-2 border-[#FBF7EC] flex items-center justify-center text-[10px] grotesk font-bold">TR</div>
+      </div>
+      <div class="absolute inset-0 halftone opacity-20 pointer-events-none" style="background-image:radial-gradient(#FBF7EC 1px,transparent 1px)"></div>
+    </header>
+
+    <!-- seating canvas -->
+    <div class="flex-1 halftone relative overflow-auto px-12 pt-6 pb-10">
+      <!-- teacher desk -->
+      <div class="flex justify-center mb-8">
+        <div class="relative bg-[#FBF7EC] border-[3px] border-[#1E2A4A] ink-shadow-red px-10 py-3">
+          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] riso-teal text-center">Front of class</div>
+          <div class="grotesk text-lg font-bold uppercase tracking-[0.2em] misreg" data-text="Teacher Desk">Teacher Desk</div>
+        </div>
+      </div>
+      <div id="grid" class="grid grid-cols-5 gap-x-6 gap-y-7 max-w-[1050px] mx-auto"></div>
+    </div>
+  </main>
+</div>
+
+<div class="grain"></div>
+<script>
+const students = [
+  ["JD","John Davis","87 PTS","#0E7C7B"],["EW","Emily Ward","1.2K PTS","#E8442E"],
+  ["ZJ","Zoe Jenkins","462 PTS","#E3A008"],["LH","Leo Hayes","890 PTS","#6D28D9"],
+  ["AB","Ava Brooks","2.1K PTS","#0E7C7B"],["KM","Kai Miller","66 PTS","#E8442E"],
+  ["SO","Sarah O'Neill","94 PTS","#E3A008"],["RR","Ryan Reed","118 PTS","#6D28D9"],
+  ["MP","Mia Park","2.4K PTS","#0E7C7B"],["TL","Toby Long","1.9K PTS","#E8442E"]
+];
+const shadows = { "#0E7C7B":"ink-shadow-teal", "#E8442E":"ink-shadow-red", "#E3A008":"ink-shadow-yellow", "#6D28D9":"ink-shadow-purple" };
+const grid = document.getElementById('grid');
+students.forEach(([init,name,pts,c]) => {
+  grid.insertAdjacentHTML('beforeend', `
+  <div class="relative bg-[#FBF7EC] border-[3px] border-[#1E2A4A] ${shadows[c]} px-3 py-5 text-center hover:-translate-y-1 transition-transform cursor-pointer">
+    <div class="w-14 h-14 mx-auto rounded-full border-[3px] border-[#1E2A4A] flex items-center justify-center grotesk text-lg font-bold" style="background:${c};color:#FBF7EC">${init}</div>
+    <div class="mt-3 grotesk font-bold text-[15px] leading-tight">${name}</div>
+    <div class="mt-1.5 inline-block text-[10px] grotesk font-bold uppercase tracking-widest text-[#FBF7EC] px-2 py-0.5" style="background:${c}">${pts}</div>
+    <div class="absolute inset-0 pointer-events-none opacity-[0.07]" style="background-image:radial-gradient(#1E2A4A 1px,transparent 1px);background-size:6px 6px"></div>
+  </div>`);
+});
+for (let i=0;i<3;i++) {
+  grid.insertAdjacentHTML('beforeend', `
+  <div class="relative border-[3px] border-dashed border-[#1E2A4A]/40 px-3 py-5 text-center opacity-60">
+    <div class="w-14 h-14 mx-auto rounded-full border-[3px] border-dashed border-[#1E2A4A]/40"></div>
+    <div class="mt-3 grotesk font-bold text-[11px] uppercase tracking-[0.25em] text-[#1E2A4A]/50">Empty desk</div>
+  </div>`);
+}
+</script>
+</body>
+</html>

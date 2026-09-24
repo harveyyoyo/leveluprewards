@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Palette } from 'lucide-react';
+import { ExternalLink, Palette, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Popover,
@@ -87,7 +90,10 @@ export function ClassroomAppearancePopover({
   triggerClassName?: string;
   iconOnly?: boolean;
 }) {
+  const params = useParams();
+  const schoolId = typeof params?.schoolId === 'string' ? params.schoolId : '';
   const active = classroomAppearanceThemeById(prefs.design);
+  const themesHref = schoolId ? `/${encodeURIComponent(schoolId.toLowerCase())}/classroom/themes` : '#';
 
   return (
     <Popover modal>
@@ -131,6 +137,34 @@ export function ClassroomAppearancePopover({
                 />
               ))}
             </div>
+
+            {schoolId ? (
+              <div className="mt-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5">
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    Classroom Theme Studio
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                    15 Looks
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                  Preview 15 interactive seating chart styles with custom fonts and colors.
+                </p>
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 w-full h-7 rounded-lg border-emerald-500/30 bg-background text-xs font-semibold hover:bg-emerald-500/10 gap-1"
+                >
+                  <Link href={themesHref} target="_blank" rel="noopener noreferrer">
+                    <span>Explore 15 Themes</span>
+                    <ExternalLink className="h-3 w-3 opacity-70" />
+                  </Link>
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2 border-t border-border/40 pt-3">

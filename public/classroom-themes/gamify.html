@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { width:1440px; height:900px; overflow:hidden; background:#F5F1E4; }
+  .grotesk { font-family:'Space Grotesk',sans-serif; }
+  .dmsans { font-family:'DM Sans',sans-serif; }
+  .panel { background:#FFFDF6; border-radius:18px; box-shadow: 0 3px 0 rgba(60,50,30,0.10), 0 14px 26px rgba(60,50,30,0.12); }
+  .btn3d { border-radius:14px; box-shadow: 0 5px 0 rgba(0,0,0,0.18), 0 10px 18px rgba(60,50,30,0.16); transition: transform .1s ease, box-shadow .1s ease; }
+  .btn3d:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.18), 0 4px 8px rgba(60,50,30,0.16); }
+  .xp-track { height:8px; border-radius:9999px; background:rgba(60,50,30,0.12); overflow:hidden; }
+  .xp-fill { height:100%; border-radius:9999px; }
+  .chip { border-radius:9999px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
+  .grid-lines { background-image: linear-gradient(rgba(60,50,30,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(60,50,30,0.05) 1px, transparent 1px); background-size: 46px 46px; }
+</style>
+</head>
+<body class="dmsans text-[#3B3222]">
+<div class="flex h-full">
+
+  <!-- SIDEBAR : player controls -->
+  <aside class="w-[290px] shrink-0 flex flex-col px-5 pt-6 pb-5 border-r-2 border-dashed border-[#E0D5BC]">
+    <div class="panel px-5 py-5 mb-4">
+      <div class="grotesk text-[24px] font-bold leading-tight text-[#2E2716]">Game Controls</div>
+      <div class="mt-1 text-[11px] font-bold uppercase tracking-[0.25em] text-[#B08D3E]">▶ press start</div>
+    </div>
+
+    <div class="panel px-5 py-4 mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="grotesk font-bold text-[10px] uppercase tracking-[0.2em] text-[#8A7A5A]">Class XP</span>
+        <span class="text-[10px] grotesk font-bold text-[#1E6B4C]">LVL 12</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" style="width:68%; background:linear-gradient(90deg,#5FC4A0,#3BA57F)"></div></div>
+      <div class="mt-2 text-[10px] font-bold text-[#8A7A5A]">680 / 1000 XP to Level 13</div>
+    </div>
+
+    <div class="flex-1 space-y-5 overflow-hidden px-1">
+      <button class="btn3d w-full py-4 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white grotesk font-bold text-sm tracking-wide">🗺 Arrange Seats</button>
+
+      <div>
+        <div class="flex items-center justify-between mb-3 px-1">
+          <span class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A]">Award XP</span>
+          <span class="text-[9px] font-bold uppercase tracking-widest bg-[#5FC4A0] text-white px-2 py-1 rounded-full chip">+combo x3</span>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <button class="btn3d py-3 bg-gradient-to-b from-[#FFE9B8] to-[#FFD57E] text-[#7A5410] grotesk font-bold">+1</button>
+          <button class="btn3d py-3 bg-gradient-to-b from-[#FFD1C4] to-[#F97F62] text-[#8A3A22] grotesk font-bold">+5</button>
+          <button class="btn3d py-3 bg-gradient-to-b from-[#E3D5FF] to-[#A882F2] text-white grotesk font-bold">+10</button>
+        </div>
+      </div>
+
+      <div class="space-y-2.5">
+        <button class="btn3d w-full py-3 px-4 bg-[#FFFDF6] flex items-center justify-between grotesk font-bold text-sm text-[#3B3222]">
+          <span class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-gradient-to-b from-[#FFDE76] to-[#FFC53D] flex items-center justify-center">🎲</span>Random Student</span>
+          <span class="text-[10px] font-bold text-[#B08D3E]">GO ▸</span>
+        </button>
+        <button class="btn3d w-full py-3 px-4 bg-[#FFFDF6] flex items-center justify-between grotesk font-bold text-sm text-[#3B3222]">
+          <span class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-gradient-to-b from-[#C9AEFF] to-[#A882F2] flex items-center justify-center">🎟</span>Raffle Draw</span>
+          <span class="text-[10px] font-bold text-[#B08D3E]">GO ▸</span>
+        </button>
+        <button class="btn3d w-full py-3 px-4 bg-[#FFFDF6] flex items-center justify-between grotesk font-bold text-sm text-[#3B3222]">
+          <span class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-gradient-to-b from-[#FFAB95] to-[#F97F62] flex items-center justify-center">⚠️</span>Behavior Log</span>
+          <span class="text-[10px] font-bold text-[#B08D3E]">GO ▸</span>
+        </button>
+        <button class="btn3d w-full py-3 px-4 bg-[#FFFDF6] flex items-center justify-between grotesk font-bold text-sm text-[#3B3222]">
+          <span class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-gradient-to-b from-[#8FDCC0] to-[#5FC4A0] flex items-center justify-center">✅</span>Attendance Roll</span>
+          <span class="text-[10px] font-bold text-[#B08D3E]">GO ▸</span>
+        </button>
+      </div>
+
+      <div>
+        <div class="grotesk font-bold text-[11px] uppercase tracking-[0.18em] text-[#8A7A5A] mb-2 px-1">⏱ Boss Timer</div>
+        <div class="panel p-4 text-center">
+          <div class="grotesk text-[38px] font-bold text-[#2E2716] leading-none">15:00</div>
+          <div class="flex gap-2 mt-3">
+            <button class="btn3d flex-1 py-2.5 bg-gradient-to-b from-[#5FC4A0] to-[#3BA57F] text-white text-xs grotesk font-bold uppercase">Start</button>
+            <button class="btn3d flex-1 py-2.5 bg-gradient-to-b from-[#EFE6D2] to-[#E0D5BC] text-[#8A7A5A] text-xs grotesk font-bold uppercase">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn3d w-full py-3.5 mt-4 bg-gradient-to-b from-[#FFFDF6] to-[#EFE6D2] text-[#8A7A5A] grotesk font-bold text-xs uppercase tracking-widest">⚙ Setup & More</button>
+  </aside>
+
+  <!-- CANVAS -->
+  <main class="flex-1 flex flex-col grid-lines">
+    <header class="mx-8 mt-6 shrink-0 flex items-center justify-between px-2 pb-4 border-b-2 border-dashed border-[#E0D5BC]">
+      <div class="flex items-center gap-5">
+        <button class="btn3d px-4 py-2 bg-gradient-to-b from-[#FFDE76] to-[#FFC53D] text-[#6E4E08] grotesk font-bold text-xs">Grade 5 ▾</button>
+        <span class="text-[11px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 text-[#8A7A5A]"><span class="w-2.5 h-2.5 rounded-full bg-[#3BA57F]"></span>12/22 present</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="btn3d px-4 py-2 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white text-[11px] grotesk font-bold">Projector</button>
+        <button class="btn3d px-4 py-2 bg-gradient-to-b from-[#3D4E8D] to-[#2E3B6E] text-white text-[11px] grotesk font-bold">Shortcuts</button>
+        <div class="w-9 h-9 rounded-full bg-gradient-to-b from-[#F97F62] to-[#E86A4C] flex items-center justify-center text-[10px] grotesk font-bold text-white chip">TR</div>
+      </div>
+    </header>
+
+    <div class="flex-1 relative overflow-auto px-10 pt-8 pb-10">
+      <div class="flex justify-center mb-9">
+        <div class="panel px-12 py-4 text-center">
+          <div class="text-[9px] grotesk font-bold uppercase tracking-[0.35em] text-[#B08D3E]">Start zone</div>
+          <div class="grotesk text-lg font-bold uppercase tracking-[0.18em] text-[#2E2716]">Teacher Desk</div>
+        </div>
+      </div>
+      <div id="grid" class="grid grid-cols-5 gap-x-6 gap-y-8 max-w-[1060px] mx-auto"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const students = [
+  ["JD","John Davis","87 PTS",4,62,"#F97F62","#FFD1C4","#8A3A22"],
+  ["EW","Emily Ward","1.2K PTS",7,84,"#5FC4A0","#B8EBD4","#1E6B4C"],
+  ["ZJ","Zoe Jenkins","462 PTS",5,38,"#FFC53D","#FFE9B8","#7A5410"],
+  ["LH","Leo Hayes","890 PTS",6,71,"#A882F2","#E3D5FF","#5B3A9E"],
+  ["AB","Ava Brooks","2.1K PTS",9,92,"#7FB8E8","#C4E2F8","#25598A"],
+  ["KM","Kai Miller","66 PTS",2,24,"#FFC53D","#FFE9B8","#7A5410"],
+  ["SO","Sarah O'Neill","94 PTS",4,45,"#5FC4A0","#B8EBD4","#1E6B4C"],
+  ["RR","Ryan Reed","118 PTS",4,30,"#A882F2","#E3D5FF","#5B3A9E"],
+  ["MP","Mia Park","2.4K PTS",10,97,"#F97F62","#FFD1C4","#8A3A22"],
+  ["TL","Toby Long","1.9K PTS",8,66,"#7FB8E8","#C4E2F8","#25598A"]
+];
+const grid = document.getElementById('grid');
+students.forEach(([init,name,pts,lvl,xp,c,cLight,cText]) => {
+  grid.insertAdjacentHTML('beforeend', `
+  <div class="panel relative px-3 pt-6 pb-4 text-center cursor-pointer hover:-translate-y-1.5 transition-transform">
+    <div class="absolute top-2.5 left-2.5 text-[9px] grotesk font-bold px-2 py-0.5 rounded-full chip" style="background:${c};color:${cText}">LV ${lvl}</div>
+    <div class="absolute top-2.5 right-2.5 text-[11px]">⭐</div>
+    <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center grotesk text-xl font-bold chip" style="background:linear-gradient(to bottom right, ${cLight}, ${c});color:${cText}">${init}</div>
+    <div class="mt-3 grotesk font-bold text-[15px] leading-tight text-[#2E2716]">${name}</div>
+    <div class="xp-track mt-3"><div class="xp-fill" style="width:${xp}%;background:${c}"></div></div>
+    <div class="mt-2.5 inline-block text-[10px] grotesk font-bold uppercase tracking-widest px-3 py-1 rounded-full chip" style="background:${cLight};color:${cText}">${pts}</div>
+  </div>`);
+});
+for (let i=0;i<3;i++) {
+  grid.insertAdjacentHTML('beforeend', `
+  <div class="relative px-3 pt-6 pb-4 text-center border-2 border-dashed border-[#D8CCAE] bg-white/40" style="border-radius:18px">
+    <div class="w-16 h-16 mx-auto rounded-full border-2 border-dashed border-[#D8CCAE]"></div>
+    <div class="mt-3 grotesk font-bold text-[11px] uppercase tracking-[0.25em] text-[#B3A382]">Empty desk</div>
+  </div>`);
+}
+</script>
+</body>
+</html>

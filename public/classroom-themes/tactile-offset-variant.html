@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+@theme {
+  --color-cream: #f7f4ed;
+  --color-navy: #0f172a;
+  --color-accent-red: #e11d48;
+  --color-accent-teal: #0d9488;
+  --color-accent-yellow: #d97706;
+  --color-accent-purple: #7e22ce;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+</style>
+<style>
+.dot-grid {
+  background-image: radial-gradient(circle, #d4d4d8 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+</style>
+</head>
+<body>
+<div class="flex h-screen bg-cream font-body text-zinc-900 overflow-hidden">
+  <aside class="w-64 border-r border-zinc-950/5 bg-zinc-50/50 flex flex-col shrink-0">
+    <div class="p-4 border-b border-zinc-950/5 bg-white/50">
+      <button class="w-full flex items-center justify-between py-2 pr-3 pl-2 bg-accent-yellow text-zinc-900 rounded-lg text-sm font-medium ring-1 ring-accent-yellow/50 shadow-sm">
+        <div class="flex items-center gap-2">
+          <div class="size-4 shrink-0 bg-black/10 rounded-sm"></div>
+          <span>Arrange seats</span>
+        </div>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4 space-y-6">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Points</span>
+        </div>
+        <div class="p-3 bg-teal-50 rounded-xl border border-teal-100">
+          <div class="flex items-center justify-between mb-2">
+             <span class="text-sm font-semibold text-teal-900">+5 to Class</span>
+             <div class="size-5 rounded-full bg-teal-600 flex items-center justify-center text-white text-[10px]">+</div>
+          </div>
+          <div class="grid grid-cols-3 gap-1">
+            <button class="py-1 text-[10px] font-bold bg-white border border-teal-100 rounded text-teal-700">+1</button>
+            <button class="py-1 text-[10px] font-bold bg-white border border-teal-100 rounded text-teal-700">+2</button>
+            <button class="py-1 text-[10px] font-bold bg-white border border-teal-100 rounded text-teal-700">+5</button>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-1">
+        <button class="w-full flex items-center gap-3 py-2 pr-3 pl-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg transition-transform">
+          <div class="size-4 shrink-0 bg-blue-500/20 rounded-full"></div>
+          <span>Random student</span>
+        </button>
+        <button class="w-full flex items-center gap-3 py-2 pr-3 pl-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg transition-transform">
+          <div class="size-4 shrink-0 bg-accent-purple/20 rounded-full"></div>
+          <span>Raffle</span>
+        </button>
+        <button class="w-full flex items-center gap-3 py-2 pr-3 pl-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg transition-transform">
+          <div class="size-4 shrink-0 bg-accent-red/20 rounded-full"></div>
+          <span>Behavior</span>
+        </button>
+      </div>
+      <div class="pt-4 border-t border-zinc-950/5">
+        <div class="bg-zinc-900 rounded-xl p-4 text-white shadow-lg">
+           <div class="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">Group Timer</div>
+           <div class="font-display text-3xl font-medium leading-none mb-4">00:00</div>
+           <div class="flex gap-2">
+             <button class="flex-1 py-2 bg-white text-zinc-900 text-xs font-bold rounded-lg">Start</button>
+             <button class="flex-1 py-2 bg-zinc-800 text-zinc-400 text-xs font-bold rounded-lg">Reset</button>
+           </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 flex flex-col min-w-0">
+    <header class="h-14 bg-navy shrink-0 flex items-center justify-between px-6 shadow-xl z-10">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <span class="text-white font-display text-lg font-medium">Grade 5</span>
+          <div class="size-4 bg-white/20 rounded"></div>
+        </div>
+        <div class="flex gap-2">
+          <span class="px-3 py-1 bg-teal-500/20 text-teal-400 text-xs font-medium rounded-full ring-1 ring-teal-500/30">3/22 Here</span>
+          <span class="px-3 py-1 bg-zinc-500/20 text-zinc-400 text-xs font-medium rounded-full ring-1 ring-zinc-500/30">Hall: Clear</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 bg-accent-yellow/10 px-3 py-1 rounded-full ring-1 ring-accent-yellow/30">
+          <span class="text-accent-yellow font-display font-medium text-sm">+15 pts</span>
+        </div>
+        <div class="h-6 w-px bg-white/10"></div>
+        <div class="flex items-center gap-2">
+          <button class="text-white/70 hover:text-white transition-transform py-2 pr-3 pl-2 text-sm">Projector</button>
+          <button class="text-white/70 hover:text-white transition-transform py-2 pr-3 pl-2 text-sm">Shortcuts</button>
+        </div>
+      </div>
+    </header>
+    <div class="flex-1 relative dot-grid overflow-y-auto">
+      <div class="flex justify-center pt-8 pb-12 sticky top-0 z-10">
+        <div class="bg-navy text-white px-8 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border-2 border-white/10">
+          <div class="size-10 bg-accent-yellow rounded-lg flex items-center justify-center">
+            <div class="size-5 border-2 border-navy rounded-sm"></div>
+          </div>
+          <div>
+            <div class="font-display font-semibold text-sm leading-tight">Teacher desk</div>
+            <div class="text-[10px] text-zinc-400 uppercase tracking-widest">Front of class</div>
+          </div>
+        </div>
+      </div>
+      <div class="max-w-6xl mx-auto px-12 pb-24">
+        <div class="grid grid-cols-5 gap-6" id="desk-grid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const students = [
+  ["JD","John","87 pts","teal"],["EW","Emily","68 pts","red"],["ZJ","Zoe","1,779 pts","yellow"],
+  ["JH","Jackson","1,817 pts","teal"],["EH","Ethan","529 pts","purple"],["JB","James","99 pts","teal"],
+  ["EW","Evelyn","938 pts","purple"],["EM","Ethan","2,125 pts","teal"],["JW","Joseph","780 pts","red"],
+  ["LB","Logan","1,506 pts","yellow"],["AL","Addison","2,020 pts","teal"],["MM","Mia","1,687 pts","red"],
+  ["MG","Michael","376 pts","teal"],["AR","Aiden","1,523 pts","purple"],["MG","Madison","2,106 pts","teal"],
+  ["OJ","Owen","1,689 pts","red"],["AY","Aria","1,882 pts","yellow"],["IB","Isabella","548 pts","teal"],
+  ["PM","Penelope","1,724 pts","yellow"],["WA","William","1,379 pts","teal"],["DA","David","132 pts","purple"]
+];
+const grid = document.getElementById('desk-grid');
+students.forEach(([init,name,pts,c]) => {
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="bg-zinc-50 p-4 rounded-[16px] ring-1 ring-zinc-950/5 border-b-4 border-r-4 border-accent-${c} shadow-sm hover:-translate-y-1 transition-transform">
+      <div class="flex flex-col items-center gap-3">
+        <div class="size-12 rounded-full bg-accent-${c}/20 flex items-center justify-center border-2 border-accent-${c}">
+          <span class="font-display font-bold text-accent-${c}">${init}</span>
+        </div>
+        <div class="text-center">
+          <h3 class="font-display font-semibold text-base">${name}</h3>
+          <div class="mt-2 px-3 py-1 bg-zinc-900 text-white rounded-full text-[10px] font-display">${pts}</div>
+        </div>
+      </div>
+    </div>`);
+});
+</script>
+</body>
+</html>

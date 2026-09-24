@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+@theme {
+  --color-canvas: #FAF9F6;
+  --color-paper: #FFFFFF;
+  --color-ink: #1A1A1A;
+  --color-accent-gold: #D4A373;
+  --color-accent-green: #606C38;
+  --color-accent-clay: #BC6C25;
+  --font-serif: 'Instrument Serif', serif;
+  --font-sans: 'Inter', sans-serif;
+}
+</style>
+</head>
+<body>
+<div class="flex h-screen w-full bg-canvas font-sans text-ink">
+  <aside class="w-80 h-full border-r border-ink/5 bg-paper/50 flex flex-col p-8">
+    <div class="mb-10">
+      <h1 class="font-serif text-4xl italic mb-2 text-accent-clay">Loomis Academy</h1>
+      <div class="flex items-center gap-2 text-xs font-semibold tracking-widest uppercase opacity-40">
+        <span>Room 402</span>
+        <span class="size-1 bg-ink/20 rounded-full"></span>
+        <span>Grade 5 History</span>
+      </div>
+    </div>
+    <nav class="space-y-8 flex-1">
+      <div>
+        <p class="text-[10px] uppercase tracking-widest font-bold text-ink/30 mb-4">Class Actions</p>
+        <ul class="space-y-2">
+          <li class="flex items-center gap-3 px-4 py-3 bg-ink text-canvas rounded-full cursor-pointer transition-transform active:scale-95">
+            <span class="text-sm font-medium">Arrange Seating</span>
+          </li>
+          <li class="flex items-center justify-between px-4 py-3 border border-ink/10 rounded-full hover:bg-ink/5 cursor-pointer">
+            <span class="text-sm font-medium">Quick Raffle</span>
+            <span class="text-[10px] bg-accent-gold/20 text-accent-clay px-2 py-0.5 rounded">Hot</span>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest font-bold text-ink/30 mb-4">Behavior Systems</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button class="p-4 border border-ink/10 rounded-2xl text-left hover:border-ink/30 transition-colors">
+            <div class="size-2 bg-accent-green rounded-full mb-2"></div>
+            <span class="text-xs font-semibold">Awards</span>
+          </button>
+          <button class="p-4 border border-ink/10 rounded-2xl text-left hover:border-ink/30 transition-colors">
+            <div class="size-2 bg-accent-clay rounded-full mb-2"></div>
+            <span class="text-xs font-semibold">Demerits</span>
+          </button>
+        </div>
+      </div>
+      <div class="pt-4">
+        <div class="p-6 rounded-3xl bg-accent-gold/10 border border-accent-gold/20 relative overflow-hidden">
+          <p class="text-sm font-serif italic mb-2">Teacher's Desk</p>
+          <p class="text-[10px] opacity-60 leading-relaxed">Front of class is oriented towards the top of your screen.</p>
+        </div>
+      </div>
+    </nav>
+    <div class="mt-auto flex items-center justify-between">
+      <div class="flex -space-x-2">
+        <div class="size-8 rounded-full border-2 border-paper bg-stone-200"></div>
+        <div class="size-8 rounded-full border-2 border-paper bg-stone-300"></div>
+      </div>
+      <span class="text-xs font-medium opacity-40">3/22 Present</span>
+    </div>
+  </aside>
+  <main class="flex-1 p-12 overflow-y-auto relative">
+    <div class="flex items-center justify-between mb-12">
+      <div class="flex items-center gap-8">
+        <div class="text-center">
+          <p class="text-[10px] uppercase tracking-widest opacity-30 font-bold">Current View</p>
+          <p class="text-lg font-serif italic">Interactive Seating</p>
+        </div>
+        <div class="h-8 w-px bg-ink/5"></div>
+        <div class="flex items-center gap-4">
+          <button class="px-4 py-2 bg-paper border border-ink/5 rounded-lg text-xs font-medium shadow-sm">Grid Settings</button>
+          <button class="px-4 py-2 bg-paper border border-ink/5 rounded-lg text-xs font-medium shadow-sm">Full Screen</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 bg-accent-green/10 text-accent-green px-3 py-1.5 rounded-full text-xs font-bold">
+          <span>All Clear</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-5 gap-8 max-w-6xl" id="desk-grid"></div>
+    <div class="fixed bottom-8 right-8 flex gap-4">
+      <button class="size-12 rounded-full bg-paper border border-ink/5 shadow-lg flex items-center justify-center">
+        <span class="text-xs">?</span>
+      </button>
+      <button class="px-6 h-12 rounded-full bg-ink text-canvas shadow-lg text-sm font-medium flex items-center gap-2">
+        <span>Roll Call</span>
+      </button>
+    </div>
+  </main>
+</div>
+<script>
+const students = [
+  ["JD","John","87 PTS","gold"],["EW","Emily","68 PTS","green"],["ZJ","Zoe","1,779 PTS","clay"],
+  ["JH","Jackson","1,817 PTS","gold"],["EH","Ethan","529 PTS","green"],["JB","James","99 PTS","stone"],
+  ["EV","Evelyn","938 PTS","clay"],["ET","Ethan","2,125 PTS","gold"],["JW","Joseph","780 PTS","green"],
+  ["LB","Logan","1,506 PTS","clay"],["AL","Addison","2,020 PTS","green"],["MM","Mia","1,687 PTS","gold"],
+  ["MG","Michael","376 PTS","clay"],["AR","Aiden","1,523 PTS","green"],["MD","Madison","2,106 PTS","gold"]
+];
+const grid = document.getElementById('desk-grid');
+students.forEach(([init,name,pts,c]) => {
+  const bg = c === 'stone' ? 'bg-stone-100' : `bg-accent-${c}/10`;
+  const txt = c === 'stone' ? 'text-ink/20' : (c === 'green' ? 'text-accent-green' : 'text-accent-clay');
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="group relative">
+      <div class="relative p-6 bg-paper border border-ink/5 rounded-[1.75rem] shadow-sm flex flex-col items-center transition-all group-hover:-translate-y-1">
+        <div class="size-16 rounded-full ${bg} flex items-center justify-center mb-4">
+          <span class="text-lg font-serif italic ${txt}">${init}</span>
+        </div>
+        <h3 class="font-serif text-xl mb-1">${name}</h3>
+        <p class="text-xs font-bold text-ink/30">${pts}</p>
+        <div class="mt-4 size-1.5 bg-accent-green rounded-full"></div>
+      </div>
+    </div>`);
+});
+</script>
+</body>
+</html>
