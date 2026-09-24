@@ -47,6 +47,7 @@ import {
   stopTime,
   tripWarnings,
   transportFamilyEmails,
+  transportPhoneStatusText,
   vehicleDueLabel,
   vehicleLabel,
   type LatLng,
@@ -103,6 +104,17 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
       subject: `Transportation update: ${routeLabel(selected)}`,
       body: familyUpdateMessage(selected, selectedTrip, now),
     });
+  };
+
+  const copyPhoneStatus = async () => {
+    if (!selected) return;
+    const status = transportPhoneStatusText(selected, selectedTrip, now);
+    try {
+      await navigator.clipboard.writeText(status.text);
+      toast({ title: 'Phone status copied', description: 'This short message can be used by the school phone service later.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not copy the phone status' });
+    }
   };
 
   const queueSelectedFamilyUpdate = async () => {
@@ -333,6 +345,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
               onPractice={() => startPractice(selected)}
               onStopPractice={() => setPractice(null)}
               onOpenStudent={openStudent}
+              onCopyPhoneStatus={copyPhoneStatus}
               onCopy={async () => {
                 try {
                   await navigator.clipboard.writeText(familyUpdateMessage(selected, selectedTrip, now));
@@ -449,6 +462,7 @@ function RouteDetail({
   onPractice,
   onStopPractice,
   onOpenStudent,
+  onCopyPhoneStatus,
   onCopy,
   onEmailFamilies,
   familyRecipientCount,
@@ -464,6 +478,7 @@ function RouteDetail({
   onPractice: () => void;
   onStopPractice: () => void;
   onOpenStudent: (id: string) => void;
+  onCopyPhoneStatus: () => void;
   onCopy: () => void;
   onEmailFamilies: () => void;
   familyRecipientCount: number;
@@ -532,6 +547,9 @@ function RouteDetail({
               </a>
             </Button>
           ) : null}
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopyPhoneStatus} title="Copy a safe status message for a future phone service">
+            <Phone className="h-3.5 w-3.5" /> Copy phone status
+          </Button>
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopy}>
             <Copy className="h-3.5 w-3.5" /> Update for families
           </Button>
@@ -551,6 +569,7 @@ function RouteDetail({
             </Button>
           ) : null}
         </div>
+        <p className="text-xs text-muted-foreground">The phone-status message contains bus information only. It does not include a child's name, address, or live location.</p>
         {isPractice ? (
           <p className="text-xs text-muted-foreground">A pretend bus is driving this route so you can see how it looks. Nothing is saved.</p>
         ) : null}

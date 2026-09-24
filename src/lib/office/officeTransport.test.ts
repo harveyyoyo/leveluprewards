@@ -18,6 +18,7 @@ import {
   transportDaySummary,
   transportDaySummaryText,
   transportFamilyEmails,
+  transportPhoneStatusText,
   tripWarnings,
   vehicleDueLabel,
   vehicleLabel,
@@ -117,6 +118,20 @@ describe('officeTransport', () => {
     const onStop = { lat: 40.72, lng: -74.32, at: at(7, 20) };
     expect(minutesLate(route, trip({ location: onStop }), at(7, 10))).toBe(0);
     expect(minutesLate(route, trip({ location: onStop }), at(7, 24))).toBe(10);
+  });
+
+  it('creates a safe phone status message without exposing coordinates', () => {
+    const status = transportPhoneStatusText(route, trip({ location: { lat: 40.719, lng: -74.319, at: at(7, 15) } }), at(7, 16));
+    expect(status.status).toBe('on_way');
+    expect(status.text).toContain('Oak');
+    expect(status.text).not.toContain('40.719');
+    expect(transportPhoneStatusText(route, null).status).toBe('not_started');
+  });
+
+  it('marks a phone status unavailable when the bus update is old', () => {
+    const status = transportPhoneStatusText(route, trip({ location: { lat: 40.719, lng: -74.319, at: at(7, 0) } }), at(7, 10));
+    expect(status.status).toBe('unavailable');
+    expect(status.text).toContain('temporarily unavailable');
   });
 
   it('warns about riders never marked off and stale locations', () => {

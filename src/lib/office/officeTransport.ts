@@ -11,7 +11,7 @@ import type {
   OfficeStudent,
   OfficeTransportMode,
 } from '@/lib/office/types';
-import { scheduleMinutes } from '@/lib/office/officeSchedule';
+import { formatScheduleTime, scheduleMinutes } from '@/lib/office/officeSchedule';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 
 export const TRANSPORT_MODE_LABEL: Record<OfficeTransportMode, string> = {
@@ -379,6 +379,46 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     updatedBy: route?.updatedBy ?? null,
     archived: route?.archived,
     archivedAt: route?.archivedAt,
+  };
+}
+
+export type OfficeBusPhoneStatus = {
+  status: 'not_started' | 'on_way' | 'delayed' | 'arrived' | 'ended' | 'unavailable';
+  text: string;
+  asOf: number;
+};
+
+/** A short, privacy-safe message suitable for a school phone line or preview. */
+export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusTrip | null | undefined, now = Date.now()): OfficeBusPhoneStatus {
+  const activeRoute = trip ? routeForTrip(route, trip) ?? route : route;
+  const bus = routeLabel(activeRoute);
+  const disclaimer = 'This is bus information, not confirmation that a child got off.';
+  if (!trip) {
+    return { status: 'not_started', asOf: now, text: `${bus} is not on a run right now. Please call the school for help. ${disclaimer}` };
+  }
+  if (trip.status === 'done') {
+    const ended = trip.endedAt ? ` The run finished at ${clockLabel(trip.endedAt)}.` : ' The run is finished.';
+    return { status: 'ended', asOf: now, text: `${bus} is not on the road.${ended} ${disclaimer}` };
+  }
+  if (!trip.location) {
+    return { status: 'unavailable', asOf: now, text: `${bus} started the ${BUS_RUN_LABEL[trip.run].toLowerCase()} run, but its location is not available yet. ${disclaimer}` };
+  }
+  if (now - trip.location.at > LOCATION_STALE_MS) {
+    return { status: 'unavailable', asOf: trip.location.at, text: `${bus} tracking is temporarily unavailable. Last update: ${clockLabel(trip.location.at)}. ${disclaimer}` };
+  }
+  const next = nextStop(activeRoute, trip);
+  if (!next) {
+    return { status: 'arrived', asOf: trip.location.at, text: `${bus} has reached the last stop on this run. ${disclaimer}` };
+  }
+  const late = minutesLate(activeRoute, trip, now);
+  const eta = etaMinutes(trip.location, next);
+  const planned = stopTime(next, trip.run);
+  const plannedText = planned ? ` Planned time: ${formatScheduleTime(planned)}.` : '';
+  const lateText = late != null && late >= LATE_THRESHOLD_MIN ? ` It is running about ${late} minutes behind plan.` : '';
+  return {
+    status: late != null && late >= LATE_THRESHOLD_MIN ? 'delayed' : 'on_way',
+    asOf: trip.location.at,
+    text: `${bus} is expected at ${next.name} in about ${eta} minutes.${lateText}${plannedText} Last update: ${clockLabel(trip.location.at)}. ${disclaimer}`,
   };
 }
 
