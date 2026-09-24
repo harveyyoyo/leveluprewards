@@ -15,6 +15,7 @@ Firebase CLI 14.27.0 has returned exit code 0 after `unable to queue the operati
 - [ ] **No Console Errors**: Check the browser console for any critical errors.
 - [ ] **Edge session cookies**: In production, school hub routes require an HttpOnly Firebase session cookie minted by `POST /api/auth/session`. The hosting runtime must be able to initialize **Firebase Admin** (Application Default Credentials or `GOOGLE_APPLICATION_CREDENTIALS`). Optional overrides: `DISABLE_AUTH_SESSION_EDGE=1` turns off middleware enforcement; `AUTH_SESSION_EDGE_ENFORCEMENT=1` forces it on in development for testing.
 - [ ] **School gate cookie**: Set `AUTH_GATE_SIGNING_SECRET` (32+ random characters) in the hosting environment so middleware also enforces a signed `edu_school_gate` cookie (scopes from Firestore + `anonymousPortalSessions`). Deploy **Cloud Functions** after pulling so `verifySchoolAccessPasscode` writes `schools/{id}/anonymousPortalSessions/{uid}` for school-portal sessions; then deploy Firestore rules so that path stays server-only.
+- [ ] **School Office transportation**: Deploy the updated Firestore rules and make sure the hosting runtime has Firebase Admin credentials. Driver location, rider marks, stop arrivals, and trip completion go through `/api/office/transport`; do not re-enable browser writes for `officeBusTrips`.
 
 ## Critical Auth Guardrails
 

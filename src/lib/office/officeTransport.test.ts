@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   distanceMeters,
   exampleRoutes,
+  latestTripForRoute,
   minutesLate,
   nextStop,
   orderedStops,
   pointAlongStops,
+  riderSnapshotFromStudents,
+  routeForTrip,
   tripWarnings,
 } from '@/lib/office/officeTransport';
 import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
@@ -92,5 +95,36 @@ describe('officeTransport', () => {
     for (const r of routes) {
       expect(r.stops[r.stops.length - 1]).toMatchObject({ isSchool: true, lat: 40.7, lng: -74.3 });
     }
+  });
+
+  it('keeps an active trip ahead of older completed attempts', () => {
+    const oldDone = trip({ id: 'old', status: 'done', startedAt: at(6, 0) });
+    const newDone = trip({ id: 'new', status: 'done', startedAt: at(7, 0) });
+    const active = trip({ id: 'active', startedAt: at(8, 0) });
+    expect(latestTripForRoute([oldDone, newDone, active], 'r1', 'am')?.id).toBe('active');
+    expect(latestTripForRoute([oldDone, newDone], 'r1', 'am')?.id).toBe('new');
+  });
+
+  it('keeps the actual student document ids in a new rider snapshot', () => {
+    expect(
+      riderSnapshotFromStudents([
+        { id: 's2', transportMode: 'bus', status: 'active' },
+        { id: 's1', transportMode: 'bus', status: undefined },
+        { id: 's3', transportMode: 'bus', status: 'withdrawn' },
+        { id: 's4', transportMode: 'car', status: 'active' },
+        { id: 's5', transportMode: 'bus', status: 'active', archived: true },
+      ]),
+    ).toEqual(['s1', 's2']);
+  });
+
+  it('uses the route saved with a trip for past history', () => {
+    const oldSnapshot = {
+      name: 'Old North',
+      busNumber: '4',
+      color: '#123456',
+      stops: [{ id: 'old-stop', name: 'Old stop', lat: 40.7, lng: -74.3 }],
+    };
+    const historical = routeForTrip(undefined, trip({ routeSnapshot: oldSnapshot }));
+    expect(historical).toMatchObject({ id: 'r1', name: 'Old North', stops: oldSnapshot.stops });
   });
 });

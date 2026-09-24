@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
-import { BUS_ALERT_LABEL, BUS_RUN_LABEL, clockLabel, localIsoDate, orderedStops, routeLabel } from '@/lib/office/officeTransport';
-import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
+import { BUS_ALERT_LABEL, BUS_RUN_LABEL, clockLabel, localIsoDate, orderedStops, routeForTrip, routeLabel } from '@/lib/office/officeTransport';
+import type { OfficeBusEvent, OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 function shiftDate(iso: string, days: number): string {
@@ -29,7 +29,7 @@ export function OfficeTransportHistory({
   const today = localIsoDate();
   const [date, setDate] = useState(today);
   const [openId, setOpenId] = useState<string | null>(null);
-  const { trips, isLoading } = useOfficeBusTripsForDate(schoolId, date);
+  const { trips, isLoading, error } = useOfficeBusTripsForDate(schoolId, date);
   // Removed routes are still named here so old trips stay readable.
   const routeById = new Map(routes.map((r) => [r.id, r]));
 
@@ -50,7 +50,11 @@ export function OfficeTransportHistory({
         ) : null}
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-8 text-center text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+          Past bus runs could not be loaded right now. Try again in a moment.
+        </p>
+      ) : isLoading ? (
         <OfficeLoadingRows cols={3} rows={3} />
       ) : trips.length === 0 ? (
         <p className="rounded-2xl border border-dashed bg-white px-4 py-8 text-center text-sm text-muted-foreground dark:border-slate-800 dark:bg-slate-900">
@@ -62,7 +66,7 @@ export function OfficeTransportHistory({
             <TripRow
               key={trip.id}
               trip={trip}
-              route={routeById.get(trip.routeId)}
+              route={routeForTrip(routeById.get(trip.routeId), trip)}
               open={openId === trip.id}
               onToggle={() => setOpenId(openId === trip.id ? null : trip.id)}
               studentNameById={studentNameById}
@@ -88,6 +92,9 @@ function TripRow({
   studentNameById: Map<string, string>;
 }) {
   const riders = Object.entries(trip.riders ?? {});
+  const riderEvents = (trip.events ?? []).filter(
+    (event): event is Extract<OfficeBusEvent, { kind: 'rider' }> => event.kind === 'rider',
+  );
   const rode = riders.filter(([, r]) => r.status !== 'absent').length;
   const leftOn = riders.filter(([, r]) => r.status === 'on');
   const alerts = trip.alerts ?? [];
@@ -191,6 +198,21 @@ function TripRow({
                   ))}
               </ul>
             )}
+            {riderEvents.length > 0 ? (
+              <div className="mt-4 border-t pt-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recorded rider changes</p>
+                <ul className="mt-1.5 space-y-1">
+                  {riderEvents.map((event, index) => (
+                    <li key={`${event.studentId}-${event.at}-${index}`} className="flex items-center justify-between gap-2 text-xs">
+                      <span>{studentNameById.get(event.studentId) ?? 'Former student'}</span>
+                      <span className="text-muted-foreground">
+                        {event.status === 'on' ? 'Got on' : event.status === 'off' ? 'Got off' : event.status === 'absent' ? 'Not riding' : 'Mark cleared'} · {clockLabel(event.at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { OfficeTransportMap, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
-import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import {
   BUS_ALERT_LABEL,
   BUS_RUN_LABEL,
@@ -20,6 +20,7 @@ import {
   nextStop,
   orderedStops,
   ridersForRoute,
+  routeForTrip,
   routeLabel,
   stopTime,
   tripDocId,
@@ -55,7 +56,7 @@ export function OfficeBusDriverMode({
   center: LatLng;
   onClose: () => void;
 }) {
-  const write = useOfficeWrite(schoolId);
+  const transport = useOfficeTransportApi(schoolId);
   const { toast } = useToast();
   const [routeId, setRouteId] = useState(routes[0]?.id ?? '');
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
@@ -64,7 +65,13 @@ export function OfficeBusDriverMode({
 
   const trip = tripId ? trips.find((t) => t.id === tripId) ?? null : null;
   const route = routes.find((r) => r.id === (trip?.routeId ?? routeId)) ?? null;
-  const existing = route ? trips.find((t) => t.id === tripDocId(localIsoDate(), route.id, run)) : undefined;
+  const existing = route
+    ? trips.find((t) => t.routeId === route.id && t.run === run && t.status === 'active')
+    : undefined;
+  const hasPriorTrip = route ? trips.some((t) => t.routeId === route.id && t.run === run) : false;
+  const hasPickupStop = !!route?.stops?.some((stop) => !stop.isSchool);
+  const hasSchoolStop = !!route?.stops?.some((stop) => stop.isSchool);
+  const canDrive = hasPickupStop && hasSchoolStop;
 
   // Keep the screen on while driving.
   const driving = trip?.status === 'active';
@@ -77,12 +84,13 @@ export function OfficeBusDriverMode({
   }, [driving]);
 
   const start = async () => {
-    if (!write.ctx || !route) return;
+    if (!route || !canDrive) return;
     setStarting(true);
     try {
-      const id = tripDocId(localIsoDate(), route.id, run);
-      await write.startOfficeBusTrip(write.ctx, route, { tripId: id, date: localIsoDate(), run });
-      setTripId(id);
+      const date = localIsoDate();
+      const id = existing?.id ?? tripDocId(date, route.id, run);
+      const { tripId: startedId } = await transport.startOfficeBusTrip(route, { tripId: id, date, run });
+      setTripId(startedId);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not start', description: (e as Error).message });
     } finally {
@@ -90,12 +98,17 @@ export function OfficeBusDriverMode({
     }
   };
 
+  const requestClose = () => {
+    if (trip?.status === 'active' && !window.confirm('The office will stop seeing this bus if you close this screen. Close it now?')) return;
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#f4f7f9] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="flex items-center gap-2 border-b bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
         {route ? <span className="h-3 w-3 rounded-full" style={{ backgroundColor: route.color }} aria-hidden /> : null}
         <p className="min-w-0 flex-1 truncate font-semibold">{trip && route ? `${routeLabel(route)} · ${BUS_RUN_LABEL[trip.run]}` : 'Drive a bus'}</p>
-        <button type="button" onClick={onClose} aria-label="Close driver screen" className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+        <button type="button" onClick={requestClose} aria-label="Close driver screen" className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
           <X className="h-5 w-5" />
         </button>
       </header>
@@ -146,13 +159,13 @@ export function OfficeBusDriverMode({
               ))}
             </div>
           </div>
-          {route && (route.stops?.length ?? 0) === 0 ? (
+          {route && !canDrive ? (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              This route has no stops yet. Add them in Routes first.
+              Add at least one student stop and the school before driving.
             </p>
           ) : null}
-          <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !route.stops?.length} onClick={() => void start()}>
-            {starting ? 'Starting…' : existing ? (existing.status === 'active' ? 'Continue this run' : 'Restart this run') : 'Start run'}
+          <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !canDrive} onClick={() => void start()}>
+            {starting ? 'Starting…' : existing ? 'Continue this run' : hasPriorTrip ? 'Start another run' : 'Start run'}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
             Your phone will share where the bus is with the office until you end the run. Keep this screen open.
@@ -178,9 +191,11 @@ function DrivingScreen({
   center: LatLng;
   onFinished: () => void;
 }) {
-  const write = useOfficeWrite(schoolId);
+  const transport = useOfficeTransportApi(schoolId);
   const { toast } = useToast();
   const [geo, setGeo] = useState<GeoState>('waiting');
+  const [lastServerAt, setLastServerAt] = useState<number | null>(trip.location?.at ?? null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [me, setMe] = useState<(LatLng & { speed?: number | null }) | null>(trip.location ?? null);
   const [showAll, setShowAll] = useState(false);
   const [report, setReport] = useState<OfficeBusAlertKind | null>(null);
@@ -189,17 +204,27 @@ function DrivingScreen({
   const [ending, setEnding] = useState(false);
   const [checked, setChecked] = useState(false);
 
-  const stops = orderedStops(route, trip.run);
-  const next = nextStop(route, trip);
-  const riders = useMemo(() => ridersForRoute(students, route.id), [students, route.id]);
+  useEffect(() => {
+    setLastServerAt(trip.location?.at ?? null);
+    setSyncError(null);
+    // Reset only when the run changes; live location updates should not reset the sync badge.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip.id]);
+
+  const activeRoute = useMemo(() => routeForTrip(route, trip) ?? route, [route, trip]);
+  const stops = orderedStops(activeRoute, trip.run);
+  const next = nextStop(activeRoute, trip);
+  const riders = useMemo(() => {
+    if (!trip.riderSnapshot) return ridersForRoute(students, activeRoute.id);
+    const ids = new Set(trip.riderSnapshot);
+    return students.filter((student) => ids.has(student.id));
+  }, [students, activeRoute.id, trip.riderSnapshot]);
   const status = trip.riders ?? {};
 
   // ---- Location sharing ----
   const lastSent = useRef<{ at: number; p: LatLng } | null>(null);
   const tripRef = useRef(trip);
   tripRef.current = trip;
-  const ctxRef = useRef(write.ctx);
-  ctxRef.current = write.ctx;
   useEffect(() => {
     if (!('geolocation' in navigator)) {
       setGeo('unavailable');
@@ -210,24 +235,27 @@ function DrivingScreen({
         setGeo('on');
         const p = { lat: pos.coords.latitude, lng: pos.coords.longitude, speed: pos.coords.speed };
         setMe(p);
-        const ctx = ctxRef.current;
         const t = tripRef.current;
-        if (!ctx) return;
         const now = Date.now();
         const prev = lastSent.current;
         // Reaching a stop is sent right away so the office sees it without waiting.
-        const upcoming = nextStop(route, t);
+        const upcoming = nextStop(activeRoute, t);
         const reached = upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
         if (!reached && prev && now - prev.at < SEND_EVERY_MS && distanceMeters(prev.p, p) < SEND_IF_MOVED_M) return;
         lastSent.current = { at: now, p };
-        void write
+        void transport
           .updateOfficeBusTripLocation(
-            ctx,
             t.id,
             { lat: p.lat, lng: p.lng, accuracy: pos.coords.accuracy ?? null, speed: pos.coords.speed ?? null, heading: pos.coords.heading ?? null, at: now },
             reached,
           )
-          .catch(() => undefined);
+          .then(() => {
+            setLastServerAt(now);
+            setSyncError(null);
+          })
+          .catch((error: unknown) => {
+            setSyncError(error instanceof Error ? error.message : 'The office has not received the latest location.');
+          });
       },
       (err) => setGeo(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable'),
       { enableHighAccuracy: true, maximumAge: 5_000, timeout: 30_000 },
@@ -238,10 +266,8 @@ function DrivingScreen({
   }, [trip.id]);
 
   const mark = async (kids: OfficeStudent[], st: OfficeBusRiderStatus | null) => {
-    if (!write.ctx) return;
     try {
-      await write.setOfficeBusRiders(
-        write.ctx,
+      await transport.setOfficeBusRiders(
         trip,
         route,
         kids.map((k) => ({ studentId: k.id, studentName: getOfficeStudentFullName(k), status: st })),
@@ -252,23 +278,22 @@ function DrivingScreen({
   };
 
   const arrive = async (stopId: string, reached = true) => {
-    if (!write.ctx) return;
     try {
-      await write.setOfficeBusStopReached(write.ctx, trip.id, stopId, reached);
+      await transport.setOfficeBusStopReached(trip, stopId, reached);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
     }
   };
 
   const sendReport = async () => {
-    if (!write.ctx || !report) return;
+    if (!report) return;
     try {
-      await write.addOfficeBusTripAlert(write.ctx, trip, route, {
+      await transport.addOfficeBusTripAlert(trip, route, {
         kind: report,
         message: reportText.trim() || null,
         minutes: report === 'delay' ? reportMinutes : null,
       });
-      toast({ title: 'Sent to the office' });
+      toast({ title: 'Saved for the office', description: 'It will appear on the live Transportation page.' });
       setReport(null);
       setReportText('');
     } catch (e) {
@@ -276,11 +301,18 @@ function DrivingScreen({
     }
   };
 
-  const stillOn = riders.filter((k) => status[k.id]?.status === 'on');
+  const unresolved = riders.filter((k) => status[k.id]?.status !== 'off' && status[k.id]?.status !== 'absent');
   const finish = async () => {
-    if (!write.ctx) return;
+    if (unresolved.length > 0) {
+      toast({ variant: 'destructive', title: 'Some riders are not accounted for', description: 'Mark every rider off or not here before ending the run.' });
+      return;
+    }
+    if (!checked) {
+      toast({ variant: 'destructive', title: 'Walk the bus first', description: 'Confirm that nobody was left on before ending the run.' });
+      return;
+    }
     try {
-      await write.endOfficeBusTrip(write.ctx, trip, route, checked);
+      await transport.endOfficeBusTrip(trip, route, checked);
       toast({ title: 'Run finished', description: checked ? 'Thanks for checking the bus.' : undefined });
       onFinished();
     } catch (e) {
@@ -304,7 +336,7 @@ function DrivingScreen({
     ...stops.map((s) => ({
       id: s.id,
       kind: (s.isSchool ? 'school' : 'stop') as TransportMapMarker['kind'],
-      color: route.color,
+      color: activeRoute.color,
       lat: s.lat,
       lng: s.lng,
       title: s.name,
@@ -319,7 +351,7 @@ function DrivingScreen({
       <div
         className={cn(
           'flex items-center gap-2 px-4 py-2 text-sm font-medium',
-          geo === 'on'
+          geo === 'on' && !syncError
             ? 'bg-teal-700 text-white'
             : geo === 'waiting'
               ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
@@ -328,19 +360,23 @@ function DrivingScreen({
         role="status"
       >
         {geo === 'on' ? <LocateFixed className="h-4 w-4" /> : <LocateOff className="h-4 w-4" />}
-        {geo === 'on'
-          ? 'Sharing bus location with the office'
-          : geo === 'waiting'
-            ? 'Finding your location…'
-            : geo === 'denied'
-              ? 'Location is off. Allow location for this site so the office can see the bus.'
-              : 'Can’t find your location right now. The rider list still works.'}
+        {geo === 'on' && syncError
+          ? 'Location found, but the office has not received it yet. Trying again…'
+          : geo === 'on' && lastServerAt
+            ? 'Sharing bus location with the office'
+            : geo === 'on'
+              ? 'Sending the first bus location…'
+              : geo === 'waiting'
+                ? 'Finding your location…'
+                : geo === 'denied'
+                  ? 'Location is off. Allow location for this site so the office can see the bus.'
+                  : 'Can’t find your location right now. The rider list still works.'}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <OfficeTransportMap
           markers={markers}
-          lines={[{ id: 'r', color: route.color, points: stops }]}
+          lines={[{ id: 'r', color: activeRoute.color, points: stops }]}
           fitPoints={me && next ? [me, next] : stops.length ? stops : [center]}
           fitKey={`${next?.id ?? 'end'}`}
           initialCenter={me ?? center}
@@ -399,7 +435,7 @@ function DrivingScreen({
                     <li key={k.id} className="rounded-xl border p-2 dark:border-slate-800">
                       <div className="flex items-center justify-between gap-2 px-1">
                         <span className="font-medium">{getOfficeStudentFullName(k)}</span>
-                        {st ? (
+                        {st && st !== 'on' ? (
                           <button type="button" onClick={() => void mark([k], null)} aria-label="Undo" className="rounded p-1 text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800">
                             <Undo2 className="h-4 w-4" />
                           </button>
@@ -528,10 +564,10 @@ function DrivingScreen({
           <DialogHeader>
             <DialogTitle>End this run?</DialogTitle>
           </DialogHeader>
-          {stillOn.length > 0 ? (
+          {unresolved.length > 0 ? (
             <p className="flex gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 dark:bg-red-950/40 dark:text-red-100">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              Still marked on the bus: {stillOn.map(getOfficeStudentFullName).join(', ')}.
+              Not accounted for: {unresolved.map(getOfficeStudentFullName).join(', ')}.
             </p>
           ) : null}
           <label className="flex items-start gap-3 rounded-xl border p-3 text-sm dark:border-slate-800">
@@ -547,7 +583,7 @@ function DrivingScreen({
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => setEnding(false)}>
               Keep driving
             </Button>
-            <Button type="button" variant="destructive" className="rounded-xl" onClick={() => void finish()}>
+            <Button type="button" variant="destructive" className="rounded-xl" disabled={!checked || unresolved.length > 0} onClick={() => void finish()}>
               End run
             </Button>
           </DialogFooter>

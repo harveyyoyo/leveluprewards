@@ -66,6 +66,7 @@ const TOPIC_WORDS: Record<string, string> = {
   frontdesk: 'front desk entries',
   notes: 'notes',
   health: 'health details',
+  transportation: 'transportation records',
 };
 
 function joinWords(words: string[]): string {
@@ -393,7 +394,8 @@ export function OfficeAiHelpButton() {
         const page = OFFICE_ASSISTANT_PAGE_LABEL[decision.view.page];
         const turnedOff =
           (decision.view.page === 'attendance' && settings?.features?.attendance === false) ||
-          (decision.view.page === 'frontdesk' && settings?.features?.frontDesk === false);
+          (decision.view.page === 'frontdesk' && settings?.features?.frontDesk === false) ||
+          (decision.view.page === 'transportation' && settings?.features?.busInfo === false);
         // A class the school doesn't have would otherwise be ignored and show every class.
         const askedClass =
           decision.view.page === 'students' || decision.view.page === 'attendance' ? decision.view.className : null;
@@ -473,6 +475,7 @@ export function OfficeAiHelpButton() {
     stopWaitingLater,
     settings?.features?.attendance,
     settings?.features?.frontDesk,
+    settings?.features?.busInfo,
     features.aiRecords,
     userName,
     showStudentsInApp,

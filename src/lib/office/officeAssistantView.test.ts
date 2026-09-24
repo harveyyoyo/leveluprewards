@@ -111,6 +111,13 @@ describe('officeAssistantViewHref', () => {
     expect(href).toContain('/billing?');
     expect(href).toContain('minOwed=100');
   });
+
+  it('opens the Transportation page for a bus question', () => {
+    const decision = parseOfficeAssistantDecision({ type: 'view', view: { page: 'transportation', label: 'Live buses' } });
+    expect(decision).toEqual({ type: 'view', view: { page: 'transportation', label: 'Live buses' } });
+    if (decision.type !== 'view') throw new Error('expected a view');
+    expect(officeAssistantViewHref('schoolabc', decision.view)).toContain('/transportation?');
+  });
 });
 
 describe('attendance and front desk views', () => {

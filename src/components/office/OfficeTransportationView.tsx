@@ -13,7 +13,6 @@ import { OfficeBusDriverMode } from '@/components/office/OfficeBusDriverMode';
 import { useOfficeBusRoutes, useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { DEFAULT_MAP_CENTER, localIsoDate, type LatLng } from '@/lib/office/officeTransport';
-import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 import type { OfficeFamily, OfficeStudent } from '@/lib/office/types';
 
 type Section = 'live' | 'routes' | 'riders' | 'history';
@@ -21,24 +20,28 @@ type Section = 'live' | 'routes' | 'riders' | 'history';
 type Props = {
   schoolId: string;
   students: OfficeStudent[];
+  studentLabelById: Map<string, string>;
   classNameById: Map<string, string>;
   familyById: Map<string, OfficeFamily>;
   isLoading: boolean;
 };
 
 /** Transportation: live bus map, routes and stops, how each student gets home, and past trips. */
-export function OfficeTransportationView({ schoolId, students, classNameById, familyById, isLoading }: Props) {
+export function OfficeTransportationView({ schoolId, students, studentLabelById, classNameById, familyById, isLoading }: Props) {
   const [section, setSection] = useState<Section>('live');
   const [driving, setDriving] = useState(false);
   const today = localIsoDate();
   const { routes, allRoutes, isLoading: routesLoading, error } = useOfficeBusRoutes(schoolId);
-  const { trips, isLoading: tripsLoading } = useOfficeBusTripsForDate(schoolId, today);
+  const { trips, isLoading: tripsLoading, error: tripsError } = useOfficeBusTripsForDate(schoolId, today);
   const { settings } = useOfficeSettings(schoolId);
   const school = settings?.transportSchoolLocation ?? null;
   const center: LatLng = school ?? routes.find((r) => r.stops?.length)?.stops[0] ?? DEFAULT_MAP_CENTER;
 
-  const studentNameById = useMemo(() => new Map(students.map((s) => [s.id, getOfficeStudentFullName(s)])), [students]);
   const activeStudents = useMemo(() => students.filter((s) => (s.status ?? 'active') === 'active'), [students]);
+  const activeRouteIds = useMemo(
+    () => new Set(trips.filter((trip) => trip.status === 'active').map((trip) => trip.routeId)),
+    [trips],
+  );
   const onRoad = trips.filter((t) => t.status === 'active').length;
   const noPlan = activeStudents.filter((s) => !s.transportMode).length;
 
@@ -48,6 +51,16 @@ export function OfficeTransportationView({ schoolId, students, classNameById, fa
         icon={Bus}
         title="Transportation is almost ready"
         description="It will open here after the next update. Everything else in the office works as usual."
+      />
+    );
+  }
+
+  if (tripsError) {
+    return (
+      <OfficeEmptyState
+        icon={Bus}
+        title="Live bus updates are unavailable"
+        description="Routes and rider records are safe, but the office cannot load live runs right now. Try again in a moment."
       />
     );
   }
@@ -79,7 +92,7 @@ export function OfficeTransportationView({ schoolId, students, classNameById, fa
           routes={routes}
           trips={trips}
           students={activeStudents}
-          studentNameById={studentNameById}
+          studentNameById={studentLabelById}
           center={center}
           isLoading={isLoading || routesLoading || tripsLoading}
           onSetUpRoutes={() => setSection('routes')}
@@ -88,10 +101,11 @@ export function OfficeTransportationView({ schoolId, students, classNameById, fa
         <OfficeTransportRoutes
           schoolId={schoolId}
           routes={routes}
-          students={activeStudents}
+          students={students}
           classNameById={classNameById}
           school={school}
           center={center}
+          activeRouteIds={activeRouteIds}
           isLoading={isLoading || routesLoading}
         />
       ) : section === 'riders' ? (
@@ -101,10 +115,11 @@ export function OfficeTransportationView({ schoolId, students, classNameById, fa
           students={activeStudents}
           classNameById={classNameById}
           familyById={familyById}
+          activeRouteIds={activeRouteIds}
           isLoading={isLoading || routesLoading}
         />
       ) : (
-        <OfficeTransportHistory schoolId={schoolId} routes={allRoutes} studentNameById={studentNameById} />
+        <OfficeTransportHistory schoolId={schoolId} routes={allRoutes} studentNameById={studentLabelById} />
       )}
 
       {driving ? (

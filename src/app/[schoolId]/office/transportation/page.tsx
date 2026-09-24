@@ -14,6 +14,7 @@ export default function OfficeTransportationPage() {
     <OfficeTransportationView
       schoolId={schoolId}
       students={shared.students}
+      studentLabelById={shared.studentLabelById}
       classNameById={shared.classNameById}
       familyById={shared.familyById}
       isLoading={shared.isLoading}

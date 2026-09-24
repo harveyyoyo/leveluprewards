@@ -46,6 +46,19 @@ describe('schoolLoginRedirect', () => {
     );
   });
 
+  it('preserves the transportation segment when signing in from the office host', () => {
+    vi.stubEnv('NEXT_PUBLIC_OFFICE_CANONICAL_HOST', 'office.leveluprewards.app');
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'office.leveluprewards.app',
+      pathname: '/yeshiva/transportation',
+    } as Location);
+
+    expect(schoolLoginNextPath('yeshiva', '/yeshiva/transportation')).toBe(
+      'https://office.leveluprewards.app/yeshiva/transportation',
+    );
+  });
+
   it('uses legacy office path on main host', () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({
       ...window.location,

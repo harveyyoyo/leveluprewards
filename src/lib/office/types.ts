@@ -205,6 +205,9 @@ export type OfficeBusRoute = {
   archivedAt?: number;
 };
 
+/** The route details needed to read a past trip after the route is edited or removed. */
+export type OfficeBusRouteSnapshot = Pick<OfficeBusRoute, 'name' | 'busNumber' | 'color' | 'stops'>;
+
 export type OfficeBusRun = 'am' | 'pm';
 export type OfficeBusRiderStatus = 'on' | 'off' | 'absent';
 export type OfficeBusAlertKind = 'delay' | 'breakdown' | 'accident' | 'behavior' | 'other';
@@ -230,9 +233,13 @@ export type OfficeBusLocation = {
   at: number;
 };
 
+export type OfficeBusEvent =
+  | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
+  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string };
+
 /**
- * One bus run on one day (`schools/{id}/officeBusTrips`, id `{date}_{routeId}_{run}`):
- * live location, stops reached, and who got on and off. Never erased.
+ * One bus run on one day (`schools/{id}/officeBusTrips`, id starts with `{date}_{routeId}_{run}`):
+ * live location, stops reached, and who got on and off. Never erased or overwritten.
  */
 export type OfficeBusTrip = {
   id: string;
@@ -240,7 +247,15 @@ export type OfficeBusTrip = {
   /** ISO date `YYYY-MM-DD`. */
   date: string;
   run: OfficeBusRun;
+  /** Keeps old history readable if the route is later renamed, moved, or removed. */
+  routeSnapshot?: OfficeBusRouteSnapshot | null;
+  /** Student ids assigned when the run began, so later roster edits do not change this run. */
+  riderSnapshot?: string[] | null;
+  /** Retry bookkeeping lives on the base trip so concurrent starts cannot create two active runs. */
+  retryCount?: number;
+  activeRetryId?: string | null;
   status: 'active' | 'done';
+  driverId?: string | null;
   driverName?: string | null;
   startedAt: number;
   endedAt?: number | null;
@@ -250,6 +265,8 @@ export type OfficeBusTrip = {
   /** studentId -> latest status on this run. */
   riders?: Record<string, { status: OfficeBusRiderStatus; at: number }> | null;
   alerts?: OfficeBusTripAlert[] | null;
+  /** Append-only rider and stop events kept for the safety record. */
+  events?: OfficeBusEvent[] | null;
   /** Driver walked the bus at the end and confirmed nobody was left on. */
   childCheckDone?: boolean | null;
   updatedAt: number;

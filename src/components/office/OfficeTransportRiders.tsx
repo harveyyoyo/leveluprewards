@@ -23,11 +23,12 @@ type Props = {
   students: OfficeStudent[];
   classNameById: Map<string, string>;
   familyById: Map<string, OfficeFamily>;
+  activeRouteIds: Set<string>;
   isLoading: boolean;
 };
 
 /** Riders: one line per student — bus (which route and stop), car pickup, walks, or after care. */
-export function OfficeTransportRiders({ schoolId, routes, students, classNameById, familyById, isLoading }: Props) {
+export function OfficeTransportRiders({ schoolId, routes, students, classNameById, familyById, activeRouteIds, isLoading }: Props) {
   const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
   const { openStudent } = useOfficeEntityNav();
@@ -58,6 +59,12 @@ export function OfficeTransportRiders({ schoolId, routes, students, classNameByI
   }, [students, filter, routeFilter, q, classNameById, routeById]);
 
   const save = async (s: OfficeStudent, patch: Pick<OfficeStudent, 'transportMode' | 'busRouteId' | 'busStopId'>) => {
+    const currentRouteIsActive = !!s.busRouteId && activeRouteIds.has(s.busRouteId);
+    const nextRouteIsActive = !!patch.busRouteId && activeRouteIds.has(patch.busRouteId);
+    if (currentRouteIsActive || nextRouteIsActive) {
+      toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before changing a rider.' });
+      return;
+    }
     if (!write.ctx) return;
     const name = getOfficeStudentFullName(s);
     const route = patch.busRouteId ? routeById.get(patch.busRouteId) : undefined;
@@ -143,6 +150,8 @@ export function OfficeTransportRiders({ schoolId, routes, students, classNameByI
           {rows.slice(0, limit).map((s) => {
             const route = s.busRouteId ? routeById.get(s.busRouteId) : undefined;
             const family = s.familyId ? familyById.get(s.familyId) : undefined;
+            const stopExists = !!route?.stops?.some((stop) => stop.id === s.busStopId && !stop.isSchool);
+            const isLocked = !!s.busRouteId && activeRouteIds.has(s.busRouteId);
             const oldRoute = !s.transportMode ? s.busRoute?.trim() || family?.busRoute?.trim() : null;
             return (
               <li key={s.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
@@ -164,6 +173,7 @@ export function OfficeTransportRiders({ schoolId, routes, students, classNameByI
                   }}
                 >
                   <SelectTrigger
+                    disabled={isLocked}
                     className={cn('h-9 w-36 rounded-lg text-xs', !s.transportMode && 'border-amber-300 text-amber-800 dark:border-amber-800 dark:text-amber-300')}
                     aria-label={`How ${getOfficeStudentFullName(s)} gets home`}
                   >
@@ -181,7 +191,7 @@ export function OfficeTransportRiders({ schoolId, routes, students, classNameByI
                 {s.transportMode === 'bus' ? (
                   <>
                     <Select value={s.busRouteId ?? ''} onValueChange={(v) => void save(s, { transportMode: 'bus', busRouteId: v, busStopId: null })}>
-                      <SelectTrigger className="h-9 w-40 rounded-lg text-xs" aria-label="Route">
+                      <SelectTrigger disabled={isLocked} className="h-9 w-40 rounded-lg text-xs" aria-label="Route">
                         <SelectValue placeholder="Pick a route" />
                       </SelectTrigger>
                       <SelectContent>
@@ -197,7 +207,7 @@ export function OfficeTransportRiders({ schoolId, routes, students, classNameByI
                       disabled={!route}
                       onValueChange={(v) => void save(s, { transportMode: 'bus', busRouteId: s.busRouteId ?? null, busStopId: v })}
                     >
-                      <SelectTrigger className="h-9 w-40 rounded-lg text-xs" aria-label="Stop">
+                      <SelectTrigger disabled={isLocked || !route} className="h-9 w-40 rounded-lg text-xs" aria-label="Stop">
                         <SelectValue placeholder={route ? 'Pick a stop' : 'Route first'} />
                       </SelectTrigger>
                       <SelectContent>
@@ -210,7 +220,13 @@ export function OfficeTransportRiders({ schoolId, routes, students, classNameByI
                           ))}
                       </SelectContent>
                     </Select>
-                    {!route || !s.busStopId ? <AlertTriangle className="h-4 w-4 text-amber-600" aria-label="Route or stop missing" /> : null}
+                    {isLocked ? (
+                      <span className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-300">
+                        <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> On the road
+                      </span>
+                    ) : !route || !s.busStopId || !stopExists ? (
+                      <AlertTriangle className="h-4 w-4 text-amber-600" aria-label="Route or stop missing" />
+                    ) : null}
                   </>
                 ) : null}
               </li>

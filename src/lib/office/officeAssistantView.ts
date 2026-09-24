@@ -96,11 +96,17 @@ const attendanceView = z.object({
   className: text,
 });
 
+const transportationView = z.object({
+  page: z.literal('transportation'),
+  label: z.string().trim().min(1).max(120),
+});
+
 export const officeAssistantViewSchema = z.discriminatedUnion('page', [
   studentsView,
   billingView,
   frontDeskView,
   attendanceView,
+  transportationView,
 ]);
 export type OfficeAssistantView = z.infer<typeof officeAssistantViewSchema>;
 
@@ -171,6 +177,9 @@ export function officeAssistantViewHref(schoolId: string, view: OfficeAssistantV
     params.set('status', view.status);
     if (view.className) params.set('className', view.className);
     return `${officePublicHref(schoolId, 'attendance')}?${params.toString()}`;
+  }
+  if (view.page === 'transportation') {
+    return `${officePublicHref(schoolId, 'transportation')}?${params.toString()}`;
   }
   if (view.date) params.set('date', view.date);
   const tab = view.kind ? (view.kind === 'nurse_visit' ? 'nurse' : 'arrivals') : view.tab;
@@ -260,6 +269,9 @@ export function describeOfficeAssistantView(view: OfficeAssistantView, today?: s
     const base = ATTENDANCE_STATUS_LABEL[view.status];
     return [base, view.className ? `in ${view.className}` : '', describeDay(view.date, today)].filter(Boolean).join(' ');
   }
+  if (view.page === 'transportation') {
+    return 'Bus routes, riders, live trips, and trip history';
+  }
   const base = view.kind
     ? DESK_KIND_LABEL[view.kind]
     : view.tab === 'nurse'
@@ -273,6 +285,7 @@ export const OFFICE_ASSISTANT_PAGE_LABEL: Record<OfficeAssistantView['page'], st
   billing: 'Billing',
   frontdesk: 'Front desk',
   attendance: 'Attendance',
+  transportation: 'Transportation',
 };
 
 /** Finds the class a question named: exact name first, then a name that contains it. */
@@ -328,6 +341,7 @@ export function officeAssistantSystemPrompt(params: {
     '   - arrivals = late arrivals and early pickups; nurse = nurse visits. Use "kind" when they ask about only one of them (e.g. who left early → early_pickup).',
     '4. Attendance for one day (all classes unless one is named): {"page":"attendance","label":"...","date":null|"YYYY-MM-DD","status":"absent"|"late"|"excused"|"not-present","className":null|"class name"}',
     '   - "who is absent today" → status "absent". "not-present" = absent, late or excused.',
+    '5. Transportation: {"page":"transportation","label":"..."} — open the live bus map, routes, riders, and trip history. Use this for questions about buses, routes, stops, riders, or bus runs.',
     'If they ask for a list of something none of these views cover (for example teacher absences), reply {"type":"answer"}.',
     'Use the filter that matches what they asked. Never swap in a filter that would pick different people than they meant (for example, a name search for one letter when they asked how names start). If nothing fits, reply {"type":"answer"}.',
     'Where students live or are from — a town, city, borough, state, zip code, or short forms like "NYC" or "NJ" — always goes in "address", written as they said it. The app understands NYC, state names and abbreviations.',

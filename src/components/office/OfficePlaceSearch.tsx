@@ -11,12 +11,14 @@ type Place = LatLng & { label: string };
 
 /** Type an address or place name, pick a match, get its spot on the map. */
 export function OfficePlaceSearch({
+  schoolId,
   onPick,
   near,
   placeholder = 'Find an address or place…',
   className,
   id,
 }: {
+  schoolId: string;
   onPick: (place: Place) => void;
   near?: LatLng | null;
   placeholder?: string;
@@ -39,8 +41,8 @@ export function OfficePlaceSearch({
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const nearParam = near ? `&lat=${near.lat.toFixed(4)}&lng=${near.lng.toFixed(4)}` : '';
-        const res = await authFetch(`/api/office/geocode?q=${encodeURIComponent(q)}${nearParam}`);
+        const nearParam = near ? `&lat=${near.lat.toFixed(4)}&lon=${near.lng.toFixed(4)}` : '';
+        const res = await authFetch(`/api/office/geocode?schoolId=${encodeURIComponent(schoolId)}&q=${encodeURIComponent(q)}${nearParam}`);
         const data = (await res.json()) as { results?: Place[] };
         if (!cancelled) {
           setResults(data.results ?? []);
@@ -58,7 +60,7 @@ export function OfficePlaceSearch({
     };
     // `near` only nudges results; re-searching when the map moves would be noisy.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, authFetch]);
+  }, [text, authFetch, schoolId]);
 
   const pick = (p: Place) => {
     onPick(p);

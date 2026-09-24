@@ -34,6 +34,7 @@ import {
   etaMinutes,
   familyUpdateMessage,
   formatDistance,
+  latestTripForRoute,
   minutesLate,
   nextStop,
   orderedStops,
@@ -73,9 +74,9 @@ export function OfficeTransportLive({ routes, trips, students, studentNameById, 
   const runTrips = useMemo(() => trips.filter((t) => t.run === run), [trips, run]);
   // A practice run stands in for the selected route's real trip while it plays.
   const tripFor = (routeId: string) =>
-    practice?.routeId === routeId ? practice : runTrips.find((t) => t.routeId === routeId) ?? null;
+    practice?.routeId === routeId ? practice : latestTripForRoute(runTrips, routeId, run);
 
-  const warnings = useMemo(() => tripWarnings(routes, trips, studentNameById, now), [routes, trips, studentNameById, now]);
+  const warnings = useMemo(() => tripWarnings(routes, runTrips, studentNameById, now), [routes, runTrips, studentNameById, now]);
   const selected = routes.find((r) => r.id === selectedId) ?? null;
   const selectedTrip = selected ? tripFor(selected.id) : null;
 

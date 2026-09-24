@@ -31,19 +31,21 @@ import {
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 import type { OfficeBusRoute, OfficeBusStop, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
 type Props = {
   schoolId: string;
   routes: OfficeBusRoute[];
   students: OfficeStudent[];
   classNameById: Map<string, string>;
+  activeRouteIds: Set<string>;
   school: { address?: string | null; lat: number; lng: number } | null;
   center: LatLng;
   isLoading: boolean;
 };
 
 /** Routes: one card per bus, with stops and riders inside. */
-export function OfficeTransportRoutes({ schoolId, routes, students, classNameById, school, center, isLoading }: Props) {
+export function OfficeTransportRoutes({ schoolId, routes, students, classNameById, activeRouteIds, school, center, isLoading }: Props) {
   const write = useOfficeWrite(schoolId);
   const firestore = useFirestore();
   const { userName } = useAppContext();
@@ -51,6 +53,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
   const [openId, setOpenId] = useState<string | 'new' | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingSchool, setEditingSchool] = useState(false);
+  const isDemoSchool = isPublicSampleSchoolId(schoolId);
 
   const saveSchool = async (place: LatLng & { label: string }) => {
     if (!firestore) return;
@@ -87,7 +90,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
         {editingSchool || !school ? (
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <p className="text-sm font-medium">Where is your school?</p>
-            <OfficePlaceSearch near={center} onPick={(p) => void saveSchool(p)} placeholder="School address" className="min-w-[220px] flex-1" />
+            <OfficePlaceSearch schoolId={schoolId} near={center} onPick={(p) => void saveSchool(p)} placeholder="School address" className="min-w-[220px] flex-1" />
             {school ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditingSchool(false)}>
                 Cancel
@@ -116,9 +119,11 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
               <Button type="button" className="gap-2 rounded-xl" onClick={() => setOpenId('new')}>
                 <Plus className="h-4 w-4" /> Add a route
               </Button>
-              <Button type="button" variant="outline" className="gap-2 rounded-xl" disabled={busy} onClick={() => void addExamples()}>
-                <Sparkles className="h-4 w-4" /> {busy ? 'Adding…' : 'Try with examples'}
-              </Button>
+              {isDemoSchool ? (
+                <Button type="button" variant="outline" className="gap-2 rounded-xl" disabled={busy} onClick={() => void addExamples()}>
+                  <Sparkles className="h-4 w-4" /> {busy ? 'Adding…' : 'Try with examples'}
+                </Button>
+              ) : null}
             </div>
           }
         />
@@ -175,6 +180,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
         routes={routes}
         students={students}
         classNameById={classNameById}
+        activeRouteIds={activeRouteIds}
         center={school ?? center}
         onOpenChange={(o) => (!o ? setOpenId(null) : undefined)}
         onCreated={(id) => setOpenId(id)}
@@ -209,6 +215,7 @@ function OfficeBusRouteSheet({
   routes,
   students,
   classNameById,
+  activeRouteIds,
   center,
   onOpenChange,
   onCreated,
@@ -219,6 +226,7 @@ function OfficeBusRouteSheet({
   routes: OfficeBusRoute[];
   students: OfficeStudent[];
   classNameById: Map<string, string>;
+  activeRouteIds: Set<string>;
   center: LatLng;
   onOpenChange: (open: boolean) => void;
   onCreated: (id: string) => void;
@@ -232,6 +240,7 @@ function OfficeBusRouteSheet({
   const [dirty, setDirty] = useState(false);
   const [focusStop, setFocusStop] = useState<string | null>(null);
   const [addStudentId, setAddStudentId] = useState('');
+  const locked = !!route && activeRouteIds.has(route.id);
 
   // A different route opened, or someone else saved this one while it was open and nothing here changed.
   useEffect(() => {
@@ -274,9 +283,16 @@ function OfficeBusRouteSheet({
   };
 
   const riders = route ? ridersForRoute(students, route.id) : [];
+  const assignedStudents = route
+    ? students.filter((s) => s.transportMode === 'bus' && s.busRouteId === route.id)
+    : [];
   const available = students.filter((s) => !(s.transportMode === 'bus' && s.busRouteId === route?.id));
 
   const save = async () => {
+    if (locked) {
+      toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before changing the route.' });
+      return;
+    }
     if (!write.ctx) return;
     if (!draft.name.trim()) {
       toast({ variant: 'destructive', title: 'Give the route a name', description: 'For example North, Route 3, or Hillside.' });
@@ -287,6 +303,7 @@ function OfficeBusRouteSheet({
       const id = await write.upsertOfficeBusRoute(write.ctx, {
         ...draft,
         id: route?.id,
+        expectedUpdatedAt: route?.updatedAt ?? null,
         name: draft.name.trim(),
         busNumber: draft.busNumber?.trim() || null,
         driverName: draft.driverName?.trim() || null,
@@ -294,6 +311,25 @@ function OfficeBusRouteSheet({
         notes: draft.notes?.trim() || null,
         capacity: draft.capacity && draft.capacity > 0 ? Math.round(draft.capacity) : null,
       });
+      if (route) {
+        const removedStopIds = route.stops.filter((oldStop) => !draft.stops.some((newStop) => newStop.id === oldStop.id)).map((oldStop) => oldStop.id);
+        const affected = assignedStudents.filter((student) => student.busStopId && removedStopIds.includes(student.busStopId));
+        if (affected.length) {
+          try {
+            await write.setOfficeStudentsTransport(
+              write.ctx,
+              affected.map((student) => ({
+                student,
+                studentName: getOfficeStudentFullName(student),
+                patch: { transportMode: 'bus', busRouteId: route.id, busStopId: null },
+              })),
+              (name) => `${name}'s stop was removed from ${routeLabel(route)}`,
+            );
+          } catch (cleanupError) {
+            toast({ variant: 'destructive', title: 'Route saved, but rider stops need attention', description: (cleanupError as Error).message });
+          }
+        }
+      }
       setDirty(false);
       toast({ title: route ? 'Route saved' : 'Route added', description: route ? undefined : 'Now add the students who ride it.' });
       if (!route) onCreated(id);
@@ -305,22 +341,26 @@ function OfficeBusRouteSheet({
   };
 
   const remove = async () => {
+    if (locked) {
+      toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before removing the route.' });
+      return;
+    }
     if (!route || !write.ctx) return;
     const ok = await confirm({
       title: `Remove ${routeLabel(route)}?`,
       description:
-        riders.length > 0
-          ? `${riders.length} student${riders.length === 1 ? '' : 's'} ride this bus. They will show as "not set" in Riders. Past trips stay in History.`
+        assignedStudents.length > 0
+          ? `${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'} ride this bus. They will show as "not set" in Riders. Past trips stay in History.`
           : 'Past trips stay in History.',
       confirmLabel: 'Remove route',
       tone: 'caution',
     });
     if (!ok) return;
     try {
-      if (riders.length) {
+      if (assignedStudents.length) {
         await write.setOfficeStudentsTransport(
           write.ctx,
-          riders.map((s) => ({ student: s, studentName: getOfficeStudentFullName(s), patch: { transportMode: null, busRouteId: null, busStopId: null } })),
+          assignedStudents.map((s) => ({ student: s, studentName: getOfficeStudentFullName(s), patch: { transportMode: null, busRouteId: null, busStopId: null } })),
           (n) => `${n} taken off ${routeLabel(route)} (route removed)`,
         );
       }
@@ -333,6 +373,10 @@ function OfficeBusRouteSheet({
   };
 
   const setRider = async (student: OfficeStudent, stopId: string | null, removeRider = false) => {
+    if (locked) {
+      toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before changing its riders.' });
+      return;
+    }
     if (!write.ctx || !route) return;
     try {
       await write.setOfficeStudentsTransport(
@@ -352,6 +396,14 @@ function OfficeBusRouteSheet({
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
     }
+  };
+
+  const removeStop = (stopId: string) => {
+    if (locked) {
+      toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before changing its stops.' });
+      return;
+    }
+    patch({ stops: draft.stops.filter((s) => s.id !== stopId) });
   };
 
   const markers: TransportMapMarker[] = draft.stops.map((s, i) => ({
@@ -377,6 +429,11 @@ function OfficeBusRouteSheet({
             {route ? routeLabel(route) : 'New route'}
           </SheetTitle>
           <SheetDescription>The bus, its stops in morning order, and who rides it.</SheetDescription>
+          {locked ? (
+            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+              This bus is on the road right now. Wait until the run ends before changing its route, stops, or riders.
+            </p>
+          ) : null}
         </SheetHeader>
 
         <div className="mt-5 space-y-6 pb-20">
@@ -436,7 +493,7 @@ function OfficeBusRouteSheet({
                 </button>
               ) : null}
             </div>
-            <OfficePlaceSearch near={center} onPick={(p) => addStop(p)} placeholder="Add a stop: type an address…" />
+            <OfficePlaceSearch schoolId={schoolId} near={center} onPick={(p) => addStop(p)} placeholder="Add a stop: type an address…" />
             <OfficeTransportMap
               markers={markers}
               lines={[{ id: 'route', color: draft.color, points: draft.stops }]}
@@ -487,7 +544,7 @@ function OfficeBusRouteSheet({
                       <button
                         type="button"
                         aria-label={`Remove ${s.name}`}
-                        onClick={() => patch({ stops: draft.stops.filter((x) => x.id !== s.id) })}
+                        onClick={() => removeStop(s.id)}
                         className="rounded p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-slate-800"
                       >
                         <X className="h-3.5 w-3.5" />
@@ -590,7 +647,7 @@ function OfficeBusRouteSheet({
           </section>
 
           {route ? (
-            <button type="button" onClick={() => void remove()} className="flex items-center gap-1.5 text-sm text-red-700 hover:underline dark:text-red-400">
+            <button type="button" disabled={locked} onClick={() => void remove()} className="flex items-center gap-1.5 text-sm text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400">
               <Trash2 className="h-3.5 w-3.5" /> Remove this route
             </button>
           ) : null}
@@ -600,7 +657,7 @@ function OfficeBusRouteSheet({
           <Button type="button" variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
             {dirty ? 'Cancel' : 'Close'}
           </Button>
-          <Button type="button" className="rounded-xl" disabled={busy || (!dirty && !!route)} onClick={() => void save()}>
+          <Button type="button" className="rounded-xl" disabled={locked || busy || (!dirty && !!route)} onClick={() => void save()}>
             {busy ? 'Saving…' : route ? 'Save changes' : 'Add route'}
           </Button>
         </div>

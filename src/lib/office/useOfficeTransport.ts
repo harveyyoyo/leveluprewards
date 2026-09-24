@@ -11,9 +11,10 @@ const LOCAL_PERMISSION_ERRORS = { reportPermissionErrors: false as const };
 /** Every bus route, A–Z. `error` is set until the database allows transportation records. */
 export function useOfficeBusRoutes(schoolId: string | null) {
   const firestore = useFirestore();
+  const normalizedSchoolId = schoolId?.trim().toLowerCase() ?? '';
   const routesQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'officeBusRoutes') : null),
-    [firestore, schoolId],
+    () => (firestore && normalizedSchoolId ? collection(firestore, 'schools', normalizedSchoolId, 'officeBusRoutes') : null),
+    [firestore, normalizedSchoolId],
   );
   const { data, isLoading, error } = useCollection<OfficeBusRoute>(routesQuery, LOCAL_PERMISSION_ERRORS);
   const routes = useMemo(
@@ -26,12 +27,13 @@ export function useOfficeBusRoutes(schoolId: string | null) {
 /** One day's bus runs (live while they are on the road). */
 export function useOfficeBusTripsForDate(schoolId: string | null, date: string | null) {
   const firestore = useFirestore();
+  const normalizedSchoolId = schoolId?.trim().toLowerCase() ?? '';
   const tripsQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && date
-        ? query(collection(firestore, 'schools', schoolId, 'officeBusTrips'), where('date', '==', date))
+      firestore && normalizedSchoolId && date
+        ? query(collection(firestore, 'schools', normalizedSchoolId, 'officeBusTrips'), where('date', '==', date))
         : null,
-    [firestore, schoolId, date],
+    [firestore, normalizedSchoolId, date],
   );
   const { data, isLoading, error } = useCollection<OfficeBusTrip>(tripsQuery, LOCAL_PERMISSION_ERRORS);
   const trips = useMemo(() => [...(data ?? [])].sort((a, b) => a.startedAt - b.startedAt), [data]);

@@ -148,7 +148,7 @@ export function tripWarnings(
           text: `${bus} finished the ${runLabel} run but ${listNames(stillOn)} ${stillOn.length === 1 ? 'was' : 'were'} never marked off.`,
         });
       }
-      if (trip.childCheckDone === false) {
+      if (trip.childCheckDone !== true) {
         out.push({
           id: `${trip.id}-no-check`,
           tone: 'caution',
@@ -207,8 +207,54 @@ export function routeLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): s
   return bus ? `Bus ${bus} (${route.name})` : route.name;
 }
 
+/** The newest active trip for a route/run, or the newest completed trip if none is active. */
+export function latestTripForRoute(
+  trips: OfficeBusTrip[],
+  routeId: string,
+  run: OfficeBusRun,
+): OfficeBusTrip | null {
+  const candidates = trips.filter((trip) => trip.routeId === routeId && trip.run === run);
+  return candidates.reduce<OfficeBusTrip | null>((latest, trip) => {
+    if (!latest) return trip;
+    if (trip.status !== latest.status) return trip.status === 'active' ? trip : latest;
+    return trip.startedAt > latest.startedAt ? trip : latest;
+  }, null);
+}
+
+/** Use the route captured at trip start so old history does not change when a route is edited. */
+export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusTrip): OfficeBusRoute | undefined {
+  const snapshot = trip.routeSnapshot;
+  if (!snapshot) return route;
+  return {
+    id: route?.id ?? trip.routeId,
+    name: snapshot.name,
+    busNumber: snapshot.busNumber ?? null,
+    color: snapshot.color,
+    driverName: route?.driverName ?? null,
+    driverPhone: route?.driverPhone ?? null,
+    capacity: route?.capacity ?? null,
+    stops: snapshot.stops ?? [],
+    notes: route?.notes ?? null,
+    updatedAt: route?.updatedAt ?? trip.updatedAt,
+    updatedBy: route?.updatedBy ?? null,
+    archived: route?.archived,
+    archivedAt: route?.archivedAt,
+  };
+}
+
 export function ridersForRoute(students: OfficeStudent[], routeId: string): OfficeStudent[] {
   return students.filter((s) => s.transportMode === 'bus' && s.busRouteId === routeId && (s.status ?? 'active') === 'active');
+}
+
+/** Ids are the immutable rider list captured when a run begins. */
+export function riderSnapshotFromStudents(
+  students: Array<Pick<OfficeStudent, 'id' | 'transportMode' | 'status' | 'archived'>>,
+): string[] {
+  return students
+    .filter((student) => student.transportMode === 'bus' && (student.status ?? 'active') === 'active' && student.archived !== true)
+    .map((student) => student.id)
+    .filter(Boolean)
+    .sort();
 }
 
 /** Short "about 20 sec ago" for the last location. */
@@ -265,8 +311,8 @@ export function newTransportId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** Springfield, NJ — the demo schools' town; used until a school sets its own location. */
-export const DEFAULT_MAP_CENTER: LatLng = { lat: 40.7051, lng: -74.3174 };
+/** Neutral fallback until a school sets its own location; real routes use their first stop. */
+export const DEFAULT_MAP_CENTER: LatLng = { lat: 39.5, lng: -98.35 };
 
 /**
  * Three example routes around the school so a new page is not empty. Times are typical:
