@@ -62,8 +62,8 @@ export function useOfficeTransportApi(schoolId: string | null) {
       ) => call<{ ok: true; notificationsQueued: number; notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' | 'office_only' }>({ action: 'alert', tripId: trip.id, run: trip.run, ...alert }),
       endOfficeBusTrip: (trip: Pick<OfficeBusTrip, 'id' | 'run'>, _route: OfficeBusRoute, childCheckDone: boolean) =>
         call<{ ok: true }>({ action: 'end', tripId: trip.id, run: trip.run, childCheckDone }),
-      closeStaleOfficeBusTrip: (tripId: string, reason: string) =>
-        call<{ ok: true }>({ action: 'close-stale', tripId, reason }),
+      closeStaleOfficeBusTrip: (tripId: string, reason: string, sameDay = false) =>
+        call<{ ok: true }>({ action: 'close-stale', tripId, reason, sameDay, confirmed: sameDay }),
     }),
     [call],
   );

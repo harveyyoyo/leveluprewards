@@ -47,10 +47,16 @@ export const BUS_ROUTE_COLORS = ['#0f766e', '#2563eb', '#c2410c', '#7c3aed', '#b
 export const STOP_ARRIVAL_RADIUS_M = 120;
 /** No location for this long while on the road → "not updating" warning. */
 export const LOCATION_STALE_MS = 3 * 60_000;
+export const ABANDONED_RUN_MIN_AGE_MS = 30 * 60_000;
 
 /** A location is usable only when it is not from the future and is recent enough. */
 export function isFreshLocation(location: Pick<OfficeBusLocation, 'at'> | null | undefined, now = Date.now()): boolean {
   return Boolean(location && Number.isFinite(location.at) && now >= location.at && now - location.at <= LOCATION_STALE_MS);
+}
+
+/** True when Office may review an active run that has had no fresh location for 30 minutes. */
+export function isAbandonedRunCandidate(trip: Pick<OfficeBusTrip, 'status' | 'startedAt' | 'location'>, now = Date.now()): boolean {
+  return trip.status === 'active' && Number.isFinite(trip.startedAt) && now >= trip.startedAt && now - trip.startedAt >= ABANDONED_RUN_MIN_AGE_MS && !isFreshLocation(trip.location, now);
 }
 
 /** Minutes behind plan before the office sees "late". */

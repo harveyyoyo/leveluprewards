@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { useToast } from '@/hooks/use-toast';
-import { useOfficeBusActiveTrips, useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
+import { useOfficeBusActiveTrips, useOfficeBusTripsForDate, useNow } from '@/lib/office/useOfficeTransport';
 import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import { downloadCsv } from '@/lib/office/officeUtils';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
@@ -16,6 +16,8 @@ import {
   BUS_RUN_LABEL,
   clockLabel,
   localIsoDate,
+  isAbandonedRunCandidate,
+  isFreshLocation,
   orderedStops,
   routeForTrip,
   riderNameForTrip,
@@ -46,11 +48,12 @@ export function OfficeTransportHistory({
   studentNameById: Map<string, string>;
 }) {
   const today = localIsoDate();
+  const now = useNow(30_000);
   const [date, setDate] = useState(today);
   const [openId, setOpenId] = useState<string | null>(null);
   const { trips, isLoading, error } = useOfficeBusTripsForDate(schoolId, date);
   const { trips: activeTrips } = useOfficeBusActiveTrips(schoolId);
-  const staleTrips = activeTrips.filter((trip) => trip.date < today);
+  const staleTrips = activeTrips.filter((trip) => !isFreshLocation(trip.location, now) && (trip.date < today || (trip.date === today && isAbandonedRunCandidate(trip, now))));
   const transport = useOfficeTransportApi(schoolId);
   const [closingId, setClosingId] = useState<string | null>(null);
   const summary = useMemo(() => transportDaySummary(trips, routes), [trips, routes]);
@@ -68,16 +71,20 @@ export function OfficeTransportHistory({
   };
 
   const closeStaleRun = async (trip: OfficeBusTrip) => {
-    if (trip.status !== 'active' || trip.date >= today) return;
-    if (!window.confirm('Close this older bus run? It will stay in History, but it will no longer block this bus.')) return;
+    const sameDay = trip.date === today;
+    if (trip.status !== 'active' || trip.date > today || (sameDay && !isAbandonedRunCandidate(trip, now))) return;
+    const warning = sameDay
+      ? 'This run has been open for at least 30 minutes without a fresh bus update. Close it only after checking with the driver.'
+      : 'Close this older bus run? It will stay in History, but it will no longer block this bus.';
+    if (!window.confirm(warning)) return;
     const reason = window.prompt('Why is the office closing this run? This note will stay in the record.')?.trim();
     if (!reason) return;
     setClosingId(trip.id);
     try {
-      await transport.closeStaleOfficeBusTrip(trip.id, reason);
-      toast({ title: 'Older run closed', description: 'The bus is free to start a new run.' });
+      await transport.closeStaleOfficeBusTrip(trip.id, reason, sameDay);
+      toast({ title: sameDay ? 'Open run closed' : 'Older run closed', description: 'The bus is free to start a new run.' });
     } catch (cause) {
-      toast({ variant: 'destructive', title: 'Could not close the old run', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
+      toast({ variant: 'destructive', title: 'Could not close the run', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
     } finally {
       setClosingId(null);
     }
@@ -118,8 +125,8 @@ export function OfficeTransportHistory({
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">An older bus run is still open.</p>
-              <p className="mt-1 text-xs">Close it before starting the bus again. The old record will stay in History.</p>
+              <p className="text-sm font-semibold">An open bus run needs Office attention.</p>
+              <p className="mt-1 text-xs">Close it only after checking with the driver. The record will stay in History.</p>
               <ul className="mt-2 space-y-1">
                 {staleTrips.map((trip) => {
                   const route = routeForTrip(routeById.get(trip.routeId), trip);
@@ -127,7 +134,7 @@ export function OfficeTransportHistory({
                     <li key={trip.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
                       <span>{route ? routeLabel(route) : 'Bus route'} · {BUS_RUN_LABEL[trip.run]} · {trip.date}</span>
                       <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" disabled={closingId === trip.id} onClick={() => void closeStaleRun(trip)}>
-                        {closingId === trip.id ? 'Closing…' : 'Close older run'}
+                        {closingId === trip.id ? 'Closing…' : trip.date === today ? 'Close open run' : 'Close older run'}
                       </Button>
                     </li>
                   );

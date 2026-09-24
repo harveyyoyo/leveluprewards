@@ -4,7 +4,7 @@ import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firesto
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
-import { familyUpdateMessage, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, routeSnapshotForRun, tripDocId } from '@/lib/office/officeTransport';
+import { familyUpdateMessage, isAbandonedRunCandidate, isFreshLocation, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, routeSnapshotForRun, tripDocId } from '@/lib/office/officeTransport';
 import { queueOfficeArrivalNotifications, type ArrivalNotificationStatus } from '@/lib/server/officeArrivalNotifications';
 import { officeArrivalEventId } from '@/lib/server/officeArrivalEvent';
 import { getTransportSchoolTimeZone, transportSchoolToday } from '@/lib/server/transportSchoolTime';
@@ -946,18 +946,32 @@ async function closeStaleTrip(auth: AuthContext, schoolId: string, body: Body): 
     throw new AuthError('Ask another School Office staff member to close your old run.', 403);
   }
   const timeZone = await getTransportSchoolTimeZone(auth.db, schoolId);
-  const today = transportSchoolToday(Date.now(), timeZone);
-  if (trip.date >= today) {
-    throw new AuthError('Only a run from an earlier school day can be closed this way. End today’s run from the driver screen.', 409);
+  const now = Date.now();
+  const today = transportSchoolToday(now, timeZone);
+  const sameDay = body.sameDay === true;
+  if (trip.date > today) {
+    throw new AuthError('A future bus run cannot be closed.', 409);
+  }
+  if (trip.date === today) {
+    if (!sameDay || body.confirmed !== true) {
+      throw new AuthError('Today’s run can only be closed after Office confirms that no fresh bus update has arrived.', 409);
+    }
+    if (!isAbandonedRunCandidate(trip, now)) {
+      throw new AuthError('This run is still receiving fresh information or has not been open long enough. Ask the driver to finish it from the driver screen.', 409);
+    }
+  }
+  if (isFreshLocation(trip.location, now)) {
+    throw new AuthError('This bus is still sending fresh location updates. Do not close it from Office yet.', 409);
   }
   const reason = optionalString(body.reason, 'Reason', 300);
-  if (!reason) throw new Error('Add a reason before closing the older run.');
-  const now = Date.now();
+  if (!reason) throw new Error('Add a reason before closing the run.');
   const ref = tripRef(auth.db, schoolId, tripId);
   await auth.db.runTransaction(async (transaction) => {
     const fresh = await transaction.get(ref);
     const current = fresh.data() as OfficeBusTrip | undefined;
     if (!current || current.status !== 'active') throw new AuthError('That bus run is already closed.', 409);
+    if (sameDay && !isAbandonedRunCandidate(current, now)) throw new AuthError('This run is still receiving fresh information or has not been open long enough. Ask the driver to finish it from the driver screen.', 409);
+    if (isFreshLocation(current.location, now)) throw new AuthError('This bus is still sending fresh location updates. Do not close it from Office yet.', 409);
     const routeLockRef = routeRef(auth.db, schoolId, current.routeId);
     const routeLockSnap = await transaction.get(routeLockRef);
     const lockedTripId = typeof routeLockSnap.data()?.activeTripId === 'string' ? routeLockSnap.data()?.activeTripId : null;
@@ -986,7 +1000,7 @@ async function closeStaleTrip(auth: AuthContext, schoolId: string, body: Body): 
     entityType: 'officeBusTrip',
     entityId: tripId,
     action: 'update',
-    summary: 'School Office closed an older run left open',
+    summary: sameDay ? 'School Office closed an abandoned same-day run' : 'School Office closed an older run left open',
     after: { reason, closedAt: now },
     changedBy: auth.uid,
   });

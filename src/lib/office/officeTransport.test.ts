@@ -4,6 +4,7 @@ import {
   exampleRoutes,
   familyUpdateMessage,
   gpsMissedStopWarning,
+  isAbandonedRunCandidate,
   isFreshLocation,
   latestMaintenanceLabel,
   latestTripForRoute,
@@ -155,6 +156,13 @@ describe('officeTransport', () => {
     expect(minutesLate(route, trip({ location: { lat: 40.72, lng: -74.32, at: at(7, 0) } }), at(7, 30))).toBeNull();
     expect(isFreshLocation({ at: at(7, 40) }, at(7, 30))).toBe(false);
     expect(minutesLate(route, trip({ location: { lat: 40.72, lng: -74.32, at: at(7, 40) } }), at(7, 30))).toBeNull();
+  });
+
+  it('marks only old runs without a fresh update for Office review', () => {
+    expect(isAbandonedRunCandidate({ status: 'active', startedAt: at(7, 0), location: null }, at(7, 29))).toBe(false);
+    expect(isAbandonedRunCandidate({ status: 'active', startedAt: at(7, 0), location: null }, at(7, 30))).toBe(true);
+    expect(isAbandonedRunCandidate({ status: 'active', startedAt: at(7, 0), location: { lat: 40.72, lng: -74.32, at: at(7, 29) } }, at(7, 30))).toBe(false);
+    expect(isAbandonedRunCandidate({ status: 'done', startedAt: at(7, 0), location: null }, at(7, 30))).toBe(false);
   });
 
   it('creates a safe phone status message without exposing coordinates', () => {
