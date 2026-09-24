@@ -129,6 +129,12 @@ export function ClassroomLiveHoverSidebar({
               setIconOnly(true);
             }
           }}
+          style={{
+            backgroundColor: 'var(--theme-sidebar-bg, undefined)',
+            borderRight: 'var(--theme-sidebar-border, undefined)',
+            color: 'var(--theme-sidebar-text, inherit)',
+            fontFamily: 'var(--theme-font-body, inherit)',
+          }}
           className={cn(
             classroomControlsBarClass(design),
             classroomSidebarRailClass(design),

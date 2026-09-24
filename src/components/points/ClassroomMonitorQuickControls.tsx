@@ -66,7 +66,11 @@ function monitorSelectTriggerLook(
       isFullscreen && 'px-2 py-1.5 text-xs',
       look.className,
     ),
-    style: look.style,
+    style: {
+      ...look.style,
+      borderRadius: 'var(--theme-card-radius, undefined)',
+      fontFamily: 'var(--theme-font-heading, inherit)',
+    },
     ink: look.ink,
   };
 }
@@ -101,7 +105,10 @@ function CollapsedToolIcon({
         visible: { opacity: 1, scale: 1, transition: spring },
       }}
       data-look={design}
-      style={look.style}
+      style={{
+        ...look.style,
+        borderRadius: 'var(--theme-card-radius, undefined)',
+      }}
       className={cn(
         'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm shadow-black/15',
         look.className,

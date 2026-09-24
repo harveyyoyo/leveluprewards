@@ -28,6 +28,12 @@ import { classroomHref, classroomPortalHomeHref } from '@/lib/classroomRealmUrl'
 import { pickClassroomActiveClass, rememberClassroomActiveClass } from '@/lib/classroom/classroomActiveClass';
 import { teacherWithBudgetAfterSpend } from '@/lib/teacherBudget';
 import { useClassroomIdleExit } from '@/hooks/useClassroomIdleExit';
+import { loadClassroomPrefs } from '@/lib/classroomSeatingChart';
+import {
+  buildThemeKitCssProperties,
+  buildThemeGoogleFontsUrl,
+} from '@/lib/classroom/classroomThemeKitStyles';
+import { cn } from '@/lib/utils';
 
 const spring = { type: 'spring' as const, stiffness: 280, damping: 28 };
 
@@ -66,6 +72,23 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   const [liveHeaderControls, setLiveHeaderControls] = useState<ClassroomLiveHeaderControls | null>(
     null,
   );
+
+  const initialPrefs = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return loadClassroomPrefs(schoolId, storageScope);
+  }, [schoolId, storageScope]);
+
+  const currentPrefs = liveHeaderControls?.appearance?.prefs ?? initialPrefs;
+  const activeThemeKitSlug = currentPrefs?.themeKitSlug;
+  const activeThemeKitSettings = currentPrefs?.themeKitSettings;
+
+  const themeVariables = useMemo(() => {
+    return buildThemeKitCssProperties(activeThemeKitSlug, activeThemeKitSettings);
+  }, [activeThemeKitSlug, activeThemeKitSettings]);
+
+  const googleFontsUrl = useMemo(() => {
+    return buildThemeGoogleFontsUrl(activeThemeKitSlug, activeThemeKitSettings);
+  }, [activeThemeKitSlug, activeThemeKitSettings]);
 
   const categories = useMemo(
     () =>
@@ -211,12 +234,22 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={spring}
-      className="classroom-realm-root classroom-realm-manage classroom-readable fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
-      style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+      className={cn(
+        'classroom-realm-root classroom-realm-manage classroom-readable fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden',
+        activeThemeKitSettings?.darkMode && 'dark',
+      )}
+      style={{
+        backgroundColor: 'var(--theme-canvas-bg, var(--cr-base, #102016))',
+        ...themeVariables,
+      }}
     >
+      {googleFontsUrl ? <link rel="stylesheet" href={googleFontsUrl} /> : null}
       <div
         className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden"
-        style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+        style={{
+          backgroundColor: 'var(--theme-canvas-bg, var(--cr-base, #102016))',
+          backgroundImage: 'var(--theme-canvas-pattern, none)',
+        }}
       >
         {!isStudentAudience && !liveHeaderControls?.arranging ? (
           <ClassroomLiveTeachChrome

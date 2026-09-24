@@ -426,8 +426,8 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
             ? { scale: 0.98, transition: tokenSpring }
             : undefined
         }
-        style={
-          tokenLook && hasStudent
+        style={{
+          ...(tokenLook && hasStudent
             ? attendanceDropped
               ? {
                   ...classroomTokenDeskStyle(visualColIndex),
@@ -435,8 +435,16 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
                   borderColor: 'rgba(15, 23, 42, 0.28)',
                 }
               : classroomTokenDeskStyle(visualColIndex)
-            : undefined
-        }
+            : undefined),
+          ...(hasStudent
+            ? {
+                backgroundColor: 'var(--theme-card-bg, undefined)',
+                borderColor: 'var(--theme-card-border, undefined)',
+                boxShadow: 'var(--theme-card-shadow, undefined)',
+                borderRadius: 'var(--theme-card-radius, undefined)',
+              }
+            : undefined),
+        }}
         aria-busy={isAwarding || undefined}
         className={cn(
           'absolute inset-0 h-full w-full',

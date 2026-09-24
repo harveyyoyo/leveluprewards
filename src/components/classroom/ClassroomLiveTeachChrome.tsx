@@ -110,7 +110,16 @@ export function ClassroomLiveTeachChrome({
         hidden: { opacity: 0, y: -10 },
         visible: { opacity: 1, y: 0, transition: { ...spring, staggerChildren: 0.05 } },
       }}
-      className="relative z-20 flex min-h-[68px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 overflow-hidden border-b border-white/10 bg-gradient-to-r from-[#0b1424] via-[#121a32] to-[#0c1528] px-3 py-2"
+      style={{
+        backgroundColor: 'var(--theme-header-bg, undefined)',
+        borderColor: 'var(--theme-header-border, undefined)',
+        color: 'var(--theme-header-text, undefined)',
+        fontFamily: 'var(--theme-font-heading, inherit)',
+      }}
+      className={cn(
+        'relative z-20 flex min-h-[68px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 overflow-hidden border-b border-white/10 px-3 py-2',
+        !headerControls?.appearance?.prefs?.themeKitSlug && 'bg-gradient-to-r from-[#0b1424] via-[#121a32] to-[#0c1528]',
+      )}
     >
       <motion.div
         variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: spring } }}
@@ -129,6 +138,7 @@ export function ClassroomLiveTeachChrome({
             <PopoverTrigger asChild>
               <button
                 type="button"
+                style={{ fontFamily: 'var(--theme-font-heading, inherit)' }}
                 className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 text-sm font-black text-white"
                 aria-label="Switch class"
               >
@@ -230,6 +240,7 @@ export function ClassroomLiveTeachChrome({
         className="flex shrink-0 items-center justify-end gap-2"
       >
         <span
+          style={{ fontFamily: 'var(--theme-font-heading, inherit)' }}
           className={cn(
             headerChipInk,
             'inline-flex h-8 shrink-0 items-center rounded-full border border-amber-400 bg-amber-100 px-3 py-1.5 text-xs font-bold tabular-nums tracking-normal',

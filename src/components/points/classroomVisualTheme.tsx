@@ -233,7 +233,7 @@ function DeskAvatar({
     );
   }
   return (
-    <div className={shell} style={tokenRingStyle}>
+    <div className={shell} style={{ ...tokenRingStyle, fontFamily: 'var(--theme-font-heading, inherit)' }}>
       {initials}
     </div>
   );
@@ -262,7 +262,11 @@ function DeskPointsPill({ points, compact = false }: { points: number; compact?:
         'classroom-on-dark shrink-0 rounded-full px-2 py-0.5 font-black tabular-nums tracking-normal !text-white',
         compact ? 'text-[9px]' : 'text-[10px] sm:text-xs',
       )}
-      style={{ backgroundColor: '#0F172A', color: '#fff' }}
+      style={{
+        backgroundColor: 'var(--theme-header-bg, #0F172A)',
+        color: '#fff',
+        fontFamily: 'var(--theme-font-body, inherit)',
+      }}
     >
       {points.toLocaleString()} pts
     </div>
@@ -297,7 +301,14 @@ function DeskInner({
       visualScale={visualScale}
     />
   );
-  const nameEl = showName && !hideName ? <div className={deskNameClass(design, visualScale)}>{name}</div> : null;
+  const nameEl = showName && !hideName ? (
+    <div
+      style={{ fontFamily: 'var(--theme-font-heading, inherit)' }}
+      className={deskNameClass(design, visualScale)}
+    >
+      {name}
+    </div>
+  ) : null;
 
   if (design === 'minimal') {
     return (
@@ -640,12 +651,24 @@ export function ClassroomTeacherDesk({
   }
   if (design === 'playful') {
     return wrap(
-      <div className="flex items-center justify-center gap-3 rounded-3xl border-2 border-white bg-white px-5 py-2.5 shadow-lg">
+      <div
+        className="flex items-center justify-center gap-3 rounded-3xl border-2 border-white bg-white px-5 py-2.5 shadow-lg"
+        style={{
+          backgroundColor: 'var(--theme-teacher-desk-bg, undefined)',
+          color: 'var(--theme-teacher-desk-text, undefined)',
+          border: 'var(--theme-card-border, undefined)',
+          boxShadow: 'var(--theme-card-shadow, undefined)',
+          borderRadius: 'var(--theme-card-radius, undefined)',
+          fontFamily: 'var(--theme-font-heading, inherit)',
+        }}
+      >
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md">
           <Monitor className="h-5 w-5" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold !text-foreground">Teacher desk</p>
+          <p className="text-sm font-bold !text-foreground" style={{ color: 'var(--theme-teacher-desk-text, inherit)' }}>
+            Teacher desk
+          </p>
           {hintEl}
         </div>
       </div>,

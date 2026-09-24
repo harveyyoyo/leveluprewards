@@ -190,6 +190,10 @@ import { isClassroomNoteShortcutKey } from '@/lib/classroom/classroomNoteShortcu
 import { isClassroomRaffleSectionVisible } from '@/lib/classroom/classroomTabSections';
 import { isClassroomTokenDesign } from '@/lib/classroom/classroomTokenTheme';
 import {
+  buildThemeKitCssProperties,
+  buildThemeGoogleFontsUrl,
+} from '@/lib/classroom/classroomThemeKitStyles';
+import {
   buildClassroomRandomPickSequence,
   classroomRandomPickStepDelayMs,
 } from '@/lib/classroom/classroomRandomPick';
@@ -644,36 +648,14 @@ function ClassroomPointsPanelInner({
   );
 
   const themeKitStyle = useMemo(() => {
-    const s = prefs.themeKitSettings;
-    if (!s) return undefined;
-    const style: React.CSSProperties = {};
-    if (s.bodyFont && s.bodyFont !== 'Theme default') {
-      style.fontFamily = `'${s.bodyFont}', sans-serif`;
-    }
-    const filterParts: string[] = [];
-    if (s.darkMode) {
-      const totalHue = (180 + (s.hue || 0)) % 360;
-      filterParts.push(`invert(0.92) hue-rotate(${totalHue}deg) saturate(${Math.round((s.vivid || 100) * 1.05)}%)`);
-    } else if (s.hue !== 0 || s.vivid !== 100) {
-      if (s.hue) filterParts.push(`hue-rotate(${s.hue}deg)`);
-      if (s.vivid && s.vivid !== 100) filterParts.push(`saturate(${s.vivid}%)`);
-    }
-    if (filterParts.length > 0) {
-      style.filter = filterParts.join(' ');
-    }
-    return Object.keys(style).length > 0 ? style : undefined;
-  }, [prefs.themeKitSettings]);
+    return buildThemeKitCssProperties(prefs.themeKitSlug, prefs.themeKitSettings);
+  }, [prefs.themeKitSlug, prefs.themeKitSettings]);
 
   const customFontLink = useMemo(() => {
-    const s = prefs.themeKitSettings;
-    if (!s) return null;
-    const fonts = [s.headingFont, s.bodyFont].filter((f) => f && f !== 'Theme default');
-    if (!fonts.length) return null;
-    const href = `https://fonts.googleapis.com/css2?${fonts
-      .map((f) => `family=${f.replaceAll(' ', '+')}:wght@400;600;700`)
-      .join('&')}&display=swap`;
-    return <link rel="stylesheet" href={href} />;
-  }, [prefs.themeKitSettings]);
+    const url = buildThemeGoogleFontsUrl(prefs.themeKitSlug, prefs.themeKitSettings);
+    if (!url) return null;
+    return <link rel="stylesheet" href={url} />;
+  }, [prefs.themeKitSlug, prefs.themeKitSettings]);
 
   const studentById = useMemo(() => {
     const map = new Map<string, Student>();
@@ -2508,12 +2490,17 @@ function ClassroomPointsPanelInner({
 
   return (
     <div
-      style={themeKitStyle}
+      style={{
+        ...themeKitStyle,
+        backgroundColor: 'var(--theme-canvas-bg, undefined)',
+        backgroundImage: 'var(--theme-canvas-pattern, undefined)',
+        filter: 'var(--theme-filter, undefined)',
+      }}
       className={cn(
         'classroom-native-colors classroom-readable',
         prefs.themeKitSettings?.darkMode && 'dark',
         design !== 'midnight' && !prefs.themeKitSettings?.darkMode && 'text-foreground',
-        classroomDesignShellClass(design, isFullscreen),
+        !prefs.themeKitSlug && classroomDesignShellClass(design, isFullscreen),
         isFullscreen && 'h-full min-h-0 w-full gap-0 p-0',
         !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-1 flex-col',
       )}
