@@ -1,0 +1,49 @@
+export type TransportParentBus = {
+  routeId: string;
+  busLabel: string;
+  run: 'am' | 'pm' | null;
+  state: 'not_started' | 'on_way' | 'delayed' | 'arrived' | 'ended' | 'unavailable';
+  message: string;
+  nextStopName: string | null;
+  etaMinutes: number | null;
+  lastUpdateAt: number | null;
+  stale: boolean;
+};
+
+export type TransportParentStatus = {
+  familyName: string;
+  buses: TransportParentBus[];
+  checkedAt: number;
+};
+
+async function readJson<T>(response: Response): Promise<T> {
+  const data = (await response.json().catch(() => ({}))) as T & { error?: string };
+  if (!response.ok) throw new Error(data.error || 'Private bus status is temporarily unavailable.');
+  return data;
+}
+
+export async function signInTransportParent(schoolId: string, code: string) {
+  const response = await fetch('/api/office/transport/parent-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ schoolId, code: code.trim() }),
+  });
+  return readJson<{ ok: boolean; expiresAt: number }>(response);
+}
+
+export async function fetchTransportParentStatus(schoolId: string) {
+  const response = await fetch(`/api/office/transport/parent-status?schoolId=${encodeURIComponent(schoolId)}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+  return readJson<TransportParentStatus>(response);
+}
+
+export async function signOutTransportParent() {
+  const response = await fetch('/api/office/transport/parent-session', {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  });
+  return readJson<{ ok: boolean }>(response);
+}

@@ -51,9 +51,14 @@ export default function ParentPortalPage() {
           </p>
         </div>
         {schoolId ? (
-          <Button asChild variant="outline">
-            <Link href={`/${schoolId}/portal`}>{t('parent.portal.backToPortal')}</Link>
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/${schoolId}/portal`}>{t('parent.portal.backToPortal')}</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href={`/${schoolId}/parent/bus`}>Private family bus status</Link>
+            </Button>
+          </div>
         ) : null}
       </div>
     );
@@ -79,6 +84,11 @@ export default function ParentPortalPage() {
           }}
         />
       )}
+      {schoolId ? (
+        <Button asChild variant="link" className="text-sm text-muted-foreground">
+          <Link href={`/${schoolId}/parent/bus`}>Need the private family bus status?</Link>
+        </Button>
+      ) : null}
     </div>
   );
 }
