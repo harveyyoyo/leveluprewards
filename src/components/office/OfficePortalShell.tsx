@@ -15,7 +15,7 @@ import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
-import { useApplyOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
+import { useApplyOfficeAppearance, useApplyOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
 import { OfficeAssistant } from '@/components/office/OfficeAiHelpButton';
 import { OfficeHeaderAskBox } from '@/components/office/OfficeHomeAskBox';
 import {
@@ -49,6 +49,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   // Sign out sits behind the person's name so it isn't clicked by accident.
   const [accountOpen, setAccountOpen] = useState(false);
   useApplyOfficeColorTheme();
+  useApplyOfficeAppearance();
 
   const displaySchool = schoolName?.trim() || schoolId;
   const { settings, marksLabels } = useOfficePortalChrome();

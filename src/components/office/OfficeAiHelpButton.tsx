@@ -272,7 +272,7 @@ export function OfficeAssistant() {
   const headerSpot = headerBoxShown ? headerSpotRaw : null;
   const spot = homeSpot ?? headerSpot;
 
-  // The answer follows its own buttons ("See in app", "Take me there") to the next page, but
+  // The answer follows "Take me there" to the next page, but
   // closes when you go somewhere else, so an old answer doesn't drop down over every page.
   const pathname = usePathname();
   const followNextPage = useRef(false);
@@ -362,9 +362,11 @@ export function OfficeAssistant() {
         ids: studentIds.join(','),
         askAt: String(Date.now()),
       });
-      goFromAnswer(`${officePublicHref(schoolId, 'students')}?${params.toString()}`);
+      // The list is the answer now, so the answer box gets out of the way.
+      setOpen(false);
+      router.push(`${officePublicHref(schoolId, 'students')}?${params.toString()}`);
     },
-    [goFromAnswer, schoolId],
+    [router, schoolId],
   );
 
   const showAgain = useCallback(
@@ -379,9 +381,11 @@ export function OfficeAssistant() {
         ),
       );
       stopWaitingLater(askAt);
-      goFromAnswer(href);
+      // "See in app": the list is on screen now, so the answer box closes.
+      setOpen(false);
+      router.push(href);
     },
-    [messages, goFromAnswer, stopWaitingLater],
+    [messages, router, stopWaitingLater],
   );
 
   /** Answers a question from the Home page's ask box. */

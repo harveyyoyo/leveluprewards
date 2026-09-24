@@ -193,6 +193,28 @@ html[data-office-portal] .office-content-pane {
   box-sizing: border-box;
 }
 
+/*
+ * School Office dark mode (Customize → Light or dark). The school's color scheme sets light-mode
+ * text and surfaces on the page and would win over plain `.dark`, leaving dark text on dark
+ * screens, so the office sets the dark ones itself.
+ */
+html[data-office-portal].dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 33% 22%;
+  --accent-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+}
+
 /* School Office color themes (Customize): swap the accent color and the side menu. */
 html[data-office-portal][data-office-theme="blue"] {
   --office-accent-50: 239 246 255;

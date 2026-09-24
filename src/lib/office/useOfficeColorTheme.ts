@@ -79,3 +79,82 @@ export function useApplyOfficeColorTheme() {
     };
   }, [theme]);
 }
+
+/** Light or dark screens in the School Office, a personal choice on this device (Customize). */
+export const OFFICE_APPEARANCES = [
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'device', label: 'Match this computer' },
+] as const;
+
+export type OfficeAppearance = (typeof OFFICE_APPEARANCES)[number]['id'];
+
+const APPEARANCE_KEY = 'school-office-appearance';
+const APPEARANCE_EVENT = 'school-office-appearance-change';
+const DARK_MEDIA = '(prefers-color-scheme: dark)';
+
+/** Null until someone picks one: the office then keeps the look the rest of the app gives it. */
+function readStoredAppearance(): OfficeAppearance | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage.getItem(APPEARANCE_KEY);
+    return OFFICE_APPEARANCES.some((a) => a.id === stored) ? (stored as OfficeAppearance) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function useOfficeAppearance() {
+  const [appearance, setAppearanceState] = useState<OfficeAppearance | null>(readStoredAppearance);
+
+  useEffect(() => {
+    setAppearanceState(readStoredAppearance());
+    const onChange = () => setAppearanceState(readStoredAppearance());
+    window.addEventListener(APPEARANCE_EVENT, onChange);
+    window.addEventListener('storage', onChange);
+    return () => {
+      window.removeEventListener(APPEARANCE_EVENT, onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, []);
+
+  const setAppearance = useCallback((next: OfficeAppearance) => {
+    setAppearanceState(next);
+    try {
+      window.localStorage.setItem(APPEARANCE_KEY, next);
+    } catch {
+      // Storage can be blocked (private mode); the choice then lasts for this page only.
+    }
+    window.dispatchEvent(new Event(APPEARANCE_EVENT));
+  }, []);
+
+  return { appearance, setAppearance };
+}
+
+/**
+ * Page frame: makes the office light or dark while it's open. The rest of the app also sets the
+ * page's dark mode (from school settings), so the choice is kept applied if that changes it, and
+ * the page is put back as it was when the office closes.
+ */
+export function useApplyOfficeAppearance() {
+  const { appearance } = useOfficeAppearance();
+  useLayoutEffect(() => {
+    if (!appearance) return;
+    const root = document.documentElement;
+    const hadDark = root.classList.contains('dark');
+    const media = window.matchMedia(DARK_MEDIA);
+    const wantDark = () => appearance === 'dark' || (appearance === 'device' && media.matches);
+    const apply = () => {
+      if (root.classList.contains('dark') !== wantDark()) root.classList.toggle('dark', wantDark());
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    media.addEventListener('change', apply);
+    return () => {
+      observer.disconnect();
+      media.removeEventListener('change', apply);
+      root.classList.toggle('dark', hadDark);
+    };
+  }, [appearance]);
+}

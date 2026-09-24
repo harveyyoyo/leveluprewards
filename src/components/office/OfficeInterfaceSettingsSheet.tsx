@@ -12,7 +12,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
-import { OFFICE_COLOR_THEMES, useOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
+import { OFFICE_APPEARANCES, OFFICE_COLOR_THEMES, useOfficeAppearance, useOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
 import { cn } from '@/lib/utils';
 import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
 import { getOfficeNavItems } from '@/lib/office/officeNav';
@@ -29,6 +29,7 @@ export function OfficeInterfaceSettingsSheet({ schoolId }: OfficeInterfaceSettin
   const [open, setOpen] = useState(false);
   const { isWide, setLayoutMode } = useOfficeLayoutMode();
   const { theme, setTheme } = useOfficeColorTheme();
+  const { appearance, setAppearance } = useOfficeAppearance();
   const { settings } = useOfficePortalChrome();
   const { hidden, setSectionHidden } = useOfficeHiddenSections();
   const menuSections = getOfficeNavItems(settings).filter((item) => item.id !== 'home');
@@ -78,6 +79,31 @@ export function OfficeInterfaceSettingsSheet({ schoolId }: OfficeInterfaceSettin
                     {t.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border p-4">
+              <p className="text-sm font-semibold">Light or dark</p>
+              <p className="text-xs text-muted-foreground">Dark screens are easier on the eyes in a dim room.</p>
+              <div className="mt-3 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Light or dark">
+                {OFFICE_APPEARANCES.map((a) => {
+                  const selected = (appearance ?? 'light') === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setAppearance(a.id)}
+                      className={cn(
+                        'rounded-xl px-2 py-2 text-xs font-medium ring-1 transition-colors',
+                        selected ? 'ring-2 ring-slate-900 dark:ring-white' : 'ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800',
+                      )}
+                    >
+                      {a.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
