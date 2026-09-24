@@ -5,6 +5,7 @@ import {
   latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
+  missingReleaseStudentIds,
   nextStop,
   orderedStops,
   pointAlongStops,
@@ -137,6 +138,15 @@ describe('officeTransport', () => {
     expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
   });
 
+  it('finds riders who are off without a release record', () => {
+    const recorded = trip({
+      riderSnapshot: ['kid1', 'kid2', 'kid3'],
+      riders: { kid1: { status: 'off', at: 1 }, kid2: { status: 'off', at: 2 }, kid3: { status: 'absent', at: 3 } },
+      releases: { kid1: { studentId: 'kid1', contactName: 'Mom', method: 'authorized_contact', occurredAt: 4, by: 'driver' } },
+    });
+    expect(missingReleaseStudentIds(recorded)).toEqual(['kid2']);
+  });
+
   it('moves a practice bus along the stops', () => {
     const pts = route.stops;
     expect(pointAlongStops(pts, 0)).toMatchObject({ lat: pts[0].lat, lng: pts[0].lng });
@@ -206,8 +216,8 @@ describe('officeTransport', () => {
     expect(transportFamilyEmails(students, families, 'r1', { riderSnapshot: [], riderManifest: [] })).toEqual([]);
   });
 
-  it('keeps the route family alert choice for the active trip view', () => {
-    expect(routeForTrip({ ...route, notifyFamiliesOnAlert: true }, trip())).toMatchObject({ notifyFamiliesOnAlert: true });
+  it('keeps route safety choices for the active trip view', () => {
+    expect(routeForTrip({ ...route, notifyFamiliesOnAlert: true, requireReleaseConfirmations: true }, trip())).toMatchObject({ notifyFamiliesOnAlert: true, requireReleaseConfirmations: true });
   });
 
   it('uses the route saved with a trip for past history', () => {

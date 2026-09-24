@@ -3,7 +3,7 @@ import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firesto
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
-import { familyUpdateMessage, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, tripDocId } from '@/lib/office/officeTransport';
+import { familyUpdateMessage, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, tripDocId } from '@/lib/office/officeTransport';
 import type {
   OfficeBusEvent,
   OfficeBusLocation,
@@ -126,6 +126,7 @@ function assertRoute(route: OfficeBusRoute): void {
     throw new Error('Bus capacity is invalid.');
   }
   if (route.notifyFamiliesOnAlert != null && typeof route.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
+  if (route.requireReleaseConfirmations != null && typeof route.requireReleaseConfirmations !== 'boolean') throw new Error('Release confirmation choice is invalid.');
   assertVehicle(route.vehicle);
   if (!Array.isArray(route.stops) || route.stops.length > MAX_STOPS) throw new Error('This route has too many stops.');
   const ids = new Set<string>();
@@ -716,6 +717,12 @@ async function endTrip(auth: AuthContext, schoolId: string, body: Body): Promise
     return status !== 'off' && status !== 'absent';
   });
   if (unresolved.length > 0) throw new Error('Mark every rider off or not here before ending the run.');
+  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? (routeSnap.data() as OfficeBusRoute) : undefined;
+  if (currentRoute?.requireReleaseConfirmations === true) {
+    const missingReleases = missingReleaseStudentIds(trip);
+    if (missingReleases.length > 0) throw new Error(`Record who received ${missingReleases.length} rider${missingReleases.length === 1 ? '' : 's'} before ending the run.`);
+  }
   const now = Date.now();
   await tripRef(auth.db, schoolId, tripId).update({ status: 'done', endedAt: now, childCheckDone: true, updatedAt: now });
   await audit(auth.db, schoolId, { entityType: 'officeBusTrip', entityId: tripId, action: 'update', summary: `Finished the ${trip.run} run · bus checked`, changedBy: auth.uid });

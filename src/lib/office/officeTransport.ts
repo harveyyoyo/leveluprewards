@@ -372,6 +372,7 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     capacity: route?.capacity ?? null,
     vehicle: snapshot.vehicle ?? route?.vehicle ?? null,
     notifyFamiliesOnAlert: route?.notifyFamiliesOnAlert === true,
+    requireReleaseConfirmations: route?.requireReleaseConfirmations === true,
     stops: snapshot.stops ?? [],
     notes: route?.notes ?? null,
     updatedAt: route?.updatedAt ?? trip.updatedAt,
@@ -383,6 +384,15 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
 
 export function riderNameForTrip(trip: OfficeBusTrip, studentId: string, currentNames: Map<string, string>): string {
   return trip.riderManifest?.find((entry) => entry.studentId === studentId)?.displayName || currentNames.get(studentId) || 'Former student';
+}
+
+export function missingReleaseStudentIds(trip: OfficeBusTrip): string[] {
+  const ids = new Set([
+    ...(trip.riderManifest?.map((entry) => entry.studentId) ?? []),
+    ...(trip.riderSnapshot ?? []),
+    ...Object.keys(trip.riders ?? {}),
+  ]);
+  return [...ids].filter((studentId) => trip.riders?.[studentId]?.status === 'off' && !trip.releases?.[studentId]);
 }
 
 export function ridersForRoute(students: OfficeStudent[], routeId: string): OfficeStudent[] {
@@ -528,6 +538,7 @@ export function exampleRoutes(school: LatLng): Array<Omit<OfficeBusRoute, 'id' |
     driverPhone: null,
     capacity: 48,
     notifyFamiliesOnAlert: false,
+    requireReleaseConfirmations: false,
     notes: null,
     stops: [
       ...points.map(([stopName, dLat, dLng], i) => ({

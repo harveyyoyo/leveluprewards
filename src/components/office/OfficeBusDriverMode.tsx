@@ -17,6 +17,7 @@ import {
   distanceMeters,
   formatDistance,
   localIsoDate,
+  missingReleaseStudentIds,
   nextStop,
   orderedStops,
   ridersForRoute,
@@ -500,10 +501,18 @@ function DrivingScreen({
   };
 
   const unresolved = riders.filter((k) => status[k.id]?.status !== 'off' && status[k.id]?.status !== 'absent');
+  const missingReleaseRiders = useMemo(() => {
+    const ids = new Set(missingReleaseStudentIds(trip));
+    return riders.filter((k) => ids.has(k.id));
+  }, [riders, trip]);
   const finish = async () => {
     if (!ensureOnline()) return;
     if (unresolved.length > 0) {
       toast({ variant: 'destructive', title: 'Some riders are not accounted for', description: 'Mark every rider off or not here before ending the run.' });
+      return;
+    }
+    if (activeRoute.requireReleaseConfirmations === true && missingReleaseRiders.length > 0) {
+      toast({ variant: 'destructive', title: 'Record each release first', description: `Use “Record who received them” for ${missingReleaseRiders.map((rider) => rider.displayName).join(', ')}.` });
       return;
     }
     if (!checked) {
@@ -733,7 +742,7 @@ function DrivingScreen({
             </details>
           ) : null}
 
-          <Button type="button" variant="destructive" className="h-12 w-full rounded-xl" disabled={readOnly || !isOnline} onClick={() => setEnding(true)}>
+          <Button type="button" variant="destructive" className="h-12 w-full rounded-xl" disabled={readOnly || !isOnline || (activeRoute.requireReleaseConfirmations === true && missingReleaseRiders.length > 0)} onClick={() => setEnding(true)}>
             End run
           </Button>
         </div>
@@ -800,6 +809,12 @@ function DrivingScreen({
               Not accounted for: {unresolved.map((rider) => rider.displayName).join(', ')}.
             </p>
           ) : null}
+          {activeRoute.requireReleaseConfirmations === true && missingReleaseRiders.length > 0 ? (
+            <p className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              Record who received: {missingReleaseRiders.map((rider) => rider.displayName).join(', ')}.
+            </p>
+          ) : null}
           <label className="flex items-start gap-3 rounded-xl border p-3 text-sm dark:border-slate-800">
             <Checkbox checked={checked} onCheckedChange={(c) => setChecked(c === true)} className="mt-0.5" />
             <span>
@@ -813,7 +828,7 @@ function DrivingScreen({
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => setEnding(false)}>
               Keep driving
             </Button>
-            <Button type="button" variant="destructive" className="rounded-xl" disabled={readOnly || !isOnline || !checked || unresolved.length > 0} onClick={() => void finish()}>
+            <Button type="button" variant="destructive" className="rounded-xl" disabled={readOnly || !isOnline || !checked || unresolved.length > 0 || (activeRoute.requireReleaseConfirmations === true && missingReleaseRiders.length > 0)} onClick={() => void finish()}>
               End run
             </Button>
           </DialogFooter>

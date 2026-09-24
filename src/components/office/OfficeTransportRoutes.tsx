@@ -171,6 +171,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
                     {lastService ? <span className="mt-1 block text-xs text-muted-foreground">Last service: {lastService}</span> : null}
                     {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
+                    {route.requireReleaseConfirmations ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Release check required</span> : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
                         {riders} rider{riders === 1 ? '' : 's'}
@@ -256,6 +257,7 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     capacity: null,
     vehicle: {},
     notifyFamiliesOnAlert: false,
+    requireReleaseConfirmations: false,
     stops: [],
     notes: '',
   };
@@ -749,6 +751,22 @@ function OfficeBusRouteSheet({
                 <span className="block text-sm font-medium">Email families when the driver reports a problem</span>
                 <span className="mt-1 block text-xs text-muted-foreground">
                   Opted-in family contacts are added to the office mail queue. This is off by default.
+                </span>
+              </span>
+            </label>
+          </section>
+
+          <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={draft.requireReleaseConfirmations === true}
+                onCheckedChange={(checked) => patch({ requireReleaseConfirmations: checked === true })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Require a release check before ending each run</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Every child marked off must have a recorded pickup or release. This is off by default.
                 </span>
               </span>
             </label>

@@ -965,10 +965,11 @@ function assertValidVehicle(vehicle: OfficeBusVehicleDetails | null | undefined)
   }
 }
 
-function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'notifyFamiliesOnAlert' | 'stops'>): void {
+function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'notifyFamiliesOnAlert' | 'requireReleaseConfirmations' | 'stops'>): void {
   if (!data.name.trim() || data.name.trim().length > 100) throw new Error('Give the route a name under 100 characters.');
   if (!/^#[0-9a-f]{6}$/i.test(data.color)) throw new Error('Choose a valid route color.');
   if (data.notifyFamiliesOnAlert != null && typeof data.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
+  if (data.requireReleaseConfirmations != null && typeof data.requireReleaseConfirmations !== 'boolean') throw new Error('Release confirmation choice is invalid.');
   if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1 || data.capacity > 200)) {
     throw new Error('Bus capacity must be between 1 and 200.');
   }
