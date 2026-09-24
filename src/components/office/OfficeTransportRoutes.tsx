@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Building2, Copy, Download, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Building2, Copy, Download, MapPin, Plus, Route as RouteIcon, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -59,7 +59,13 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
   const [openId, setOpenId] = useState<string | 'new' | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingSchool, setEditingSchool] = useState(false);
+  const [search, setSearch] = useState('');
   const isDemoSchool = isPublicSampleSchoolId(schoolId);
+  const visibleRoutes = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return routes;
+    return routes.filter((route) => [route.name, route.busNumber, route.driverName, vehicleLabel(route.vehicle)].filter(Boolean).join(' ').toLowerCase().includes(query));
+  }, [routes, search]);
 
   const saveSchool = async (place: LatLng & { label: string }) => {
     if (!firestore) return;
@@ -135,13 +141,18 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
         />
       ) : (
         <>
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <div className="relative sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a route, bus, or driver" className="rounded-xl pl-9" aria-label="Find a route" />
+            </div>
             <Button type="button" className="gap-2 rounded-xl" onClick={() => setOpenId('new')}>
               <Plus className="h-4 w-4" /> New route
             </Button>
           </div>
+          {visibleRoutes.length === 0 ? <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No routes match “{search.trim()}”.</p> : null}
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {routes.map((route) => {
+            {visibleRoutes.map((route) => {
               const riders = ridersForRoute(students, route.id).length;
               const pct = route.capacity ? Math.min(100, Math.round((riders / route.capacity) * 100)) : null;
               const readiness = routeReadiness(route);
