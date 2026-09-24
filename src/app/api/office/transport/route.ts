@@ -3,7 +3,7 @@ import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firesto
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
-import { riderSnapshotFromStudents, tripDocId } from '@/lib/office/officeTransport';
+import { riderManifestFromStudents, riderSnapshotFromStudents, tripDocId } from '@/lib/office/officeTransport';
 import type {
   OfficeBusEvent,
   OfficeBusLocation,
@@ -241,9 +241,9 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
   }
 
   const ridersSnap = await auth.db.collection('schools').doc(schoolId).collection('officeStudents').where('busRouteId', '==', routeId).get();
-  const riderSnapshot = riderSnapshotFromStudents(
-    ridersSnap.docs.map((doc) => ({ ...(doc.data() as Pick<OfficeStudent, 'transportMode' | 'status' | 'archived'>), id: doc.id })),
-  );
+  const riderStudents = ridersSnap.docs.map((doc) => ({ ...(doc.data() as OfficeStudent), id: doc.id }));
+  const riderManifest = riderManifestFromStudents(riderStudents);
+  const riderSnapshot = riderSnapshotFromStudents(riderStudents);
   const now = Date.now();
   let tripId = baseId;
   let resumed = false;
@@ -309,6 +309,7 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
         routeId,
         routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, stops: route.stops },
         riderSnapshot,
+        riderManifest,
         date,
         run,
         status: 'active',

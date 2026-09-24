@@ -1,5 +1,6 @@
 import type {
   OfficeBusAlertKind,
+  OfficeBusRiderManifestEntry,
   OfficeBusRoute,
   OfficeBusRun,
   OfficeBusStop,
@@ -8,6 +9,7 @@ import type {
   OfficeTransportMode,
 } from '@/lib/office/types';
 import { scheduleMinutes } from '@/lib/office/officeSchedule';
+import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 
 export const TRANSPORT_MODE_LABEL: Record<OfficeTransportMode, string> = {
   bus: 'Bus',
@@ -256,6 +258,22 @@ function listNames(names: string[]): string {
   return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
 }
 
+export type RouteReadiness = {
+  ready: boolean;
+  hasPickupStop: boolean;
+  hasSchoolStop: boolean;
+  missing: string[];
+};
+
+/** The same basic readiness rule the trusted start endpoint enforces. */
+export function routeReadiness(route: Pick<OfficeBusRoute, 'stops'>): RouteReadiness {
+  const stops = route.stops ?? [];
+  const hasPickupStop = stops.some((stop) => !stop.isSchool);
+  const hasSchoolStop = stops.some((stop) => stop.isSchool);
+  const missing = [...(!hasPickupStop ? ['a student stop'] : []), ...(!hasSchoolStop ? ['the school stop'] : [])];
+  return { ready: missing.length === 0, hasPickupStop, hasSchoolStop, missing };
+}
+
 /** "Bus 4 · North" or just the route name. */
 export function routeLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): string {
   const bus = route.busNumber?.trim();
@@ -297,6 +315,10 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
   };
 }
 
+export function riderNameForTrip(trip: OfficeBusTrip, studentId: string, currentNames: Map<string, string>): string {
+  return trip.riderManifest?.find((entry) => entry.studentId === studentId)?.displayName || currentNames.get(studentId) || 'Former student';
+}
+
 export function ridersForRoute(students: OfficeStudent[], routeId: string): OfficeStudent[] {
   return students.filter((s) => s.transportMode === 'bus' && s.busRouteId === routeId && (s.status ?? 'active') === 'active');
 }
@@ -310,6 +332,23 @@ export function riderSnapshotFromStudents(
     .map((student) => student.id)
     .filter(Boolean)
     .sort();
+}
+
+/** Captures the names and stops a driver saw when the run began. */
+export function riderManifestFromStudents(
+  students: Array<
+    Pick<OfficeStudent, 'id' | 'firstName' | 'lastName' | 'nickname' | 'familyId' | 'busStopId' | 'transportMode' | 'status' | 'archived'>
+  >,
+): OfficeBusRiderManifestEntry[] {
+  return students
+    .filter((student) => student.transportMode === 'bus' && (student.status ?? 'active') === 'active' && student.archived !== true)
+    .map((student) => ({
+      studentId: student.id,
+      displayName: getOfficeStudentFullName(student) || 'Student',
+      familyId: student.familyId ?? null,
+      busStopId: student.busStopId ?? null,
+    }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { numeric: true }) || a.studentId.localeCompare(b.studentId));
 }
 
 /** Short "about 20 sec ago" for the last location. */

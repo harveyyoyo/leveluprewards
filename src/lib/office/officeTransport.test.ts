@@ -7,8 +7,11 @@ import {
   nextStop,
   orderedStops,
   pointAlongStops,
+  riderManifestFromStudents,
+  riderNameForTrip,
   riderSnapshotFromStudents,
   routeForTrip,
+  routeReadiness,
   transportDaySummary,
   transportDaySummaryText,
   tripWarnings,
@@ -54,6 +57,14 @@ describe('officeTransport', () => {
   it('runs the afternoon in reverse', () => {
     expect(orderedStops(route, 'am').map((s) => s.id)).toEqual(['a', 'b', 's']);
     expect(orderedStops(route, 'pm').map((s) => s.id)).toEqual(['s', 'b', 'a']);
+  });
+
+  it('shows when a route needs a student stop and school stop', () => {
+    expect(routeReadiness(route)).toMatchObject({ ready: true, missing: [] });
+    expect(routeReadiness({ stops: [{ id: 'a', name: 'Oak', lat: 40.7, lng: -74.3 }] })).toMatchObject({
+      ready: false,
+      missing: ['the school stop'],
+    });
   });
 
   it('finds the first stop not reached yet', () => {
@@ -117,6 +128,19 @@ describe('officeTransport', () => {
         { id: 's5', transportMode: 'bus', status: 'active', archived: true },
       ]),
     ).toEqual(['s1', 's2']);
+  });
+
+  it('captures the rider names and stops that the driver saw', () => {
+    const manifest = riderManifestFromStudents([
+      { id: 's2', firstName: 'Maya', lastName: 'Lopez', nickname: 'May', familyId: 'f2', busStopId: 'stop-a', transportMode: 'bus', status: 'active' },
+      { id: 's1', firstName: 'Noah', lastName: 'Cohen', familyId: null, busStopId: 'stop-b', transportMode: 'bus', status: undefined },
+      { id: 's3', firstName: 'Old', lastName: 'Record', transportMode: 'bus', status: 'withdrawn' },
+    ]);
+    expect(manifest).toEqual([
+      { studentId: 's2', displayName: 'May Lopez', familyId: 'f2', busStopId: 'stop-a' },
+      { studentId: 's1', displayName: 'Noah Cohen', familyId: null, busStopId: 'stop-b' },
+    ]);
+    expect(riderNameForTrip({ ...trip(), riderManifest: manifest }, 's2', new Map())).toBe('May Lopez');
   });
 
   it('uses the route saved with a trip for past history', () => {

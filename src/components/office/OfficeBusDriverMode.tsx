@@ -21,6 +21,7 @@ import {
   orderedStops,
   ridersForRoute,
   routeForTrip,
+  routeReadiness,
   routeLabel,
   stopTime,
   tripDocId,
@@ -28,7 +29,7 @@ import {
 } from '@/lib/office/officeTransport';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBusAlertKind, OfficeBusRiderStatus, OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBusAlertKind, OfficeBusRiderManifestEntry, OfficeBusRiderStatus, OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 /** Send the bus position at most this often, unless it moved far. */
@@ -69,9 +70,8 @@ export function OfficeBusDriverMode({
     ? trips.find((t) => t.routeId === route.id && t.run === run && t.status === 'active')
     : undefined;
   const hasPriorTrip = route ? trips.some((t) => t.routeId === route.id && t.run === run) : false;
-  const hasPickupStop = !!route?.stops?.some((stop) => !stop.isSchool);
-  const hasSchoolStop = !!route?.stops?.some((stop) => stop.isSchool);
-  const canDrive = hasPickupStop && hasSchoolStop;
+  const readiness = route ? routeReadiness(route) : { ready: false, missing: ['a route'] };
+  const canDrive = readiness.ready;
 
   // Keep the screen on while driving.
   const driving = trip?.status === 'active';
@@ -176,6 +176,34 @@ export function OfficeBusDriverMode({
   );
 }
 
+type DriverRider = {
+  id: string;
+  displayName: string;
+  busStopId?: string | null;
+};
+
+function driverRiders(trip: OfficeBusTrip, students: OfficeStudent[], routeId: string): DriverRider[] {
+  if (trip.riderManifest) {
+    return trip.riderManifest.map((entry: OfficeBusRiderManifestEntry) => ({
+      id: entry.studentId,
+      displayName: entry.displayName || 'Student',
+      busStopId: entry.busStopId ?? null,
+    }));
+  }
+  const ids = trip.riderSnapshot ? new Set(trip.riderSnapshot) : null;
+  const current = ridersForRoute(students, routeId).filter((student) => !ids || ids.has(student.id));
+  if (ids) {
+    const byId = new Map(current.map((student) => [student.id, student]));
+    return [...ids].map((id) => {
+      const student = byId.get(id);
+      return student
+        ? { id, displayName: getOfficeStudentFullName(student), busStopId: student.busStopId ?? null }
+        : { id, displayName: 'Student', busStopId: null };
+    });
+  }
+  return current.map((student) => ({ id: student.id, displayName: getOfficeStudentFullName(student), busStopId: student.busStopId ?? null }));
+}
+
 function DrivingScreen({
   schoolId,
   route,
@@ -214,11 +242,10 @@ function DrivingScreen({
   const activeRoute = useMemo(() => routeForTrip(route, trip) ?? route, [route, trip]);
   const stops = orderedStops(activeRoute, trip.run);
   const next = nextStop(activeRoute, trip);
-  const riders = useMemo(() => {
-    if (!trip.riderSnapshot) return ridersForRoute(students, activeRoute.id);
-    const ids = new Set(trip.riderSnapshot);
-    return students.filter((student) => ids.has(student.id));
-  }, [students, activeRoute.id, trip.riderSnapshot]);
+  const riders = useMemo(
+    () => driverRiders(trip, students, activeRoute.id),
+    [activeRoute.id, students, trip.riderManifest, trip.riderSnapshot],
+  );
   const status = trip.riders ?? {};
 
   // ---- Location sharing ----
@@ -265,12 +292,12 @@ function DrivingScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id]);
 
-  const mark = async (kids: OfficeStudent[], st: OfficeBusRiderStatus | null) => {
+  const mark = async (kids: DriverRider[], st: OfficeBusRiderStatus | null) => {
     try {
       await transport.setOfficeBusRiders(
         trip,
         route,
-        kids.map((k) => ({ studentId: k.id, studentName: getOfficeStudentFullName(k), status: st })),
+        kids.map((k) => ({ studentId: k.id, studentName: k.displayName, status: st })),
       );
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
@@ -434,7 +461,7 @@ function DrivingScreen({
                   return (
                     <li key={k.id} className="rounded-xl border p-2 dark:border-slate-800">
                       <div className="flex items-center justify-between gap-2 px-1">
-                        <span className="font-medium">{getOfficeStudentFullName(k)}</span>
+                        <span className="font-medium">{k.displayName}</span>
                         {st && st !== 'on' ? (
                           <button type="button" onClick={() => void mark([k], null)} aria-label="Undo" className="rounded p-1 text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800">
                             <Undo2 className="h-4 w-4" />
@@ -567,7 +594,7 @@ function DrivingScreen({
           {unresolved.length > 0 ? (
             <p className="flex gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 dark:bg-red-950/40 dark:text-red-100">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              Not accounted for: {unresolved.map(getOfficeStudentFullName).join(', ')}.
+              Not accounted for: {unresolved.map((rider) => rider.displayName).join(', ')}.
             </p>
           ) : null}
           <label className="flex items-start gap-3 rounded-xl border p-3 text-sm dark:border-slate-800">

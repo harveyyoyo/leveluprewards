@@ -26,6 +26,7 @@ import {
   newTransportId,
   ridersForRoute,
   routeLabel,
+  routeReadiness,
   type LatLng,
 } from '@/lib/office/officeTransport';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
@@ -138,6 +139,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
             {routes.map((route) => {
               const riders = ridersForRoute(students, route.id).length;
               const pct = route.capacity ? Math.min(100, Math.round((riders / route.capacity) * 100)) : null;
+              const readiness = routeReadiness(route);
               return (
                 <li key={route.id}>
                   <button
@@ -152,6 +154,11 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
                     <span className="mt-1 block truncate text-xs text-muted-foreground">
                       {[route.driverName || 'No driver yet', `${route.stops?.length ?? 0} stop${route.stops?.length === 1 ? '' : 's'}`].join(' · ')}
                     </span>
+                    {!readiness.ready ? (
+                      <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                        Add {readiness.missing.join(' and ')}
+                      </span>
+                    ) : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
                         {riders} rider{riders === 1 ? '' : 's'}

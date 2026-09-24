@@ -15,6 +15,7 @@ import {
   localIsoDate,
   orderedStops,
   routeForTrip,
+  riderNameForTrip,
   routeLabel,
   transportDaySummary,
   transportDaySummaryText,
@@ -268,12 +269,12 @@ function TripRow({
             ) : (
               <ul className="mt-1.5 space-y-1">
                 {riders
-                  .sort((a, b) => (studentNameById.get(a[0]) ?? '').localeCompare(studentNameById.get(b[0]) ?? ''))
+                  .sort((a, b) => riderNameForTrip(trip, a[0], studentNameById).localeCompare(riderNameForTrip(trip, b[0], studentNameById)))
                   .map(([id, r]) => (
                     <li key={id} className="flex items-center justify-between gap-2">
                       <span className={cn(r.status === 'on' && trip.status === 'done' && 'font-medium text-red-700 dark:text-red-400')}>
                         {r.status === 'on' && trip.status === 'done' ? <AlertTriangle className="mr-1 inline h-3 w-3" /> : null}
-                        {studentNameById.get(id) ?? 'Former student'}
+                        {riderNameForTrip(trip, id, studentNameById)}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {r.status === 'on' ? 'Got on' : r.status === 'off' ? 'Got off' : 'Not riding'} · {clockLabel(r.at)}
@@ -288,7 +289,7 @@ function TripRow({
                 <ul className="mt-1.5 space-y-1">
                   {riderEvents.map((event, index) => (
                     <li key={`${event.studentId}-${event.at}-${index}`} className="flex items-center justify-between gap-2 text-xs">
-                      <span>{studentNameById.get(event.studentId) ?? 'Former student'}</span>
+                      <span>{riderNameForTrip(trip, event.studentId, studentNameById)}</span>
                       <span className="text-muted-foreground">
                         {event.status === 'on' ? 'Got on' : event.status === 'off' ? 'Got off' : event.status === 'absent' ? 'Not riding' : 'Mark cleared'} · {clockLabel(event.at)}
                       </span>

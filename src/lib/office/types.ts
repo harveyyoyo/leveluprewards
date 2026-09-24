@@ -237,6 +237,13 @@ export type OfficeBusEvent =
   | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
   | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string };
 
+export type OfficeBusRiderManifestEntry = {
+  studentId: string;
+  displayName: string;
+  familyId?: string | null;
+  busStopId?: string | null;
+};
+
 /**
  * One bus run on one day (`schools/{id}/officeBusTrips`, id starts with `{date}_{routeId}_{run}`):
  * live location, stops reached, and who got on and off. Never erased or overwritten.
@@ -251,6 +258,8 @@ export type OfficeBusTrip = {
   routeSnapshot?: OfficeBusRouteSnapshot | null;
   /** Student ids assigned when the run began, so later roster edits do not change this run. */
   riderSnapshot?: string[] | null;
+  /** Immutable names, family links, and stops captured when the run began. */
+  riderManifest?: OfficeBusRiderManifestEntry[] | null;
   /** Retry bookkeeping lives on the base trip so concurrent starts cannot create two active runs. */
   retryCount?: number;
   activeRetryId?: string | null;
