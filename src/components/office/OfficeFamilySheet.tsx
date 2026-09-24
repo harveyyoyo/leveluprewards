@@ -44,6 +44,7 @@ function newContact(): OfficeFamilyContact {
     email: null,
     isPrimary: false,
     pickupAuthorized: true,
+    transportNotificationsEnabled: true,
     notes: null,
   };
 }
@@ -269,6 +270,17 @@ export function OfficeFamilySheet({
                       }
                     />
                     Allowed to receive bus riders
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Checkbox
+                      checked={c.transportNotificationsEnabled !== false}
+                      onCheckedChange={(checked) =>
+                        setContacts((prev) =>
+                          prev.map((x) => (x.id === c.id ? { ...x, transportNotificationsEnabled: checked === true } : x)),
+                        )
+                      }
+                    />
+                    Receive transportation emails
                   </label>
                 </div>
               ))}

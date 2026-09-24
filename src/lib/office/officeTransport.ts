@@ -438,6 +438,7 @@ export function transportFamilyEmails(
   const emails = new Set<string>();
   for (const familyId of familyIds) {
     for (const contact of familyById.get(familyId)?.contacts ?? []) {
+      if (contact.transportNotificationsEnabled === false) continue;
       const email = contact.email?.trim().toLowerCase();
       if (email) emails.add(email);
     }
