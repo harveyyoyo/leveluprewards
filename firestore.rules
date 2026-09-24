@@ -664,10 +664,26 @@ service cloud.firestore {
 
       match /attendanceLog/{entryId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
-        // Attendance logs are audit records and point-award evidence. They are
-        // created by the trusted Cloud Function via the Admin SDK.
-        allow create: if false;
-        allow update, delete: if isAdmin(schoolId);
+        // Attendance logs are audit records and point-award evidence. Kiosk
+        // sign-ins are created by the trusted Cloud Function via the Admin SDK.
+        // Staff may add a manual check-in (Today board) for one student, flagged
+        // `manual`, stamped now, with the id the app builds (`{studentId}_{session}`).
+        allow create: if (isAdmin(schoolId) || isTeacher(schoolId))
+          && request.resource.data.manual == true
+          && request.resource.data.studentId is string
+          && entryId.matches(request.resource.data.studentId + '_.+')
+          && request.resource.data.pointsAwarded is number
+          && request.resource.data.pointsAwarded >= 0
+          && request.resource.data.signedInAt is number
+          && request.resource.data.signedInAt > request.time.toMillis() - 900000
+          && request.resource.data.signedInAt < request.time.toMillis() + 900000;
+        allow update: if isAdmin(schoolId)
+          // Teachers may mark a check-in late from the class roll call.
+          || (
+            isTeacher(schoolId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['onTime', 'status', 'updatedAt'])
+          );
+        allow delete: if isAdmin(schoolId);
       }
 
       match /bathroomActive/{studentId} {

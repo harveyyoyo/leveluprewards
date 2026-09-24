@@ -6,7 +6,7 @@ import type {
 } from '@/lib/types';
 import { ATTENDANCE_RESOLVE_FAILURE_MESSAGES, type AttendanceResolveSource } from '@/lib/attendance/resolveSettings';
 
-type CallablePayload = { schoolId: string; studentId: string };
+type CallablePayload = { schoolId: string; studentId: string; deviceTimeZone?: string };
 type CallableResult = {
   pointsAwarded: number;
   onTime: boolean;
@@ -15,6 +15,15 @@ type CallableResult = {
   serverTimeMs?: number;
   source?: string;
 };
+
+/** This screen's own time zone. The server uses it only when the school never picked one. */
+function deviceTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function mapServerReason(r: string): AttendanceKioskSignInResult['reason'] {
   switch (r) {
@@ -70,7 +79,7 @@ export async function performKioskAttendanceSignIn(params: {
 
   try {
     const fn = httpsCallable<CallablePayload, CallableResult>(functions, 'signInAttendance');
-    const res = await fn({ schoolId, studentId: student.id });
+    const res = await fn({ schoolId, studentId: student.id, deviceTimeZone: deviceTimeZone() });
     const data = res.data;
     return {
       pointsAwarded: data.pointsAwarded ?? 0,

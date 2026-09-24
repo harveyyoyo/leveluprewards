@@ -91,6 +91,10 @@ export const getAttendanceConfig = async (
     attendanceTimeZone: typeof data.attendanceTimeZone === 'string' && data.attendanceTimeZone.trim()
       ? String(data.attendanceTimeZone).trim()
       : undefined,
+    attendanceQuietAfterMinutes:
+      typeof data.attendanceQuietAfterMinutes === 'number' && Number.isFinite(data.attendanceQuietAfterMinutes)
+        ? data.attendanceQuietAfterMinutes
+        : undefined,
   };
 };
 
@@ -381,6 +385,7 @@ export const recordManualAttendance = async (
       teacherId: options.teacherId ?? null,
       manual: true,
       note: options.note ?? null,
+      timeZone: options.attendanceTimeZone ?? null,
     });
 
     return { success: true, pointsAwarded: pointsToAward, periodLabel: options.periodLabel };

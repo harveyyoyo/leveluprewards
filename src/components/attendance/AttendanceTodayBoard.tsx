@@ -16,10 +16,12 @@ import {
   Sparkles,
   ChevronDown,
 } from 'lucide-react';
-import { collection, limit, orderBy, query } from 'firebase/firestore';
+import { collection, orderBy, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { AttendanceLogEntry, AttendanceScheduleSlot, AttendanceSettings, Class, Student, Teacher } from '@/lib/types';
 import { recordManualAttendance } from '@/lib/db/attendance';
+import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
+import { useMinuteClock } from '@/hooks/useMinuteClock';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,12 +53,6 @@ export interface AttendanceTodayBoardProps {
   attendanceConfig?: AttendanceSettings | null;
   teacherIdScope?: string;
   variant?: 'admin' | 'teacher';
-}
-
-function getStartOfTodayMs(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
 
 function parseTimeToMinutes(hhmm: string): number | null {
@@ -99,26 +95,27 @@ export function AttendanceTodayBoard({
   // Quick Action row loading ID
   const [quickActionStudentId, setQuickActionStudentId] = useState<string | null>(null);
 
-  // Realtime live attendance logs today
+  // Ticks every minute so the current period and "today" keep up on a board left open all day.
+  // Uses the school's time zone when one is set, otherwise this screen's clock.
+  const nowMs = useMinuteClock();
+  const schoolClock = getSchoolDayClock(nowMs, attendanceConfig?.attendanceTimeZone, { whenUnset: 'local' });
+  const nowMin = schoolClock.minutesSinceMidnight;
+  const startOfDay = nowMs - nowMin * 60_000;
+
+  // Realtime live attendance logs today — all of them, however many students signed in.
   const logQuery = useMemoFirebase(
     () =>
       schoolId
         ? query(
             collection(firestore, 'schools', schoolId, 'attendanceLog'),
-            orderBy('signedInAt', 'desc'),
-            limit(500)
+            where('signedInAt', '>=', startOfDay),
+            orderBy('signedInAt', 'desc')
           )
         : null,
-    [firestore, schoolId]
+    [firestore, schoolId, startOfDay]
   );
-  const { data: allLogs } = useCollection<AttendanceLogEntry>(logQuery);
-
-  const startOfDay = useMemo(() => getStartOfTodayMs(), []);
-
-  // Filter logs for today
-  const todayLogs = useMemo(() => {
-    return (allLogs || []).filter((log) => Number(log.signedInAt || 0) >= startOfDay);
-  }, [allLogs, startOfDay]);
+  const { data: todayLogsRaw } = useCollection<AttendanceLogEntry>(logQuery);
+  const todayLogs = useMemo(() => todayLogsRaw || [], [todayLogsRaw]);
 
   // Map studentId -> most recent log entry today
   const todayStudentLogMap = useMemo(() => {
@@ -132,15 +129,13 @@ export function AttendanceTodayBoard({
 
   // Determine current active period
   const activePeriod = useMemo(() => {
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
     return periods.find((p) => {
       const start = parseTimeToMinutes(p.startTime);
       const end = parseTimeToMinutes(p.endTime);
       if (start == null || end == null) return false;
       return nowMin >= start && nowMin <= end;
     });
-  }, [periods]);
+  }, [periods, nowMin]);
 
   // Filter students based on teacher scope and class list
   const scopedStudents = useMemo(() => {

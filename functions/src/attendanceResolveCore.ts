@@ -35,10 +35,14 @@ export interface StudentLike {
 export interface ClassLike {
   id: string;
   primaryTeacherId?: string | null;
+  /** Co-teachers. Checked after the primary teacher, in order. */
+  teacherIds?: string[] | null;
 }
 
 export interface AttendanceRewardRuleLike {
   id: string;
+  /** Teacher who owns the rule (rules live under `teachers/{teacherId}/attendanceRewards`). */
+  teacherId?: string;
   enabled: boolean;
   classId: string;
   periodId?: string;
@@ -131,26 +135,64 @@ function normalizeSchoolConfig(raw: Record<string, unknown> | null | undefined):
   return normalizeConfig(raw);
 }
 
+/** Primary teacher first, then co-teachers; blanks and repeats removed. */
+export function teacherIdsForClass(cls: ClassLike | null | undefined): string[] {
+  if (!cls) return [];
+  const out: string[] = [];
+  const add = (v: unknown) => {
+    const id = typeof v === 'string' ? v.trim() : '';
+    if (id && !out.includes(id)) out.push(id);
+  };
+  add(cls.primaryTeacherId);
+  if (Array.isArray(cls.teacherIds)) cls.teacherIds.forEach(add);
+  return out;
+}
+
+/** True when `tz` is a time zone name this runtime understands (e.g. "America/New_York"). */
+export function isValidTimeZone(tz: unknown): tz is string {
+  if (typeof tz !== 'string' || !tz.trim()) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz.trim() }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface ResolveAttendanceSettingsInput {
   nowMs: number;
   student: StudentLike;
   classes: ClassLike[];
   periods: AttendanceScheduleSlotLike[];
+  /** Reward rules from every teacher of the student's class. */
   teacherRewards: AttendanceRewardRuleLike[];
+  /** Legacy per-teacher config for the primary teacher (kept for older callers). */
   teacherConfigRaw: Record<string, unknown> | null | undefined;
+  /** Legacy per-teacher config keyed by teacher id; covers co-teachers. */
+  teacherConfigsRaw?: Record<string, Record<string, unknown> | null | undefined>;
   schoolConfigRaw: Record<string, unknown> | null | undefined;
+  /**
+   * Time zone to use when the school never picked one — the sign-in device's own zone,
+   * which sits in the school building. Ignored when the school config has a zone.
+   */
+  fallbackTimeZone?: string | null;
 }
 
 export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSettingsInput): ResolveAttendanceResult {
-  const { nowMs, student, classes, periods, teacherRewards, teacherConfigRaw, schoolConfigRaw } = input;
+  const { nowMs, student, classes, periods, teacherRewards, teacherConfigRaw, teacherConfigsRaw, schoolConfigRaw } =
+    input;
   const studentClassId = (student.classId || '').trim();
   const classForStudent = studentClassId ? classes.find((c) => c.id === studentClassId) : undefined;
-  const teacherId = (classForStudent?.primaryTeacherId || '').trim() || undefined;
+  const classTeacherIds = teacherIdsForClass(classForStudent);
+  const primaryTeacherId = classTeacherIds[0];
 
-  const schoolTimeZone =
+  const configuredTimeZone =
     schoolConfigRaw && typeof schoolConfigRaw['attendanceTimeZone'] === 'string'
       ? String(schoolConfigRaw['attendanceTimeZone'] as string).trim() || undefined
       : undefined;
+  const schoolTimeZone =
+    configuredTimeZone ||
+    (isValidTimeZone(input.fallbackTimeZone) ? String(input.fallbackTimeZone).trim() : undefined);
 
   const withSchoolTz = (s: AttendanceSettingsLike): AttendanceSettingsLike =>
     schoolTimeZone ? { ...s, attendanceTimeZone: schoolTimeZone } : { ...s, attendanceTimeZone: s.attendanceTimeZone };
@@ -164,6 +206,7 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
   const enabledRules = teacherRewards.filter((r) => r.enabled);
   const matchingRule = enabledRules.find((r) => {
     if (!studentClassId || r.classId !== studentClassId) return false;
+    if (r.teacherId && classTeacherIds.length > 0 && !classTeacherIds.includes(r.teacherId)) return false;
     const period = resolveRulePeriod(r, periods);
     if (!period) return false;
     const start = parse(period.startTime);
@@ -171,7 +214,9 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
     return nowMinutes >= start - EARLY_SIGN_IN_WINDOW_MINUTES && nowMinutes <= end;
   });
 
-  if (matchingRule && teacherId) {
+  const ruleTeacherId = matchingRule ? (matchingRule.teacherId || '').trim() || primaryTeacherId : undefined;
+  if (matchingRule && ruleTeacherId) {
+    const teacherId = ruleTeacherId;
     const period = resolveRulePeriod(matchingRule, periods);
     if (period) {
       const slotId = matchingRule.periodId || `custom_${matchingRule.id}`;
@@ -199,11 +244,18 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
   let legacy: AttendanceSettingsLike | null = null;
   let source: AttendanceResolveSource = 'default';
 
-  if (teacherId) {
-    const t = normalizeTeacherConfig(teacherConfigRaw, teacherId);
+  for (const teacherId of classTeacherIds) {
+    const raw =
+      teacherConfigsRaw && Object.prototype.hasOwnProperty.call(teacherConfigsRaw, teacherId)
+        ? teacherConfigsRaw[teacherId]
+        : teacherId === primaryTeacherId
+          ? teacherConfigRaw
+          : null;
+    const t = normalizeTeacherConfig(raw, teacherId);
     if (t) {
       legacy = t;
       source = 'teacher_legacy';
+      break;
     }
   }
   if (!legacy) {
@@ -215,8 +267,8 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
   }
 
   if (!legacy) {
-    legacy = teacherId
-      ? { ...DEFAULT_ATTENDANCE_SETTINGS, teacherId }
+    legacy = primaryTeacherId
+      ? { ...DEFAULT_ATTENDANCE_SETTINGS, teacherId: primaryTeacherId }
       : { ...DEFAULT_ATTENDANCE_SETTINGS };
   }
 
