@@ -924,6 +924,7 @@ function ClassroomPointsPanelInner({
 
   const gridHandlersRef = useRef<ClassroomGridHandlers>({
     onDeskTap: () => {},
+    onDeskMenu: () => {},
     onDeduct: () => {},
     onBehaviorNote: () => {},
     onDragStart: () => {},
@@ -2116,6 +2117,7 @@ function ClassroomPointsPanelInner({
 
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
+    onDeskMenu: handleDeskMenu,
     onDeduct: undefined,
     onBehaviorNote: (studentId, shortcutKey, fromHeldKey) => {
       const s = studentById.get(studentId);
@@ -2825,7 +2827,7 @@ function ClassroomPointsPanelInner({
           fitViewport={isFullscreen}
           hideEmptyDesks={isStudentAudience}
           deskMenuEnabled={
-            prefs.instantTap && interactionMode !== 'attendance' && !isStudentAudience && !editMode
+            interactionMode !== 'attendance' && !isStudentAudience && !editMode
           }
         />
         {frontAtBottom && teacherDesk}
