@@ -19,7 +19,9 @@ function stateFromDocument(data: Record<string, unknown>): OfficeQueueDeliverySt
     ?.toString()
     .toLowerCase()
     .trim() ?? '';
-  if (['failed', 'error', 'failure', 'undelivered', 'rejected'].includes(raw)) return 'failed';
+  const hasError = [delivery?.error, data.error, data.deliveryMessage]
+    .some((value) => typeof value === 'string' && value.trim().length > 0);
+  if (hasError || ['failed', 'error', 'failure', 'undelivered', 'rejected'].includes(raw)) return 'failed';
   if (['delivered', 'sent', 'success', 'successful', 'completed'].includes(raw)) return 'delivered';
   return 'pending';
 }

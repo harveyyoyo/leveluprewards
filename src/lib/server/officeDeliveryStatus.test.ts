@@ -15,6 +15,13 @@ describe('Office delivery queue summary', () => {
     expect(summaries.has('event-2')).toBe(false);
   });
 
+  it('treats a queue error as failed even when the state is blank', () => {
+    const summaries = summarizeOfficeDeliveryQueue([
+      { id: 'mail-1', data: { kind: 'transportation_arrival', arrivalEventId: 'event-1', delivery: { error: 'Provider unavailable' } } },
+    ]);
+    expect(summaries.get('event-1')).toEqual({ total: 1, pending: 0, delivered: 0, failed: 1 });
+  });
+
   it('treats unknown queue states as waiting rather than delivered', () => {
     const summaries = summarizeOfficeDeliveryQueue([
       { id: 'mail-1', data: { kind: 'transportation_arrival', arrivalEventId: 'event-1' } },
