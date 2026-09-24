@@ -9,6 +9,7 @@ import {
   Clock,
   Copy,
   Info,
+  Mail,
   Phone,
   Play,
   Route as RouteIcon,
@@ -43,12 +44,14 @@ import {
   routeLabel,
   stopTime,
   tripWarnings,
+  transportFamilyEmails,
   vehicleDueLabel,
   vehicleLabel,
   type LatLng,
 } from '@/lib/office/officeTransport';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
-import type { OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeStudent } from '@/lib/office/types';
+import { buildAnnouncementMailto } from '@/lib/office/officeUtils';
+import type { OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeFamily, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -56,6 +59,7 @@ type Props = {
   routes: OfficeBusRoute[];
   trips: OfficeBusTrip[];
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   studentNameById: Map<string, string>;
   center: LatLng;
   isLoading: boolean;
@@ -65,7 +69,7 @@ type Props = {
 const PRACTICE_SECONDS = 75;
 
 /** Live view: every bus on the map, what needs attention, and each run's progress. */
-export function OfficeTransportLive({ routes, trips, students, studentNameById, center, isLoading, onSetUpRoutes }: Props) {
+export function OfficeTransportLive({ routes, trips, students, familyById, studentNameById, center, isLoading, onSetUpRoutes }: Props) {
   const now = useNow(10_000);
   const { toast } = useToast();
   const { openStudent } = useOfficeEntityNav();
@@ -81,6 +85,22 @@ export function OfficeTransportLive({ routes, trips, students, studentNameById, 
   const warnings = useMemo(() => tripWarnings(routes, runTrips, studentNameById, now), [routes, runTrips, studentNameById, now]);
   const selected = routes.find((r) => r.id === selectedId) ?? null;
   const selectedTrip = selected ? tripFor(selected.id) : null;
+  const selectedFamilyEmails = useMemo(
+    () => (selected ? transportFamilyEmails(students, familyById, selected.id, selectedTrip) : []),
+    [familyById, selected, selectedTrip, students],
+  );
+  const emailSelectedFamilies = () => {
+    if (!selected) return;
+    if (selectedFamilyEmails.length === 0) {
+      toast({ title: 'No family email addresses found', description: 'Add an email to a family contact first.' });
+      return;
+    }
+    window.location.href = buildAnnouncementMailto({
+      emails: selectedFamilyEmails,
+      subject: `Transportation update: ${routeLabel(selected)}`,
+      body: familyUpdateMessage(selected, selectedTrip, now),
+    });
+  };
 
   const activeTrips = runTrips.filter((t) => t.status === 'active');
   const lateCount = activeTrips.filter((t) => {
@@ -302,6 +322,8 @@ export function OfficeTransportLive({ routes, trips, students, studentNameById, 
                   toast({ variant: 'destructive', title: 'Could not copy' });
                 }
               }}
+              onEmailFamilies={emailSelectedFamilies}
+              familyRecipientCount={selectedFamilyEmails.length}
             />
           ) : (
             <ul className="divide-y dark:divide-slate-800">
@@ -408,6 +430,8 @@ function RouteDetail({
   onStopPractice,
   onOpenStudent,
   onCopy,
+  onEmailFamilies,
+  familyRecipientCount,
 }: {
   route: OfficeBusRoute;
   trip: OfficeBusTrip | null;
@@ -420,6 +444,8 @@ function RouteDetail({
   onStopPractice: () => void;
   onOpenStudent: (id: string) => void;
   onCopy: () => void;
+  onEmailFamilies: () => void;
+  familyRecipientCount: number;
 }) {
   const status = statusOf(route, trip, now);
   const stops = orderedStops(route, run);
@@ -484,6 +510,9 @@ function RouteDetail({
           ) : null}
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopy}>
             <Copy className="h-3.5 w-3.5" /> Update for families
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onEmailFamilies} disabled={familyRecipientCount === 0}>
+            <Mail className="h-3.5 w-3.5" /> Email families ({familyRecipientCount})
           </Button>
           {isPractice ? (
             <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onStopPractice}>

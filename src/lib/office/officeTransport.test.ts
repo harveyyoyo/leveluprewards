@@ -14,6 +14,7 @@ import {
   routeReadiness,
   transportDaySummary,
   transportDaySummaryText,
+  transportFamilyEmails,
   tripWarnings,
   vehicleDueLabel,
   vehicleLabel,
@@ -149,6 +150,25 @@ describe('officeTransport', () => {
       { studentId: 's1', displayName: 'Noah Cohen', familyId: null, busStopId: 'stop-b' },
     ]);
     expect(riderNameForTrip({ ...trip(), riderManifest: manifest }, 's2', new Map())).toBe('May Lopez');
+  });
+
+  it('deduplicates family email addresses for a route update', () => {
+    const families = new Map([
+      ['f1', { id: 'f1', displayName: 'Lopez family', contacts: [
+        { id: 'c1', name: 'Mom', role: 'parent' as const, email: 'MOM@example.com' },
+        { id: 'c2', name: 'Dad', role: 'parent' as const, email: 'dad@example.com' },
+      ], updatedAt: 1 }],
+      ['f2', { id: 'f2', displayName: 'Cohen family', contacts: [
+        { id: 'c3', name: 'Guardian', role: 'guardian' as const, email: 'mom@example.com' },
+      ], updatedAt: 1 }],
+    ]);
+    const students = [
+      { id: 's1', firstName: 'Maya', lastName: 'Lopez', familyId: 'f1', transportMode: 'bus' as const, busRouteId: 'r1', status: 'active' as const, updatedAt: 1 },
+      { id: 's2', firstName: 'Noah', lastName: 'Cohen', familyId: 'f2', transportMode: 'bus' as const, busRouteId: 'r1', status: 'active' as const, updatedAt: 1 },
+      { id: 's3', firstName: 'Other', lastName: 'Route', familyId: 'f1', transportMode: 'bus' as const, busRouteId: 'r2', status: 'active' as const, updatedAt: 1 },
+    ];
+    expect(transportFamilyEmails(students, families, 'r1')).toEqual(['dad@example.com', 'mom@example.com']);
+    expect(transportFamilyEmails(students, families, 'r1', { riderSnapshot: [], riderManifest: [] })).toEqual([]);
   });
 
   it('uses the route saved with a trip for past history', () => {

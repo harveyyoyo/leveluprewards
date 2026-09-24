@@ -6,6 +6,7 @@ import type {
   OfficeBusStop,
   OfficeBusTrip,
   OfficeBusVehicleDetails,
+  OfficeFamily,
   OfficeStudent,
   OfficeTransportMode,
 } from '@/lib/office/types';
@@ -391,6 +392,39 @@ export function familyUpdateMessage(route: OfficeBusRoute, trip: OfficeBusTrip |
   const stop = nextStop(route, trip);
   const stopText = stop && trip.location ? ` Next stop: ${stop.name}, in about ${etaMinutes(trip.location, stop)} min.` : '';
   return `${bus} is on the road.${lateText}${stopText} Thank you for your patience.`;
+}
+
+/** Unique family email addresses for the riders on a route, safe to put in BCC. */
+export function transportFamilyEmails(
+  students: OfficeStudent[],
+  familyById: Map<string, OfficeFamily>,
+  routeId: string,
+  trip?: Pick<OfficeBusTrip, 'riderSnapshot' | 'riderManifest'> | null,
+): string[] {
+  const riderIds = trip?.riderSnapshot ? new Set(trip.riderSnapshot) : null;
+  const assigned = students.filter(
+    (student) =>
+      student.transportMode === 'bus' &&
+      student.busRouteId === routeId &&
+      (student.status ?? 'active') === 'active' &&
+      student.archived !== true &&
+      (!riderIds || riderIds.has(student.id)),
+  );
+  const familyIds = new Set<string>();
+  for (const entry of trip?.riderManifest ?? []) {
+    if (entry.familyId) familyIds.add(entry.familyId);
+  }
+  for (const student of assigned) {
+    if (student.familyId) familyIds.add(student.familyId);
+  }
+  const emails = new Set<string>();
+  for (const familyId of familyIds) {
+    for (const contact of familyById.get(familyId)?.contacts ?? []) {
+      const email = contact.email?.trim().toLowerCase();
+      if (email) emails.add(email);
+    }
+  }
+  return [...emails].sort();
 }
 
 /**
