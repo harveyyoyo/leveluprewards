@@ -22,6 +22,8 @@ export {
   staffPortalTeacherOperatedAdminNote,
   staffPortalSchoolwideTeacherNote,
   STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES,
+  STAFF_PORTAL_WELCOME_PILLAR_TABS,
+  STAFF_PORTAL_WELCOME_PILLAR_SET,
   normalizeStaffPortalTabValue,
   normalizeStaffPortalTabValues,
 } from './tabRegistry';

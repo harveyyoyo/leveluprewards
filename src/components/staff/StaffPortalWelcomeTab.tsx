@@ -42,6 +42,8 @@ type StaffPortalWelcomeTabProps = {
   welcomeStats?: StaffPortalWelcomeStats;
   /** @deprecated Use welcomeStats */
   adminStats?: StaffPortalWelcomeStats;
+  /** Tab values visible on the left sidebar — removed from the middle. */
+  sidebarTabValues?: string[];
   className?: string;
 };
 
@@ -322,6 +324,7 @@ export function StaffPortalWelcomeTab({
   staffName,
   welcomeStats,
   adminStats,
+  sidebarTabValues,
   className,
 }: StaffPortalWelcomeTabProps) {
   const stats = welcomeStats ?? adminStats;
@@ -344,9 +347,33 @@ export function StaffPortalWelcomeTab({
     ...LIBRARY_PILLAR_VALUES,
   ]);
 
-  // Filter core and addon lists to remove welcome itself and items shown in pillar boxes
-  const filteredCore = core.filter((t) => t.value !== 'welcome' && !PILLAR_VALUES.has(t.value));
-  const filteredAddons = addons.filter((t) => !PILLAR_VALUES.has(t.value));
+  // Tab values that appear on the left sidebar navigation — removed from the middle
+  const leftSideSet = useMemo(() => {
+    return new Set(
+      sidebarTabValues ?? [
+        'welcome',
+        'students',
+        'classes',
+        'teachers',
+        'reports',
+        'insights',
+        'displays',
+        'category-badges',
+        'notifications',
+        'branding',
+        'integrations',
+        'student-portal',
+      ],
+    );
+  }, [sidebarTabValues]);
+
+  // Filter core and addon lists to remove welcome itself, items shown in pillar boxes, and items on the left side
+  const filteredCore = core.filter(
+    (t) => t.value !== 'welcome' && !PILLAR_VALUES.has(t.value) && !leftSideSet.has(t.value),
+  );
+  const filteredAddons = addons.filter(
+    (t) => !PILLAR_VALUES.has(t.value) && !leftSideSet.has(t.value),
+  );
 
   // Build rewards pillar links from enabled tabs
   const rewardsPillarLinks = useMemo(() => {

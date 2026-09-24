@@ -10,6 +10,7 @@ import {
   staffPortalOrderMainTabs,
   staffPortalSortTabs,
   staffPortalTabsForRole,
+  STAFF_PORTAL_WELCOME_PILLAR_SET,
 } from './tabRegistry';
 import type { StaffPortalRole, StaffPortalTabDef, StaffPortalTabView } from './types';
 import {
@@ -91,7 +92,11 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
 
     const pinnedSet = new Set(pinnedAddOnValues.map(normalizeStaffPortalTabValue));
     const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
-    const availableMain = [...core, ...pinnedExtras];
+    const availableMain = (
+      role === 'admin'
+        ? [...core, ...pinnedExtras].filter((t) => !STAFF_PORTAL_WELCOME_PILLAR_SET.has(t.value))
+        : [...core, ...pinnedExtras]
+    );
     const main = filterTabsForDisplayMode(
       staffPortalOrderMainTabs(availableMain, mainTabOrder),
       role,
@@ -99,7 +104,13 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
     );
     const mainValues = new Set(main.map((t) => t.value));
     const addMore = filterTabsForDisplayMode(
-      staffPortalSortTabs(addOnViews.filter((t) => !mainValues.has(t.value))),
+      staffPortalSortTabs(
+        addOnViews.filter(
+          (t) =>
+            !mainValues.has(t.value) &&
+            (role !== 'admin' || !STAFF_PORTAL_WELCOME_PILLAR_SET.has(t.value)),
+        ),
+      ),
       role,
       resolvedDisplayMode,
     );
