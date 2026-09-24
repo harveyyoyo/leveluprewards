@@ -36,6 +36,7 @@ import {
   etaMinutes,
   familyUpdateMessage,
   formatDistance,
+  latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
   nextStop,
@@ -481,6 +482,7 @@ function RouteDetail({
   const alerts = [...(trip?.alerts ?? [])].reverse();
   const vehicle = vehicleLabel(route.vehicle);
   const vehicleDue = vehicleDueLabel(route.vehicle, now);
+  const lastService = latestMaintenanceLabel(route.vehicle);
 
   return (
     <div className="flex max-h-[560px] flex-col">
@@ -514,10 +516,11 @@ function RouteDetail({
           </div>
         ) : null}
 
-        {vehicle ? (
+        {vehicle || lastService ? (
           <p className={cn('rounded-xl px-3 py-2 text-xs', vehicleDue ? 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-100' : 'bg-slate-50 text-muted-foreground dark:bg-slate-800/60')}>
-            Vehicle: {vehicle}
+            {vehicle ? `Vehicle: ${vehicle}` : 'Vehicle service history'}
             {vehicleDue ? ` · ${vehicleDue}` : ''}
+            {lastService ? ` · Last service ${lastService}` : ''}
           </p>
         ) : null}
 
