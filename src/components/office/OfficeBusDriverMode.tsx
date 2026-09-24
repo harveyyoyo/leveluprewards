@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Check, Clock, LocateFixed, LocateOff, MapPin, ShieldCheck, Undo2, X } from 'lucide-react';
+import { AlertTriangle, Check, Clock, LocateFixed, LocateOff, MapPin, Save, ShieldCheck, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ import {
 } from '@/lib/office/officeTransport';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { clearDriverOfflinePacket, readDriverOfflinePacket, saveDriverOfflinePacket, type OfficeDriverOfflinePacket } from '@/lib/office/officeDriverOffline';
 import type { OfficeBusAlertKind, OfficeBusReleaseMethod, OfficeBusRiderManifestEntry, OfficeBusRiderStatus, OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeFamily, OfficeFamilyContact, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
@@ -65,9 +66,12 @@ export function OfficeBusDriverMode({
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
   const [tripId, setTripId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [offlinePacket, setOfflinePacket] = useState<OfficeDriverOfflinePacket | null>(() => readDriverOfflinePacket(schoolId));
+  const [offlineOpen, setOfflineOpen] = useState(false);
 
-  const trip = tripId ? trips.find((t) => t.id === tripId) ?? null : null;
-  const route = routes.find((r) => r.id === (trip?.routeId ?? routeId)) ?? null;
+  const liveTrip = tripId ? trips.find((t) => t.id === tripId) ?? null : null;
+  const trip = offlineOpen && offlinePacket ? offlinePacket.trip : liveTrip;
+  const route = offlineOpen && offlinePacket ? offlinePacket.route : routes.find((r) => r.id === (trip?.routeId ?? routeId)) ?? null;
   const existing = route
     ? trips.find((t) => t.routeId === route.id && t.run === run && t.status === 'active')
     : undefined;
@@ -92,6 +96,7 @@ export function OfficeBusDriverMode({
       const date = localIsoDate();
       const id = existing?.id ?? tripDocId(date, route.id, run);
       const { tripId: startedId } = await transport.startOfficeBusTrip(route, { tripId: id, date, run });
+      setOfflineOpen(false);
       setTripId(startedId);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not start', description: (e as Error).message });
@@ -101,8 +106,21 @@ export function OfficeBusDriverMode({
   };
 
   const requestClose = () => {
-    if (trip?.status === 'active' && !window.confirm('The office will stop seeing this bus if you close this screen. Close it now?')) return;
+    if (!offlineOpen && trip?.status === 'active' && !window.confirm('The office will stop seeing this bus if you close this screen. Close it now?')) return;
     onClose();
+  };
+
+  const openOfflinePacket = () => {
+    if (!offlinePacket) return;
+    setRouteId(offlinePacket.route.id);
+    setTripId(offlinePacket.trip.id);
+    setOfflineOpen(true);
+  };
+
+  const discardOfflinePacket = () => {
+    clearDriverOfflinePacket(schoolId);
+    setOfflinePacket(null);
+    toast({ title: 'Saved trip copy removed' });
   };
 
   return (
@@ -116,7 +134,23 @@ export function OfficeBusDriverMode({
       </header>
 
       {trip && route && trip.status === 'active' ? (
-        <DrivingScreen schoolId={schoolId} route={route} trip={trip} students={students} familyById={familyById} center={center} onFinished={onClose} />
+        <DrivingScreen
+          schoolId={schoolId}
+          route={route}
+          trip={trip}
+          students={students}
+          familyById={familyById}
+          center={center}
+          readOnly={offlineOpen}
+          onOfflineSaved={() => setOfflinePacket(readDriverOfflinePacket(schoolId))}
+          onFinished={() => {
+            if (offlinePacket?.trip.id === trip.id) {
+              clearDriverOfflinePacket(schoolId);
+              setOfflinePacket(null);
+            }
+            onClose();
+          }}
+        />
       ) : (
         <div className="mx-auto w-full max-w-md flex-1 space-y-5 overflow-y-auto p-5">
           <div>
@@ -169,6 +203,25 @@ export function OfficeBusDriverMode({
           <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !canDrive} onClick={() => void start()}>
             {starting ? 'Starting…' : existing ? 'Continue this run' : hasPriorTrip ? 'Start another run' : 'Start run'}
           </Button>
+          {offlinePacket ? (
+            <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900 dark:bg-blue-950/30">
+              <div>
+                <p className="font-semibold">Saved trip copy</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {routeLabel(offlinePacket.route)} · {offlinePacket.trip.riderManifest?.length ?? 0} riders · saved {new Date(offlinePacket.savedAt).toLocaleString()}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" className="rounded-xl" onClick={openOfflinePacket}>
+                  Open saved copy
+                </Button>
+                <Button type="button" variant="ghost" className="rounded-xl" onClick={discardOfflinePacket}>
+                  Remove saved copy
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">The saved copy is read-only and stays on this phone until this page is closed. It may be old, so check the live page before driving. Reconnect to the live run before making changes.</p>
+            </div>
+          ) : null}
           <p className="text-center text-xs text-muted-foreground">
             Your phone will share where the bus is with the office until you end the run. Keep this screen open.
           </p>
@@ -226,6 +279,8 @@ function DrivingScreen({
   students,
   familyById,
   center,
+  readOnly = false,
+  onOfflineSaved,
   onFinished,
 }: {
   schoolId: string;
@@ -234,6 +289,8 @@ function DrivingScreen({
   students: OfficeStudent[];
   familyById: Map<string, OfficeFamily>;
   center: LatLng;
+  readOnly?: boolean;
+  onOfflineSaved?: () => void;
   onFinished: () => void;
 }) {
   const transport = useOfficeTransportApi(schoolId);
@@ -255,6 +312,7 @@ function DrivingScreen({
   const [releaseRecipientName, setReleaseRecipientName] = useState('');
   const [releaseNote, setReleaseNote] = useState('');
   const [releaseSaving, setReleaseSaving] = useState(false);
+  const [offlineSaved, setOfflineSaved] = useState(false);
 
   useEffect(() => {
     setLastServerAt(trip.location?.at ?? null);
@@ -288,6 +346,10 @@ function DrivingScreen({
   const tripRef = useRef(trip);
   tripRef.current = trip;
   useEffect(() => {
+    if (readOnly) {
+      setGeo('unavailable');
+      return;
+    }
     if (!('geolocation' in navigator)) {
       setGeo('unavailable');
       return;
@@ -332,9 +394,25 @@ function DrivingScreen({
   }, [trip.id]);
 
   const ensureOnline = () => {
+    if (readOnly) {
+      toast({ variant: 'destructive', title: 'This is a saved copy', description: 'Reopen the live run before saving rider changes or ending the trip.' });
+      return false;
+    }
     if (isOnline) return true;
     toast({ variant: 'destructive', title: 'No internet connection', description: 'Reconnect before saving this change. The trip will not be marked complete offline.' });
     return false;
+  };
+
+  const saveOfflineCopy = () => {
+    if (readOnly) return;
+    const saved = saveDriverOfflinePacket(schoolId, trip, activeRoute);
+    if (!saved) {
+      toast({ variant: 'destructive', title: 'Could not save the trip copy', description: 'This browser may be full or may not allow saved information.' });
+      return;
+    }
+    setOfflineSaved(true);
+    onOfflineSaved?.();
+    toast({ title: 'Trip copy saved', description: 'It is read-only and stays on this phone until this page is closed.' });
   };
 
   const mark = async (kids: DriverRider[], st: OfficeBusRiderStatus | null) => {
@@ -472,9 +550,11 @@ function DrivingScreen({
       <div
         className={cn(
           'flex items-center gap-2 px-4 py-2 text-sm font-medium',
-          !isOnline
-            ? 'bg-slate-700 text-white'
-            : geo === 'on' && !syncError
+          readOnly
+            ? 'bg-blue-800 text-white'
+            : !isOnline
+              ? 'bg-slate-700 text-white'
+              : geo === 'on' && !syncError
               ? 'bg-teal-700 text-white'
             : geo === 'waiting'
               ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
@@ -482,10 +562,12 @@ function DrivingScreen({
         )}
         role="status"
       >
-        {!isOnline ? <LocateOff className="h-4 w-4" /> : geo === 'on' ? <LocateFixed className="h-4 w-4" /> : <LocateOff className="h-4 w-4" />}
-        {!isOnline
-          ? 'No internet connection. Reconnect before saving rider changes or ending this run.'
-          : geo === 'on' && syncError
+        {readOnly ? <Save className="h-4 w-4" /> : !isOnline ? <LocateOff className="h-4 w-4" /> : geo === 'on' ? <LocateFixed className="h-4 w-4" /> : <LocateOff className="h-4 w-4" />}
+        {readOnly
+          ? 'Saved copy. Reopen the live run before making changes.'
+          : !isOnline
+            ? 'No internet connection. Reconnect before saving rider changes or ending this run.'
+            : geo === 'on' && syncError
             ? 'Location found, but the office has not received it yet. Trying again…'
             : geo === 'on' && lastServerAt
               ? 'Sharing bus location with the office'
@@ -497,6 +579,19 @@ function DrivingScreen({
                     ? 'Location is off. Allow location for this site so the office can see the bus.'
                     : 'Can’t find your location right now. The rider list still works.'}
       </div>
+
+      {readOnly ? (
+        <div className="border-b bg-blue-50 px-4 py-2 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+          This is a saved, read-only copy. Rider changes, reports, and ending the run are turned off here.
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 border-b bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs text-muted-foreground">Keep a copy on this phone before leaving signal.</p>
+          <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-lg" onClick={saveOfflineCopy}>
+            <Save className="h-3.5 w-3.5" /> {offlineSaved ? 'Saved on this phone' : 'Save trip copy'}
+          </Button>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <OfficeTransportMap
@@ -525,7 +620,7 @@ function DrivingScreen({
                   </span>
                 ) : null}
               </p>
-              <Button type="button" className="mt-3 h-12 w-full rounded-xl text-base" onClick={() => void arrive(next.id)}>
+              <Button type="button" className="mt-3 h-12 w-full rounded-xl text-base" disabled={readOnly} onClick={() => void arrive(next.id)}>
                 {atSchool ? 'At school' : 'At this stop'} — next
               </Button>
             </div>
@@ -546,7 +641,7 @@ function DrivingScreen({
               </button>
             </div>
             {!showAll && atSchool && hereKids.length > 1 ? (
-              <Button type="button" variant="outline" className="mt-3 h-11 w-full rounded-xl" onClick={() => void mark(hereKids, trip.run === 'am' ? 'off' : 'on')}>
+              <Button type="button" variant="outline" className="mt-3 h-11 w-full rounded-xl" disabled={readOnly} onClick={() => void mark(hereKids, trip.run === 'am' ? 'off' : 'on')}>
                 {trip.run === 'am' ? `Everyone off (${hereKids.length})` : `Everyone on (${hereKids.length})`}
               </Button>
             ) : null}
@@ -561,7 +656,7 @@ function DrivingScreen({
                       <div className="flex items-center justify-between gap-2 px-1">
                         <span className="font-medium">{k.displayName}</span>
                         {st && st !== 'on' ? (
-                          <button type="button" onClick={() => void mark([k], null)} aria-label="Undo" className="rounded p-1 text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800">
+                          <button type="button" disabled={readOnly} onClick={() => void mark([k], null)} aria-label="Undo" className="rounded p-1 text-muted-foreground hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800">
                             <Undo2 className="h-4 w-4" />
                           </button>
                         ) : null}
@@ -577,6 +672,7 @@ function DrivingScreen({
                           <button
                             key={value}
                             type="button"
+                            disabled={readOnly}
                             aria-pressed={st === value}
                             onClick={() => void mark([k], st === value ? null : value)}
                             className={cn(
@@ -598,7 +694,7 @@ function DrivingScreen({
                         trip.releases?.[k.id] ? (
                           <p className="mt-2 text-xs text-teal-700 dark:text-teal-300">Released to {trip.releases[k.id].contactName}</p>
                         ) : (
-                          <Button type="button" variant="outline" size="sm" className="mt-2 w-full gap-2 rounded-lg" onClick={() => openRelease(k)}>
+                          <Button type="button" variant="outline" size="sm" className="mt-2 w-full gap-2 rounded-lg" disabled={readOnly} onClick={() => openRelease(k)}>
                             <ShieldCheck className="h-3.5 w-3.5" /> Record who received them
                           </Button>
                         )
@@ -611,10 +707,10 @@ function DrivingScreen({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="outline" className="h-12 rounded-xl" onClick={() => setReport('delay')}>
+            <Button type="button" variant="outline" className="h-12 rounded-xl" disabled={readOnly} onClick={() => setReport('delay')}>
               <Clock className="mr-2 h-4 w-4" /> Running late
             </Button>
-            <Button type="button" variant="outline" className="h-12 rounded-xl" onClick={() => setReport('breakdown')}>
+            <Button type="button" variant="outline" className="h-12 rounded-xl" disabled={readOnly} onClick={() => setReport('breakdown')}>
               <AlertTriangle className="mr-2 h-4 w-4" /> Report a problem
             </Button>
           </div>
@@ -628,7 +724,7 @@ function DrivingScreen({
                   .map((s) => (
                     <li key={s.id} className="flex items-center justify-between">
                       <span>{s.name}</span>
-                      <button type="button" onClick={() => void arrive(s.id, false)} className="text-xs text-teal-800 hover:underline dark:text-teal-300">
+                      <button type="button" disabled={readOnly} onClick={() => void arrive(s.id, false)} className="text-xs text-teal-800 hover:underline dark:text-teal-300">
                         Not yet
                       </button>
                     </li>
@@ -637,7 +733,7 @@ function DrivingScreen({
             </details>
           ) : null}
 
-          <Button type="button" variant="destructive" className="h-12 w-full rounded-xl" disabled={!isOnline} onClick={() => setEnding(true)}>
+          <Button type="button" variant="destructive" className="h-12 w-full rounded-xl" disabled={readOnly || !isOnline} onClick={() => setEnding(true)}>
             End run
           </Button>
         </div>
@@ -686,7 +782,7 @@ function DrivingScreen({
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => setReport(null)}>
               Cancel
             </Button>
-            <Button type="button" className="rounded-xl" onClick={() => void sendReport()}>
+            <Button type="button" className="rounded-xl" disabled={readOnly} onClick={() => void sendReport()}>
               Send
             </Button>
           </DialogFooter>
@@ -717,7 +813,7 @@ function DrivingScreen({
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => setEnding(false)}>
               Keep driving
             </Button>
-            <Button type="button" variant="destructive" className="rounded-xl" disabled={!isOnline || !checked || unresolved.length > 0} onClick={() => void finish()}>
+            <Button type="button" variant="destructive" className="rounded-xl" disabled={readOnly || !isOnline || !checked || unresolved.length > 0} onClick={() => void finish()}>
               End run
             </Button>
           </DialogFooter>
