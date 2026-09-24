@@ -547,7 +547,6 @@ export function ThemeGeneratorModal({
                 });
             }
             resetThemeHistory(undefined);
-            onOpenChange(false);
         } catch (error) {
             console.error('Remove theme failed:', error);
             const description =

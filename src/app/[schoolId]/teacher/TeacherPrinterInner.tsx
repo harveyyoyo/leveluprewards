@@ -1060,9 +1060,10 @@ function TeacherRosterTab({
                       setStudentIdPreview((prev) =>
                         prev && prev.id === idCardThemeStudent.id ? { ...prev, theme: undefined } : prev,
                       );
+                      setIdCardThemeStudent((prev) =>
+                        prev && prev.id === idCardThemeStudent.id ? { ...prev, theme: undefined } : prev,
+                      );
                       toast({ title: 'Theme removed' });
-                      setIdCardThemeOpen(false);
-                      setIdCardThemeStudent(null);
                     } catch (e) {
                       toast({
                         variant: 'destructive',

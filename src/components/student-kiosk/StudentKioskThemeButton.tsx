@@ -75,7 +75,7 @@ export function StudentKioskThemeButton({
         if (!normalized) throw new Error('Invalid theme');
         await fn({ schoolId, studentId: student.id, theme: normalized });
       }
-      setThemeModalOpen(false);
+      if (theme !== null) setThemeModalOpen(false);
       toast({
         title: theme === null ? 'Theme removed' : 'Theme saved',
         description:
