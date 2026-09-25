@@ -463,7 +463,7 @@ export default function PortalPage() {
             >
                 <div
                     className={cn(
-                        'flex min-h-full w-full flex-1 flex-col items-center justify-start md:h-full md:max-h-full md:min-h-0 md:justify-center',
+                        'flex min-h-full w-full flex-1 flex-col items-center !justify-start md:h-full md:max-h-full md:min-h-0 md:!justify-center',
                         portalHubOuterGapClass(hubCardCount, compactDisplay),
                     )}
                 >
