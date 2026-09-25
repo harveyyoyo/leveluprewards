@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState, type ReactNode } from 'react';
 import { captureThemeCard, themeCardStarter, type CardAssets } from '@/lib/cardDesignStarter';
+import { CANVA_TEMPLATE_HEIGHT, CANVA_TEMPLATE_WIDTH, CARD_IMAGE_BUDGET, UPLOADED_ART_LABEL, downloadCanvaTemplate, fitUploadedArt } from '@/lib/cardDesignCanva';
 import type { StudentTheme } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ArtworkElement } from './CardArtwork';
@@ -50,6 +51,22 @@ export function StudentCardDesigner({ value, onChange, name, currentTheme, curre
     } catch { setError('That picture could not fit. Try a smaller picture or remove another picture.'); }
     finally { URL.revokeObjectURL(url); setUploading(false); }
   };
+  const uploadArt = async (file?: File) => {
+    if (!file) return;
+    setError('');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 15000000) { setError('Choose a PNG or JPG picture smaller than 15 MB.'); return; }
+    setUploading(true);
+    try {
+      const base = latest.current;
+      const others = base.elements.filter(e => e.label !== UPLOADED_ART_LABEL);
+      const used = others.filter(e => e.kind === 'image' && !e.binding).reduce((sum, e) => sum + e.text.length, 0);
+      const data = await fitUploadedArt(file, CARD_IMAGE_BUDGET - used);
+      const id = crypto.randomUUID();
+      commit({ ...base, elements: [{ id, kind: 'image', text: data, x: 0, y: 0, width: 540, height: artworkHeight, rotation: 0, color: '#000000', fontSize: 32, font: 'sans-serif', bold: false, label: UPLOADED_ART_LABEL, locked: true }, ...others] });
+      select(id);
+    } catch { setError('That picture could not fit on the card. Try saving it from Canva as a JPG, or remove other pictures first.'); }
+    finally { setUploading(false); }
+  };
   const loadCurrent = () => {
     try { commit(currentTheme?.cardDesign ?? (currentCard && source.current ? captureThemeCard(source.current, assets, currentTheme) : themeCardStarter(currentTheme, name, assets.school))); select(undefined); setError(''); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not open your current card.'); }
@@ -82,6 +99,22 @@ export function StudentCardDesigner({ value, onChange, name, currentTheme, curre
     </div>
     {currentCard && <details className="rounded-xl border bg-white p-3"><summary className="cursor-pointer text-sm font-bold">See my current card</summary><div className="mt-3 flex justify-center">{currentCard}</div></details>}
     <div className="flex flex-wrap gap-2 rounded-xl border bg-white p-3"><span className="w-full text-sm font-bold">Ready-made starting designs · uses your theme colors</span>{(['theme', 'stripe', 'spotlight'] as const).map(style => <Button key={style} variant="outline" onClick={() => { commit(themeCardStarter(currentTheme, name, assets.school, style)); select(undefined); }}>{style === 'theme' ? 'My theme' : style === 'stripe' ? 'Color stripe' : 'Spotlight'}</Button>)}</div>
+    <details className="rounded-xl border bg-white p-3">
+      <summary className="cursor-pointer text-sm font-bold">Design it in Canva instead</summary>
+      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
+        <li>Download a template below.</li>
+        <li>In Canva, choose <b>Create a design → Custom size</b> and type <b>{CANVA_TEMPLATE_WIDTH} × {CANVA_TEMPLATE_HEIGHT}</b> pixels. Drop the guide picture in as the bottom layer if you want to see the safe area.</li>
+        <li>Make your art. The student&apos;s name, school, and scan code are added underneath automatically, so leave them out.</li>
+        <li>Hide or delete the guide, then <b>Share → Download</b> as PNG or JPG.</li>
+        <li>Come back here and press <b>Upload finished art</b>.</li>
+      </ol>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => downloadCanvaTemplate(true)}>Download template with guides</Button>
+        <Button variant="outline" onClick={() => downloadCanvaTemplate(false)}>Download blank template</Button>
+        <label className="cursor-pointer rounded-md border bg-slate-900 px-3 py-2 text-sm font-medium text-white">{uploading ? 'Adding your art…' : 'Upload finished art'}<input disabled={uploading} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e => { void uploadArt(e.target.files?.[0]); e.target.value = ''; }} /></label>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">Your art fills the whole top of the card and sits behind everything else. You can still add text and stickers on top. Uploading again replaces it.</p>
+    </details>
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" onClick={() => add('text', 'Make it yours!')}>+ Text</Button>
       <Button variant="outline" onClick={() => add('rectangle')}>+ Rectangle</Button>
