@@ -171,6 +171,44 @@ describe('office routing', () => {
     }
   });
 
+  it('keeps office links on the old portal host until the forward switch is on', () => {
+    const previousPortal = process.env.PORTAL_CANONICAL_HOST;
+    const previousForward = process.env.PORTAL_HOST_FORWARD;
+    process.env.PORTAL_CANONICAL_HOST = 'leveluprewards.app';
+    delete process.env.PORTAL_HOST_FORWARD;
+    try {
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+
+      process.env.PORTAL_HOST_FORWARD = '1';
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://leveluprewards.app/yeshiva/office/teachers');
+    } finally {
+      if (previousPortal === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previousPortal;
+      }
+      if (previousForward === undefined) {
+        delete process.env.PORTAL_HOST_FORWARD;
+      } else {
+        process.env.PORTAL_HOST_FORWARD = previousForward;
+      }
+    }
+  });
+
   it('serves /school/office on the main site when subdomain is not configured', () => {
     const previousOffice = process.env.OFFICE_CANONICAL_HOST;
     const previousPublic = process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST;

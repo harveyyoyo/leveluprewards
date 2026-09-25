@@ -397,7 +397,7 @@ const MiniPortal: React.FC<{ config: ThemeIntroConfig }> = ({ config }) => {
             justifyContent: "center",
           }}
         >
-          portal.leveluprewards.app
+          leveluprewards.app
         </div>
       </div>
       <div

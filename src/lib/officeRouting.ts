@@ -16,7 +16,12 @@ const RESERVED_OFFICE_SEGMENTS = new Set([
 /** Path segments on the office host (after /{schoolId}/). */
 const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'attendance', 'front-desk', 'transportation', 'communication', 'teachers', 'billing', 'reports', 'settings']);
 
-import { canonicalPortalHost, isLocalDevHost } from '@/lib/portalRouting';
+import {
+  canonicalPortalHost,
+  isLocalDevHost,
+  isPortalHostname,
+  portalHostForwardEnabled,
+} from '@/lib/portalRouting';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
@@ -221,11 +226,13 @@ export function officeHostToPortalRedirectUrl(
   if (isLocalDevHost(rawCurrentHost)) return null;
 
   let portalHost = canonicalPortalHost();
-  if (!portalHost) {
-    const officeHost = normalizeHost(rawCurrentHost);
-    if (officeHost.startsWith('office.')) {
-      portalHost = `portal.${officeHost.slice('office.'.length)}`;
-    }
+  const officeHost = normalizeHost(rawCurrentHost);
+  // Until old portal. links are switched to forward to the main site, old office links keep
+  // landing on the portal. address they have used since the office subdomain was retired.
+  const keepOldPortalHost =
+    !portalHost || (!isPortalHostname(portalHost) && !portalHostForwardEnabled());
+  if (keepOldPortalHost && officeHost.startsWith('office.')) {
+    portalHost = `portal.${officeHost.slice('office.'.length)}`;
   }
   if (!portalHost) return null;
 

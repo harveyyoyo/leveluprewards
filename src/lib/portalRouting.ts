@@ -3,6 +3,8 @@ const RESERVED_PORTAL_SEGMENTS = new Set([
   '_next',
   'portal',
   'login',
+  'contact',
+  'office-bootstrap',
   'developer',
   'privacy',
   'terms',
@@ -177,6 +179,42 @@ export function canonicalPortalRedirectUrl(
   const scheme =
     targetHost.includes('localhost') || isLocalDevHost(targetHost) ? 'http:' : protocol || 'https:';
   const target = new URL(`${scheme}//${targetHost}${pathname}`);
+  target.search = search || '';
+  return target;
+}
+
+/**
+ * Switch for moving everyone off the old `portal.` address. Off by default (owner choice): schools
+ * using the old address keep it unchanged, with no second sign-in, until this is turned on.
+ */
+export function portalHostForwardEnabled(): boolean {
+  return process.env.PORTAL_HOST_FORWARD === '1';
+}
+
+/**
+ * With the forward switch on and a canonical host that is not a `portal.` subdomain (e.g.
+ * `leveluprewards.app`), old portal-host links (bookmarks, QR codes, flyers) open the same page on
+ * the canonical host, keeping the portal host's short links (`/` → `/portal`, `/{school}` →
+ * `/{school}/portal`). API calls and files stay on the old host so pages already open there keep
+ * working until they reload.
+ */
+export function portalHostToCanonicalRedirectUrl(
+  pathname: string,
+  search: string,
+  rawCurrentHost: string | null | undefined,
+  protocol: string,
+): URL | null {
+  if (!portalHostForwardEnabled()) return null;
+  const targetHost = canonicalPortalHost();
+  if (!targetHost || isPortalHostname(targetHost)) return null;
+  if (!isPortalHostname(rawCurrentHost) || isLocalDevHost(rawCurrentHost)) return null;
+  if (pathname === '/api' || pathname.startsWith('/api/')) return null;
+  if (/\.[a-z0-9]+$/i.test(pathname)) return null;
+
+  const targetPath = portalHostRedirectPath(pathname) ?? pathname;
+  const scheme =
+    targetHost.includes('localhost') || isLocalDevHost(targetHost) ? 'http:' : protocol || 'https:';
+  const target = new URL(`${scheme}//${targetHost}${targetPath}`);
   target.search = search || '';
   return target;
 }

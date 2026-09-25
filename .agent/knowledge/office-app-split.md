@@ -12,9 +12,9 @@ of "the Office app" without realizing it.
 - Code: `src/app/[schoolId]/office/…`, `src/components/office/`, `src/lib/office/`.
 - Local dev: `npm run dev` (port 3000) — no second server, no hand-off. Opening
   `/{schoolId}/office` renders directly.
-- Production: `https://portal.leveluprewards.app/{school}/office` (owner preference — same app
-  as the student portal, no separate office subdomain required). See `office-subdomain.md` for
-  the optional `office.leveluprewards.app` redirect-only behavior.
+- Production: `https://leveluprewards.app/{school}/office` (owner preference — same app
+  as the student portal, no separate office subdomain and no `portal.` prefix). See
+  `office-subdomain.md` for the optional `office.leveluprewards.app` redirect-only behavior.
 - Data: still `office*` Firestore collections only — see `office-rewards-separation.md`.
 
 If you find a reference to `apps/office`, `dev:office`, `build:office`, `install:office`, or the

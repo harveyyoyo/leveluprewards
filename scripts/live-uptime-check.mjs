@@ -14,6 +14,7 @@ const schoolId = (process.env.LIVE_UPTIME_SCHOOL_ID || process.env.LIVE_AUTH_SCH
 const { passcode, firebaseApiKey } = liveAuthConfig();
 const timeoutMs = Number(process.env.LIVE_UPTIME_TIMEOUT_MS || 15000);
 const portalMode = (process.env.LIVE_UPTIME_PORTAL_MODE || 'any').trim().toLowerCase();
+const oldPortalUrl = (process.env.LIVE_UPTIME_OLD_PORTAL_URL || '').trim().replace(/\/+$/, '');
 
 function fail(message, detail = '') {
   console.error(`[live-uptime] ${message}`);
@@ -127,6 +128,19 @@ async function checkPortal() {
   console.log(`[live-uptime] /${schoolId}/portal returned ${response.status}.`);
 }
 
+/** Old portal-subdomain links (bookmarks, QR codes) must still open the school's portal page. */
+async function checkOldPortalLink() {
+  if (!oldPortalUrl) return;
+  const oldLink = `${oldPortalUrl}/${schoolId}`;
+  const response = await fetchWithTimeout(oldLink, { redirect: 'follow' });
+  // Strict edge mode sends signed-out visitors to /login first.
+  const landed = new URL(response.url).pathname;
+  if (!response.ok || (landed !== `/${schoolId}/portal` && landed !== '/login')) {
+    fail(`${oldLink} should open the school's portal page. HTTP ${response.status}`, response.url);
+  }
+  console.log(`[live-uptime] ${oldLink} opens ${response.url} (HTTP ${response.status}).`);
+}
+
 async function checkSchoolAccessApi() {
   const idToken = await createAnonymousIdToken(firebaseApiKey);
   const { response, body } = await verifySchoolAccessApiRoute({
@@ -146,4 +160,5 @@ await checkHealth();
 await checkSchoolAccessApi();
 await checkLogin();
 await checkPortal();
+await checkOldPortalLink();
 console.log('[live-uptime] Uptime checks passed.');

@@ -524,7 +524,7 @@ export const BrowserMockup: React.FC<{
           padding: "4px 0",
         }}
       >
-        portal.leveluprewards.app
+        leveluprewards.app
       </div>
     </div>
     <div style={{ flex: 1, overflow: "hidden", background: "#f8fafc" }}>

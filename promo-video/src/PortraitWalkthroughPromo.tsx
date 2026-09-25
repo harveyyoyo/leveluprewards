@@ -229,7 +229,7 @@ const DemoScene: React.FC<{
               padding: "4px 0",
             }}
           >
-            portal.leveluprewards.app
+            leveluprewards.app
           </div>
         </div>
         <Video

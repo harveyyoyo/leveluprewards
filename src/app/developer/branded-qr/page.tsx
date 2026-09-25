@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useRef, useState } from 'react';
 import { downloadBrandedQrPng } from '@/lib/qr/downloadBrandedQrPng';
 
-const DEFAULT_URL = 'https://portal.leveluprewards.app/yeshiva/student-home';
+const DEFAULT_URL = 'https://leveluprewards.app/yeshiva/student-home';
 
 export default function DeveloperBrandedQrPage() {
   const [url, setUrl] = useState(DEFAULT_URL);

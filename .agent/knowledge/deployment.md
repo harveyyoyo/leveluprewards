@@ -8,6 +8,26 @@ Production and PR preview workflows share the `firebase-frameworks-studio-127307
 
 Firebase CLI 14.27.0 has returned exit code 0 after `unable to queue the operation` / `failed to update function`, without publishing a Hosting release. Both workflows now run `scripts/assert-firebase-release.cjs` against the CLI log: a completed upload is insufficient, and a confirmed Hosting release is required. Check the actual served page after deployment before reporting a UI update as live.
 
+## Main site address (no `portal.` prefix)
+
+Owner preference (2026-09-25): the live site is `https://leveluprewards.app`; links must not start
+with `portal.`. `deploy.yml` sets `PORTAL_CANONICAL_HOST` / `NEXT_PUBLIC_PORTAL_CANONICAL_HOST` to
+`leveluprewards.app`, so the main site no longer bounces sign-in and school pages to `portal.`, and
+links the app builds (school portal, sign-in, office hand-off) use it.
+
+**For now the old `portal.leveluprewards.app` address keeps working exactly as before** (owner
+choice, in case a school uses it): no forwarding, links on pages there stay there, and old
+`office.` links still land on `portal.`. Keep `portal.leveluprewards.app` attached in Firebase
+Hosting. The post-deploy uptime check (`LIVE_UPTIME_OLD_PORTAL_URL`) verifies an old link still
+opens the school's portal page.
+
+**Later, to move everyone to the main site** (only when the owner asks): add
+`PORTAL_HOST_FORWARD=1` to the production env in `deploy.yml`. Page loads on `portal.` (and
+`office.`) then forward to the same page on the main site (`/` → `/portal`, `/{school}` →
+`/{school}/portal`). API calls and in-app navigation from pages already open on the old address are
+not forwarded, so open kiosks keep working until they reload. Moving hosts changes the browser
+origin, so each device signs in to the school once more — publish after school hours.
+
 ## Pre-Deployment Checklist
 - [ ] **Login Functionality**: Especially ensure that accounts can log in successfully (School, Teacher, Student, Admin).
 - [ ] **Core Portals**: Verify that the Student Kiosk, Teacher Portal, and Admin Portal are accessible.

@@ -31,6 +31,10 @@ export function schoolPortalHref(schoolId: string): string {
     if (isLocalDevHost(window.location.host) && !isPortalHostname(window.location.host)) {
       return `/${school}/portal`;
     }
+    // On the old portal. address, keep links there, where the user is signed in.
+    if (isPortalHostname(window.location.host) && !isPortalHostname(host)) {
+      return `/${school}/portal`;
+    }
   }
   const scheme = host.includes('localhost') ? 'http' : 'https';
   return `${scheme}://${host}/${school}/portal`;
