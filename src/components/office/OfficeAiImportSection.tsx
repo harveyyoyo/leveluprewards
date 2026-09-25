@@ -28,6 +28,7 @@ import {
   type ParsedOfficeSnapshot,
 } from '@/lib/office/officeAiImport';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { OfficeMicButton } from '@/components/office/OfficeMicButton';
 import type {
   OfficeBillingAccount,
   OfficeClass,
@@ -474,13 +475,16 @@ export function OfficeAiImportSection({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Paste anything (optional)
-          </Label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Paste anything (optional)
+            </Label>
+            <OfficeMicButton getValue={() => aiPaste} onChange={setAiPaste} />
+          </div>
           <Textarea
             value={aiPaste}
             onChange={(e) => setAiPaste(e.target.value)}
-            placeholder="Spreadsheets, report cards, billing exports, mixed tables, emails…"
+            placeholder="Spreadsheets, report cards, billing exports, mixed tables, emails… or tap Speak and read it out loud."
             className="min-h-[120px] rounded-xl font-mono text-sm"
           />
         </div>
