@@ -92,10 +92,13 @@ service cloud.firestore {
 
     // Staff, kiosk, or school-portal lobby (read-mostly admin UI before admin/teacher passcode).
     // Rewards / kiosk / portal hub — office staff use separate office* collections only.
+    // Order matters: rules stop after 10 document lookups per request. The kiosk and
+    // portal-lobby checks come first so they are never pushed past that limit by the
+    // seven staff-role lookups plus the two developer lookups.
     function isSchoolMember(schoolId) {
-      return isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId)
-        || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isHouseCoordinator(schoolId) || isDeveloper()
-        || hasKioskSession(schoolId) || hasAnonymousPortalSession(schoolId);
+      return hasKioskSession(schoolId) || hasAnonymousPortalSession(schoolId)
+        || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId)
+        || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isHouseCoordinator(schoolId) || isDeveloper();
     }
 
     function isLibraryCheckoutActivity() {
