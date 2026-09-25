@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,600;9..144,1,600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+@theme {
+  --color-canvas: #F8F5F0;
+  --color-ink: #1E2124;
+  --color-accent-blue: #4F46E5;
+  --color-accent-green: #10B981;
+  --color-accent-red: #EF4444;
+  --color-accent-orange: #F59E0B;
+  --font-serif: 'Fraunces', serif;
+  --font-sans: 'Instrument Sans', sans-serif;
+}
+</style>
+<style>
+  .dotted-canvas {
+    background-image: radial-gradient(#E2E2D5 1.5px, transparent 1.5px);
+    background-size: 32px 32px;
+  }
+</style>
+</head>
+<body>
+<div class="flex h-screen w-full bg-canvas font-sans text-ink">
+  <aside class="w-72 bg-white border-r border-stone-200 flex flex-col p-6 gap-6 z-10">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-8 h-8 bg-ink rounded flex items-center justify-center text-white font-serif italic text-lg">A</div>
+      <h1 class="font-serif text-xl font-semibold tracking-tight">Classroom.</h1>
+    </div>
+    <nav class="space-y-1.5">
+      <button class="w-full flex items-center justify-between px-4 py-2.5 bg-ink text-white rounded-lg text-sm font-medium transition-colors">
+        Arrange Seats
+        <span class="text-[10px] opacity-60">⌘A</span>
+      </button>
+      <button class="w-full flex items-center gap-3 px-4 py-2.5 text-stone-600 hover:bg-stone-50 rounded-lg text-sm font-medium transition-colors">Instant Award</button>
+      <button class="w-full flex items-center gap-3 px-4 py-2.5 text-stone-600 hover:bg-stone-50 rounded-lg text-sm font-medium transition-colors">Random Picker</button>
+      <button class="w-full flex items-center gap-3 px-4 py-2.5 text-stone-600 hover:bg-stone-50 rounded-lg text-sm font-medium transition-colors">Roll Call</button>
+    </nav>
+    <hr class="border-stone-100">
+    <div class="space-y-4">
+      <div class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Active Groups</div>
+      <div class="grid grid-cols-2 gap-2">
+        <button class="p-3 bg-stone-50 border border-stone-200 rounded-lg text-xs font-medium text-center hover:border-accent-blue transition-colors">Reading A</button>
+        <button class="p-3 bg-stone-50 border border-stone-200 rounded-lg text-xs font-medium text-center hover:border-accent-blue transition-colors">Math Owls</button>
+      </div>
+    </div>
+    <div class="mt-auto pt-6">
+      <div class="p-4 bg-accent-blue/5 rounded-xl border border-accent-blue/10">
+        <div class="text-xs font-semibold text-accent-blue mb-1">Class Goal</div>
+        <div class="h-1.5 w-full bg-accent-blue/10 rounded-full overflow-hidden">
+          <div class="h-full bg-accent-blue w-2/3"></div>
+        </div>
+        <div class="text-[10px] text-accent-blue/70 mt-2 uppercase font-bold tracking-tight">840 / 1200 Points</div>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 relative overflow-auto dotted-canvas p-12">
+    <div class="flex justify-between items-end mb-12 max-w-6xl mx-auto">
+      <div>
+        <h2 class="font-serif text-4xl text-ink">5th Grade Homeroom</h2>
+        <p class="text-stone-500 mt-1 italic">24 Students Present • 2 Excused</p>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex -space-x-2">
+           <div class="size-10 rounded-full border-2 border-canvas bg-accent-blue flex items-center justify-center text-white text-xs font-bold">3/22</div>
+           <div class="size-10 rounded-full border-2 border-canvas bg-accent-green flex items-center justify-center text-white text-xs font-bold">HC</div>
+        </div>
+        <button class="bg-white border border-stone-200 px-6 py-2.5 rounded-full text-sm font-semibold shadow-sm hover:shadow transition-all">Launch Projector</button>
+      </div>
+    </div>
+    <div class="flex justify-center mb-16">
+      <div class="w-64 h-12 bg-white border-2 border-stone-200 rounded-b-3xl border-t-0 flex items-center justify-center shadow-sm">
+        <span class="text-[10px] uppercase font-bold tracking-[0.2em] text-stone-400">Front of Class</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-5 gap-6 max-w-6xl mx-auto">
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue font-serif text-xl font-bold italic transition-transform group-hover:scale-105">AJ</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Arthur J.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">412 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer border-l-4 border-l-accent-green">
+        <div class="size-16 rounded-full bg-stone-100 outline-1 -outline-offset-1 outline-black/5 overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform">
+          <span class="text-[8px] font-medium uppercase tracking-widest text-stone-400">Avatar</span>
+        </div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Beatrice M.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">1,208 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-red/10 flex items-center justify-center text-accent-red font-serif text-xl font-bold italic transition-transform group-hover:scale-105">CL</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Carlos L.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">890 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-orange/10 flex items-center justify-center text-accent-orange font-serif text-xl font-bold italic transition-transform group-hover:scale-105">DW</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Daisy W.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">560 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer border-l-4 border-l-accent-red">
+        <div class="size-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 font-serif text-xl font-bold italic transition-transform group-hover:scale-105">EM</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Ethan M.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">215 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue font-serif text-xl font-bold italic transition-transform group-hover:scale-105">FS</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Fiona S.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">740 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-green/10 flex items-center justify-center text-accent-green font-serif text-xl font-bold italic transition-transform group-hover:scale-105">GT</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Gabe T.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">1,550 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-orange/10 flex items-center justify-center text-accent-orange font-serif text-xl font-bold italic transition-transform group-hover:scale-105">HR</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Hannah R.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">92 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer border-l-4 border-l-accent-green">
+        <div class="size-16 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue font-serif text-xl font-bold italic transition-transform group-hover:scale-105">IP</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Ismael P.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">1,100 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-red/10 flex items-center justify-center text-accent-red font-serif text-xl font-bold italic transition-transform group-hover:scale-105">JK</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Jade K.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">335 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 font-serif text-xl font-bold italic transition-transform group-hover:scale-105">KL</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Kevin L.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">670 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer border-l-4 border-l-accent-orange">
+        <div class="size-16 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue font-serif text-xl font-bold italic transition-transform group-hover:scale-105">LY</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Leo Y.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">480 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-green/10 flex items-center justify-center text-accent-green font-serif text-xl font-bold italic transition-transform group-hover:scale-105">MA</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Maya A.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">1,940 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-red/10 flex items-center justify-center text-accent-red font-serif text-xl font-bold italic transition-transform group-hover:scale-105">NR</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Noah R.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">12 pts</div>
+        </div>
+      </div>
+      <div class="bg-white border-2 border-stone-200 p-5 rounded-2xl flex flex-col items-center gap-3 shadow-sm group hover:border-accent-blue transition-all cursor-pointer">
+        <div class="size-16 rounded-full bg-accent-orange/10 flex items-center justify-center text-accent-orange font-serif text-xl font-bold italic transition-transform group-hover:scale-105">OP</div>
+        <div class="text-center">
+          <div class="font-serif font-semibold text-lg">Olive P.</div>
+          <div class="text-xs font-bold text-stone-400 mt-0.5 px-2 py-0.5 bg-stone-50 rounded-full">775 pts</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -11,7 +11,8 @@ const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
 function shortcutRows(tapPoints: number) {
   return [
     { action: `Instant award: +${tapPoints} now`, keys: ['Left click'] },
-    { action: 'Open menu', keys: ['Right click'] },
+    { action: 'Open menu', keys: ['Right click', 'Hold desk'] },
+    { action: 'Pick random student', keys: ['R'] },
     { action: 'Positive note', keys: ['Hold P', 'click'] },
     { action: 'Comment', keys: ['Hold C', 'click'] },
     { action: 'Incident', keys: ['Hold I', 'click'] },
@@ -92,9 +93,9 @@ export function ClassroomShortcutsModal({
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p id="classroom-shortcuts-title" className="text-base font-black tracking-tight">
-                  Shortcuts
+                  Shortcuts & Cheat Sheet
                 </p>
-                <p className="mt-0.5 text-xs font-semibold text-slate-300">Glance, then close.</p>
+                <p className="mt-0.5 text-xs font-semibold text-slate-300">Quick keys & reminder card</p>
               </div>
               <button
                 type="button"
@@ -117,13 +118,13 @@ export function ClassroomShortcutsModal({
             >
               {onShowOnScreenChange ? (
                 <div className="rounded-xl border border-slate-600 bg-slate-800/80 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Show on screen</p>
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Keep Cheat Sheet on Screen</p>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={showOnScreen}
                     className={cn(
-                      'mt-2 inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-sm font-black tracking-normal',
+                      'mt-2 inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-sm font-black tracking-normal transition-colors',
                       showOnScreen ? 'bg-amber-300 text-[#102033]' : 'bg-slate-700 text-white hover:bg-slate-600',
                     )}
                     onClick={() => onShowOnScreenChange(!showOnScreen)}
@@ -131,7 +132,7 @@ export function ClassroomShortcutsModal({
                     {showOnScreen ? 'By teacher desk ✓' : 'By teacher desk'}
                   </button>
                   <p className="mt-1.5 text-xs font-semibold text-slate-300">
-                    Keep a small reminder beside the teacher desk. It does not cover student desks.
+                    Keep a small reminder card right beside the teacher desk while teaching.
                   </p>
                 </div>
               ) : null}
@@ -199,21 +200,28 @@ export function ClassroomShortcutsModal({
 
 export function ClassroomShortcutsTrigger({
   onOpen,
+  isPinned = false,
 }: {
   onOpen: () => void;
+  isPinned?: boolean;
 }) {
   return (
     <motion.button
       type="button"
       layoutId="classroom-keyboard-tips"
       transition={spring}
-      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-xs font-black text-white hover:bg-white/20"
+      className={cn(
+        'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-black tracking-normal transition-colors',
+        isPinned
+          ? 'bg-indigo-600 text-white ring-2 ring-white/80 hover:bg-indigo-500'
+          : 'border border-white/20 bg-white/10 text-white hover:bg-white/20',
+      )}
       aria-label="Shortcuts"
-      title="Shortcuts"
+      title={isPinned ? 'Shortcuts (Cheat sheet pinned to desk)' : 'Keyboard shortcuts & cheat sheet'}
       onClick={onOpen}
     >
       <Keyboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      Shortcuts
+      {isPinned ? 'Shortcuts ✓' : 'Shortcuts'}
     </motion.button>
   );
 }

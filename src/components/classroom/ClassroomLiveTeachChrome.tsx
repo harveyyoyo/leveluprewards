@@ -8,16 +8,24 @@ import {
   ChevronDown,
   GraduationCap,
   Home,
+  Music,
+  Radio,
   RotateCcw,
+  Timer,
   Users,
+  Vote,
 } from 'lucide-react';
 import { ClassroomAppearancePopover } from '@/components/classroom/ClassroomAppearancePopover';
 import { ClassroomAwardsEffectsPopover } from '@/components/classroom/ClassroomAwardsEffectsPopover';
-import { ClassroomLiveCheatsheetTrigger } from '@/components/classroom/ClassroomLiveCheatsheet';
 import { ClassroomShortcutsModal, ClassroomShortcutsTrigger } from '@/components/classroom/ClassroomShortcutsModal';
+import { ClassroomMissionTimerModal } from '@/components/classroom/ClassroomMissionTimerModal';
+import { ClassroomNoiseRadarModal } from '@/components/classroom/ClassroomNoiseRadarModal';
+import { ClassroomSoundboardModal } from '@/components/classroom/ClassroomSoundboardModal';
+import { ClassroomQuickVoteModal } from '@/components/classroom/ClassroomQuickVoteModal';
 import {
   loadClassroomLiveCheatsheetShown,
   saveClassroomLiveCheatsheetShown,
+  subscribeClassroomLiveCheatsheet,
 } from '@/lib/classroom/classroomLiveCheatsheet';
 import { ClassroomWhosOutPulse } from '@/components/classroom/ClassroomWhosOutPulse';
 import type { ClassroomWhosOutPass } from '@/lib/classroom/classroomWhosOutPasses';
@@ -96,9 +104,14 @@ export function ClassroomLiveTeachChrome({
   const attendance = headerControls?.attendance;
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
+  const [noiseRadarOpen, setNoiseRadarOpen] = useState(false);
+  const [soundboardOpen, setSoundboardOpen] = useState(false);
+  const [quickVoteOpen, setQuickVoteOpen] = useState(false);
 
   useEffect(() => {
     setCheatsheetOpen(loadClassroomLiveCheatsheetShown());
+    return subscribeClassroomLiveCheatsheet((prefs) => setCheatsheetOpen(prefs.showQuickSheet));
   }, []);
 
   return (
@@ -110,7 +123,16 @@ export function ClassroomLiveTeachChrome({
         hidden: { opacity: 0, y: -10 },
         visible: { opacity: 1, y: 0, transition: { ...spring, staggerChildren: 0.05 } },
       }}
-      className="relative z-20 flex min-h-[68px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 overflow-hidden border-b border-white/10 bg-gradient-to-r from-[#0b1424] via-[#121a32] to-[#0c1528] px-3 py-2"
+      style={{
+        backgroundColor: 'var(--theme-header-bg, undefined)',
+        borderColor: 'var(--theme-header-border, undefined)',
+        color: 'var(--theme-header-text, undefined)',
+        fontFamily: 'var(--theme-font-heading, inherit)',
+      }}
+      className={cn(
+        'relative z-20 flex min-h-[68px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 overflow-hidden border-b border-white/10 px-3 py-2',
+        !headerControls?.appearance?.prefs?.themeKitSlug && 'bg-gradient-to-r from-[#0b1424] via-[#121a32] to-[#0c1528]',
+      )}
     >
       <motion.div
         variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: spring } }}
@@ -129,6 +151,7 @@ export function ClassroomLiveTeachChrome({
             <PopoverTrigger asChild>
               <button
                 type="button"
+                style={{ fontFamily: 'var(--theme-font-heading, inherit)' }}
                 className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 text-sm font-black text-white"
                 aria-label="Switch class"
               >
@@ -230,6 +253,7 @@ export function ClassroomLiveTeachChrome({
         className="flex shrink-0 items-center justify-end gap-2"
       >
         <span
+          style={{ fontFamily: 'var(--theme-font-heading, inherit)' }}
           className={cn(
             headerChipInk,
             'inline-flex h-8 shrink-0 items-center rounded-full border border-amber-400 bg-amber-100 px-3 py-1.5 text-xs font-bold tabular-nums tracking-normal',
@@ -243,8 +267,7 @@ export function ClassroomLiveTeachChrome({
               prefs={headerControls.appearance.prefs}
               rewardsPillarOn={headerControls.appearance.rewardsPillarOn}
               onChange={headerControls.appearance.onChange}
-              triggerClassName={iconBtnClass}
-              iconOnly
+              triggerClassName="inline-flex h-8 items-center justify-center rounded-full border border-white/20 bg-white/10 px-2.5 text-xs font-bold text-white hover:bg-white/20 gap-1.5"
             />
             <ClassroomAwardsEffectsPopover
               prefs={headerControls.appearance.prefs}
@@ -254,6 +277,42 @@ export function ClassroomLiveTeachChrome({
             />
           </>
         ) : null}
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Mission timer"
+          title="Activity & countdown timer"
+          onClick={() => setTimerOpen(true)}
+        >
+          <Timer className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Noise radar"
+          title="Classroom sound level radar"
+          onClick={() => setNoiseRadarOpen(true)}
+        >
+          <Radio className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Soundboard"
+          title="Attention chimes, celebration fanfares & focus ambience"
+          onClick={() => setSoundboardOpen(true)}
+        >
+          <Music className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Quick vote"
+          title="Live check for understanding & polling"
+          onClick={() => setQuickVoteOpen(true)}
+        >
+          <Vote className="h-4 w-4" aria-hidden />
+        </button>
         {headerControls?.onResetSessionDisplay ? (
           <button
             type="button"
@@ -280,14 +339,10 @@ export function ClassroomLiveTeachChrome({
         ) : null}
         {headerControls?.shortcutHint ? (
           <>
-            <ClassroomLiveCheatsheetTrigger
-              visible={cheatsheetOpen}
-              onShow={() => {
-                saveClassroomLiveCheatsheetShown(true);
-                setCheatsheetOpen(true);
-              }}
+            <ClassroomShortcutsTrigger
+              isPinned={cheatsheetOpen}
+              onOpen={() => setShortcutsOpen(true)}
             />
-            <ClassroomShortcutsTrigger onOpen={() => setShortcutsOpen(true)} />
             <ClassroomShortcutsModal
               open={shortcutsOpen}
               onOpenChange={setShortcutsOpen}
@@ -301,6 +356,15 @@ export function ClassroomLiveTeachChrome({
           </>
         ) : null}
       </motion.div>
+
+      <ClassroomMissionTimerModal open={timerOpen} onOpenChange={setTimerOpen} />
+      <ClassroomNoiseRadarModal open={noiseRadarOpen} onOpenChange={setNoiseRadarOpen} />
+      <ClassroomSoundboardModal open={soundboardOpen} onOpenChange={setSoundboardOpen} />
+      <ClassroomQuickVoteModal
+        open={quickVoteOpen}
+        onOpenChange={setQuickVoteOpen}
+        classNameLabel={pickerLabel}
+      />
     </motion.div>
   );
 }

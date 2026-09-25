@@ -21,6 +21,7 @@ export type StudentPrizeShopCardProps = {
   /** Why this prize is locked, when points exist but the wrong pile is needed. */
   affordHint?: string;
   className?: string;
+  compact?: boolean;
   /** When Goals are on, students can save toward this prize. */
   enableWishlist?: boolean;
   wishlistActive?: boolean;
@@ -39,6 +40,7 @@ export function StudentPrizeShopCard({
   wholeCardClick = false,
   affordHint,
   className,
+  compact = false,
   enableWishlist = false,
   wishlistActive = false,
   wishlistBusy = false,
@@ -76,7 +78,9 @@ export function StudentPrizeShopCard({
         variant={wishlistActive ? 'default' : 'outline'}
         size="sm"
         disabled={wishlistBusy}
-        className="h-9 w-full rounded-xl text-[10px] font-black uppercase tracking-widest"
+        aria-busy={wishlistBusy}
+        className="h-9 w-full rounded-xl text-xs font-bold"
+        style={themed ? { backgroundColor: wishlistActive ? 'var(--theme-primary)' : 'var(--theme-card)', color: wishlistActive ? primaryForeground : 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
         onClick={(e) => {
           e.stopPropagation();
           onToggleWishlist();
@@ -94,6 +98,7 @@ export function StudentPrizeShopCard({
       <div
         className={cn(
           'relative mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-inner transition-transform duration-500',
+          compact && '!mb-0 !h-12 !w-12',
           canAfford ? 'group-hover:scale-110 group-hover:rotate-6' : 'opacity-80 grayscale',
         )}
         style={
@@ -131,7 +136,7 @@ export function StudentPrizeShopCard({
         <DynamicIcon name={prize.icon || 'Gift'} className="relative z-10 h-8 w-8 drop-shadow-sm" />
       </div>
 
-      <div className="mb-4 w-full min-w-0">
+      <div className={cn("mb-4 w-full min-w-0", compact && "!mb-0 !w-auto flex-1 text-left")}>
         {wholeCardClick ? (
           prizeTitle
         ) : (
@@ -142,7 +147,7 @@ export function StudentPrizeShopCard({
             </TooltipContent>
           </Tooltip>
         )}
-        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
+        <div className={cn("mt-2.5 flex flex-wrap items-center justify-center gap-1.5", compact && "!mt-1 !justify-start")}>
           <Badge
             className="rounded-xl px-3 py-0.5 text-sm font-black"
             style={
@@ -194,7 +199,7 @@ export function StudentPrizeShopCard({
   const redeemControl = wholeCardClick ? (
     <span
       className={cn(
-        'inline-flex h-10 w-full items-center justify-center rounded-xl text-xs font-black uppercase tracking-widest shadow-md',
+        'inline-flex h-10 w-full items-center justify-center rounded-xl text-sm font-bold shadow-md',
         !themed && canAfford && 'bg-primary text-primary-foreground',
       )}
       style={
@@ -206,14 +211,14 @@ export function StudentPrizeShopCard({
       }
     >
       <Gift className="mr-2 h-4 w-4" aria-hidden />
-      Redeem Now
+      Get this prize
     </span>
   ) : (
     <Button
       type="button"
       onClick={onRedeem}
       disabled={!canAfford}
-      className="h-10 w-full rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all"
+      className="h-10 w-full rounded-xl text-sm font-bold shadow-md transition-all"
       style={
         themed && canAfford
           ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
@@ -223,7 +228,7 @@ export function StudentPrizeShopCard({
       }
     >
       <Gift className="mr-2 h-4 w-4" aria-hidden />
-      Redeem Now
+      Get this prize
     </Button>
   );
 
@@ -259,7 +264,7 @@ export function StudentPrizeShopCard({
           onClick={onRedeem}
           aria-label={canAfford ? `Redeem ${displayName}` : `Cannot redeem ${displayName}. ${lockedTitle}`}
           title={!canAfford ? lockedTitle : undefined}
-          className="flex w-full cursor-pointer flex-col items-center"
+          className={cn("flex w-full cursor-pointer flex-col items-center", compact && "!flex-row flex-wrap gap-3")}
         >
           {mediaAndMeta}
           {redeemControl}

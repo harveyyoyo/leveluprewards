@@ -611,7 +611,7 @@ function StudentLoginPage() {
         <TooltipProvider>
           <div
             className={cn(
-              'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 py-4 font-sans [@media(max-height:720px)]:py-2',
+              'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-4 font-sans [@media(max-height:720px)]:justify-start [@media(max-height:720px)]:py-2',
               isGraphic
                 ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
                 : '',

@@ -119,9 +119,10 @@ export function AdminStaffAccountsTab({
         </Button>
       </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent>
-        <ul className="pr-1 space-y-1">
+        <ul className="overflow-x-auto pb-2 pr-1 space-y-1">
           {staffAccounts && staffAccounts.length > 0 ? (
             <AdminRecordListHeader
+              className="min-w-[640px]"
               gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(120px,160px)_minmax(120px,180px)_44px]"
               columns={[
                 { label: 'Edit' },
@@ -141,7 +142,7 @@ export function AdminStaffAccountsTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                  className="h-11 gap-1.5 rounded-lg border-primary/20 bg-background font-semibold text-primary hover:bg-primary/5"
                   onClick={() => openEdit(a)}
                 >
                   <Edit className="h-3.5 w-3.5" />
@@ -162,7 +163,7 @@ export function AdminStaffAccountsTab({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                  className="size-11 rounded-lg text-destructive hover:bg-destructive/10"
                   onClick={() => void onDelete(a.id)}
                 >
                   <Trash2 className="w-3.5 h-3.5" />

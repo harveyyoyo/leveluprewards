@@ -12,7 +12,9 @@ import {
   LayoutGrid,
   Monitor,
   Palette,
+  Music,
   Projector,
+  Radio,
   RotateCcw,
   Settings as SettingsIcon,
   Shuffle,
@@ -20,6 +22,7 @@ import {
   Timer,
   Tv,
   Users,
+  Vote,
 } from 'lucide-react';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -71,6 +74,10 @@ import {
 } from '@/lib/classroomSeatingChart';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { RandomStudentPickerModal } from '@/components/classroom/RandomStudentPickerModal';
+import { ClassroomMissionTimerModal } from '@/components/classroom/ClassroomMissionTimerModal';
+import { ClassroomNoiseRadarModal } from '@/components/classroom/ClassroomNoiseRadarModal';
+import { ClassroomSoundboardModal } from '@/components/classroom/ClassroomSoundboardModal';
+import { ClassroomQuickVoteModal } from '@/components/classroom/ClassroomQuickVoteModal';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
 import { BehaviorTimelinePanel } from '@/components/classroom/BehaviorTimelinePanel';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
@@ -125,6 +132,10 @@ export function ClassroomCommandCenter({
   const [activeTab, setActiveTab] = useState<ClassroomWorkbenchTab>(initialTab);
   const [isRandomModalOpen, setIsRandomModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
+  const [isNoiseRadarOpen, setIsNoiseRadarOpen] = useState(false);
+  const [isSoundboardOpen, setIsSoundboardOpen] = useState(false);
+  const [isQuickVoteOpen, setIsQuickVoteOpen] = useState(false);
   const [sessionPoints, setSessionPoints] = useState<number>(0);
 
   // Scope & Class Resolution
@@ -368,6 +379,54 @@ export function ClassroomCommandCenter({
 
           {/* Quick Action Broadcast Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Mission & Activity Timer */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTimerModalOpen(true)}
+              className="h-9 rounded-xl font-bold text-xs gap-1.5 border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
+            >
+              <Timer className="h-3.5 w-3.5" />
+              Timer
+            </Button>
+
+            {/* Noise Radar */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsNoiseRadarOpen(true)}
+              className="h-9 rounded-xl font-bold text-xs gap-1.5 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+            >
+              <Radio className="h-3.5 w-3.5" />
+              Noise Radar
+            </Button>
+
+            {/* Soundboard & Ambience */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSoundboardOpen(true)}
+              className="h-9 rounded-xl font-bold text-xs gap-1.5 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+            >
+              <Music className="h-3.5 w-3.5" />
+              Soundboard
+            </Button>
+
+            {/* Quick Check Poll */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsQuickVoteOpen(true)}
+              className="h-9 rounded-xl font-bold text-xs gap-1.5 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-violet-600 dark:text-violet-400"
+            >
+              <Vote className="h-3.5 w-3.5" />
+              Quick Check
+            </Button>
+
             {/* Random Student Spotlight */}
             <Button
               type="button"
@@ -572,6 +631,7 @@ export function ClassroomCommandCenter({
         isOpen={isRandomModalOpen}
         onClose={() => setIsRandomModalOpen(false)}
         students={classStudents}
+        attendanceMap={attendanceMap}
         onAward={handleRandomAward}
         defaultPoints={5}
         defaultReason="Random student spotlight"
@@ -635,6 +695,26 @@ export function ClassroomCommandCenter({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Futurist Classroom Modals */}
+      <ClassroomMissionTimerModal
+        open={isTimerModalOpen}
+        onOpenChange={setIsTimerModalOpen}
+        title={`${activeClass?.name || 'Classroom'} Timer`}
+      />
+      <ClassroomNoiseRadarModal
+        open={isNoiseRadarOpen}
+        onOpenChange={setIsNoiseRadarOpen}
+      />
+      <ClassroomSoundboardModal
+        open={isSoundboardOpen}
+        onOpenChange={setIsSoundboardOpen}
+      />
+      <ClassroomQuickVoteModal
+        open={isQuickVoteOpen}
+        onOpenChange={setIsQuickVoteOpen}
+        classNameLabel={activeClass?.name || 'Classroom'}
+      />
     </div>
   );
 }

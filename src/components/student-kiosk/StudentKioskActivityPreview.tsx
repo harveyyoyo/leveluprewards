@@ -47,7 +47,7 @@ export function StudentKioskActivityPreview({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <p
-          className="flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+          className="flex items-center gap-2 text-xs font-bold"
           style={themed ? { color: 'var(--theme-text)' } : undefined}
         >
           <Clock className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
@@ -61,7 +61,7 @@ export function StudentKioskActivityPreview({
           studentId={studentId}
           themed={themed}
           preview
-          maxItems={3}
+          maxItems={variant === 'sidebar' ? 2 : 3}
         />
       </div>
       {showFooterCta ? (

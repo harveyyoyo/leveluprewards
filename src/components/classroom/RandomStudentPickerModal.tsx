@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Award,
@@ -28,7 +28,10 @@ import {
   CLASSROOM_TAP_SOUND,
 } from '@/lib/classroom/classroomPointSounds';
 import { getStudentNickname } from '@/lib/utils';
+import { playClassroomSound } from '@/lib/classroom/classroomSoundSynth';
 import type { Student } from '@/lib/types';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export interface RandomStudentPickerModalProps {
   isOpen: boolean;
@@ -38,6 +41,7 @@ export interface RandomStudentPickerModalProps {
   defaultPoints?: number;
   defaultReason?: string;
   accentColor?: string;
+  attendanceMap?: Map<string, string>;
 }
 
 export function RandomStudentPickerModal({
@@ -46,8 +50,9 @@ export function RandomStudentPickerModal({
   students,
   onAward,
   defaultPoints = 5,
-  defaultReason = 'Random student pick',
+  defaultReason = 'Random student spotlight',
   accentColor = '#10b981',
+  attendanceMap,
 }: RandomStudentPickerModalProps) {
   const playSound = useArcadeSound();
   const [isSpinning, setIsSpinning] = useState(false);
@@ -57,23 +62,36 @@ export function RandomStudentPickerModal({
   const [awardReason, setAwardReason] = useState<string>(defaultReason);
   const [isAwarding, setIsAwarding] = useState(false);
   const [awardedSuccess, setAwardedSuccess] = useState(false);
+  const [onlyPresent, setOnlyPresent] = useState(true);
+
+  // Compute absent students from attendance map
+  const absentCount = useMemo(() => {
+    if (!attendanceMap) return 0;
+    return students.filter((s) => attendanceMap.get(s.id) === 'absent').length;
+  }, [students, attendanceMap]);
+
+  const eligibleStudents = useMemo(() => {
+    if (!onlyPresent || !attendanceMap || absentCount === 0) return students;
+    const presentOnly = students.filter((s) => attendanceMap.get(s.id) !== 'absent');
+    return presentOnly.length > 0 ? presentOnly : students;
+  }, [students, attendanceMap, onlyPresent, absentCount]);
 
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const startSpin = useCallback(() => {
-    if (!students.length) return;
+    if (!eligibleStudents.length) return;
     setIsSpinning(true);
     setSelectedWinner(null);
     setAwardedSuccess(false);
 
-    let currentIdx = Math.floor(Math.random() * students.length);
+    let currentIdx = Math.floor(Math.random() * eligibleStudents.length);
     let delay = 60;
     let step = 0;
     const totalSteps = 24 + Math.floor(Math.random() * 8);
 
     const stepTick = () => {
-      currentIdx = (currentIdx + 1) % students.length;
-      setHighlightedStudent(students[currentIdx]);
+      currentIdx = (currentIdx + 1) % eligibleStudents.length;
+      setHighlightedStudent(eligibleStudents[currentIdx]);
       playSound(CLASSROOM_TAP_SOUND);
       step++;
 
@@ -88,29 +106,30 @@ export function RandomStudentPickerModal({
       } else {
         // Landed on winner!
         setIsSpinning(false);
-        const winner = students[currentIdx];
+        const winner = eligibleStudents[currentIdx];
         setSelectedWinner(winner);
         playSound(CLASSROOM_PICK_SOUND);
+        playClassroomSound('victory_fanfare', 0.85);
       }
     };
 
     spinTimeoutRef.current = setTimeout(stepTick, delay);
-  }, [students, playSound]);
+  }, [eligibleStudents, playSound]);
 
   useEffect(() => {
-    if (isOpen && students.length > 0 && !selectedWinner && !isSpinning) {
+    if (isOpen && eligibleStudents.length > 0 && !selectedWinner && !isSpinning) {
       startSpin();
     }
     return () => {
       if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     };
-  }, [isOpen, students.length, startSpin, isSpinning, selectedWinner]);
+  }, [isOpen, eligibleStudents.length, startSpin, isSpinning, selectedWinner]);
 
-  const handleGiveAward = async (pts: number) => {
+  const handleGiveAward = async (pts: number, customReason?: string) => {
     if (!selectedWinner || isAwarding) return;
     setIsAwarding(true);
     try {
-      await onAward(selectedWinner.id, pts, awardReason || 'Random student spotlight');
+      await onAward(selectedWinner.id, pts, customReason || awardReason || 'Random student spotlight');
       setAwardedSuccess(true);
       playSound('classroom_award');
     } catch {
@@ -120,11 +139,11 @@ export function RandomStudentPickerModal({
     }
   };
 
-  const currentDisplayStudent = selectedWinner || highlightedStudent || students[0];
+  const currentDisplayStudent = selectedWinner || highlightedStudent || eligibleStudents[0] || students[0];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md rounded-3xl p-6 sm:p-8 overflow-hidden text-center">
+      <DialogContent className="max-w-md overflow-y-auto rounded-3xl p-4 text-center sm:p-8">
         <DialogHeader className="space-y-1">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 mb-1">
             <Shuffle className="h-6 w-6" />
@@ -137,7 +156,26 @@ export function RandomStudentPickerModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 space-y-6">
+        <div className="mt-4 space-y-4">
+          {/* Attendance filter toggle if any student is absent */}
+          {absentCount > 0 ? (
+            <div className="flex items-center justify-between rounded-2xl border bg-muted/40 px-3.5 py-2 text-xs">
+              <span className="font-semibold text-muted-foreground">
+                {onlyPresent
+                  ? `Present students only (${students.length - absentCount} in class)`
+                  : `All students (${absentCount} absent)`}
+              </span>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="only-present-switch"
+                  checked={onlyPresent}
+                  disabled={isSpinning}
+                  onCheckedChange={setOnlyPresent}
+                />
+              </div>
+            </div>
+          ) : null}
+
           {/* Winner / Active Student Display Card */}
           <div
             className={`relative mx-auto flex flex-col items-center justify-center rounded-3xl border-2 p-6 transition-all duration-300 ${
@@ -205,36 +243,63 @@ export function RandomStudentPickerModal({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              className="space-y-4 text-left"
             >
+              {/* Quick Award Points */}
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <p className="text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Quick Award Spotlight
                 </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 5].map((pts) => (
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[1, 2, 3, 5, 10].map((pts) => (
                     <Button
                       key={pts}
                       type="button"
                       variant="outline"
                       disabled={isAwarding}
                       onClick={() => handleGiveAward(pts)}
-                      className="rounded-2xl border-2 font-black text-sm h-11 transition-transform hover:scale-105 hover:border-amber-400"
+                      className="h-11 min-w-0 rounded-2xl border-2 px-1 font-black text-sm transition-transform hover:scale-105 hover:border-amber-400 sm:px-3"
                     >
-                      <Award className="mr-1.5 h-4 w-4 text-amber-500" />
                       +{pts} pts
                     </Button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* Quick Reason Chips */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-bold text-muted-foreground">Award reason:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Spotlight Star',
+                    'Active Participation',
+                    'Great Effort',
+                    'Team Helper',
+                    'Super Answer',
+                  ].map((presetReason) => (
+                    <button
+                      key={presetReason}
+                      type="button"
+                      onClick={() => setAwardReason(presetReason)}
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                        awardReason === presetReason
+                          ? 'bg-amber-500 text-black font-bold shadow-sm'
+                          : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      {presetReason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={startSpin}
                   disabled={isSpinning || isAwarding}
-                  className="flex-1 font-bold text-xs gap-1.5 rounded-2xl h-10"
+                  className="flex-1 font-bold text-xs gap-1.5 rounded-2xl min-h-11"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Spin Again
@@ -243,7 +308,7 @@ export function RandomStudentPickerModal({
                   type="button"
                   onClick={() => handleGiveAward(awardPoints)}
                   disabled={isAwarding}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs gap-1.5 rounded-2xl h-10 shadow"
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs gap-1.5 rounded-2xl min-h-11 shadow"
                 >
                   <Trophy className="h-3.5 w-3.5" />
                   Award +{awardPoints}

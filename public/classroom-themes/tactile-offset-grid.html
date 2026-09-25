@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+@theme {
+  --color-paper: #FDFCF5;
+  --color-navy: #0A1628;
+  --color-accent-red: #E63946;
+  --color-accent-teal: #2A9D8F;
+  --color-accent-yellow: #E9C46A;
+  --color-accent-purple: #8338EC;
+  --color-ink: #1B1B1B;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+}
+.dot-grid {
+  background-image: radial-gradient(circle, #D1D1C1 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.offset-card {
+  box-shadow: 4px 4px 0px 0px rgba(10, 22, 40, 0.08);
+  transition: all 0.2s var(--ease-out-expo);
+}
+.offset-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0px 0px rgba(10, 22, 40, 0.12);
+}
+@keyframes entrance {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<div class="flex h-screen w-full bg-paper font-body text-ink overflow-hidden">
+  <aside class="w-72 bg-white border-r border-navy/10 flex flex-col z-20 shadow-xl">
+    <div class="p-6 border-b border-navy/5">
+      <div class="text-xs font-bold uppercase tracking-widest text-navy/40 font-display mb-4">Classroom Tools</div>
+      <button class="w-full bg-navy text-white font-display font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-navy/90 transition-colors">
+        <span>Arrange Seats</span>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4 space-y-6">
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-bold font-display text-navy">Add Points</span>
+          <span class="text-[10px] bg-accent-teal/10 text-accent-teal px-2 py-0.5 rounded-full">+5 to Class</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button class="bg-paper border border-navy/10 py-2 rounded font-display font-bold text-xs hover:bg-accent-teal hover:text-white transition-colors">+1</button>
+          <button class="bg-paper border border-navy/10 py-2 rounded font-display font-bold text-xs hover:bg-accent-teal hover:text-white transition-colors">+5</button>
+          <button class="bg-paper border border-navy/10 py-2 rounded font-display font-bold text-xs hover:bg-accent-teal hover:text-white transition-colors">+10</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <button class="w-full py-2.5 px-4 bg-accent-yellow rounded-lg text-left text-navy font-bold text-sm shadow-[2px_2px_0_0_#D4A017]">Random Student</button>
+        <button class="w-full py-2.5 px-4 bg-accent-purple rounded-lg text-left text-white font-bold text-sm shadow-[2px_2px_0_0_#5B21B6]">Raffle Draw</button>
+        <button class="w-full py-2.5 px-4 bg-accent-red rounded-lg text-left text-white font-bold text-sm shadow-[2px_2px_0_0_#B91C1C]">Behavior Log</button>
+        <button class="w-full py-2.5 px-4 bg-accent-teal rounded-lg text-left text-white font-bold text-sm shadow-[2px_2px_0_0_#0D9488]">Attendance Roll</button>
+      </div>
+      <div class="pt-4 border-t border-navy/5">
+        <div class="text-xs font-bold font-display text-navy/40 mb-3 uppercase tracking-tighter">Group Timer</div>
+        <div class="bg-navy text-white rounded-xl p-4">
+          <div class="text-3xl font-display font-bold text-center mb-3 tracking-tight">15:00</div>
+          <div class="flex gap-2">
+            <button class="flex-1 bg-white/20 py-1.5 rounded-md text-xs font-bold hover:bg-white/30">Start</button>
+            <button class="flex-1 bg-white/10 py-1.5 rounded-md text-xs font-bold hover:bg-white/20">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 bg-paper/50">
+      <button class="w-full border border-navy/10 py-2 rounded text-xs font-bold text-navy/60 hover:bg-white">Setup & More</button>
+    </div>
+  </aside>
+  <div class="flex-1 flex flex-col">
+    <header class="h-14 bg-navy text-white px-6 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-6">
+        <div class="bg-white/10 px-3 py-1 rounded font-display font-bold text-sm border border-white/10">Grade 5 ▾</div>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-accent-teal animate-pulse"></span>
+          <span class="text-xs font-bold opacity-80 uppercase tracking-widest">3/22 Present</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="px-4 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold">Projector</button>
+        <button class="px-4 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold">Shortcuts</button>
+        <div class="w-8 h-8 rounded-full bg-accent-yellow flex items-center justify-center text-navy font-bold text-xs">TR</div>
+      </div>
+    </header>
+    <main class="flex-1 dot-grid overflow-y-auto relative p-12">
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 animate-[entrance_0.6s_var(--ease-out-expo)_both]">
+        <div class="bg-navy text-white px-10 py-2 rounded-b-2xl shadow-lg border-x border-b border-white/20 flex flex-col items-center">
+          <span class="text-[10px] uppercase font-bold tracking-[0.2em] opacity-50">Front of Class</span>
+          <span class="font-display font-bold">TEACHER DESK</span>
+        </div>
+      </div>
+      <div class="mt-12 grid grid-cols-5 gap-6 max-w-5xl mx-auto">
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-teal animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:50ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-teal/20 grid place-items-center mb-3 ring-2 ring-accent-teal/10">
+              <span class="text-accent-teal font-display font-bold">JD</span>
+            </div>
+            <div class="font-display font-bold text-sm mb-1">John Davis</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">87 PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-red animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:100ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-red/20 grid place-items-center mb-3 ring-2 ring-accent-red/10">
+              <span class="text-accent-red font-display font-bold">EW</span>
+            </div>
+            <div class="font-display font-bold text-sm mb-1">Emily Ward</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">1.2K PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-yellow animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:150ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-yellow/20 grid place-items-center mb-3 ring-2 ring-accent-yellow/10">
+              <span class="text-accent-yellow font-display font-bold">ZJ</span>
+            </div>
+            <div class="font-display font-bold text-sm mb-1">Zoe Jenkins</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">452 PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-purple animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:200ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-purple/20 grid place-items-center mb-3 ring-2 ring-accent-purple/10">
+              <span class="text-accent-purple font-display font-bold">LH</span>
+            </div>
+            <div class="font-display font-bold text-sm mb-1">Leo Hayes</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">890 PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-teal animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:250ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-teal/20 grid place-items-center mb-3 ring-2 ring-accent-teal/10">
+              <span class="text-accent-teal font-display font-bold">AB</span>
+            </div>
+            <div class="font-display font-bold text-sm mb-1">Ava Brooks</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">2.1K PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-red animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:300ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-red/20 flex items-center justify-center mb-3 text-accent-red font-display font-bold">KM</div>
+            <div class="font-display font-bold text-sm mb-1">Kai Miller</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">66 PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-yellow animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:350ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-yellow/20 flex items-center justify-center mb-3 text-accent-yellow font-display font-bold">SO</div>
+            <div class="font-display font-bold text-sm mb-1">Sarah O'Neil</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">94 PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-purple animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:400ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-purple/20 flex items-center justify-center mb-3 text-accent-purple font-display font-bold">RR</div>
+            <div class="font-display font-bold text-sm mb-1">Ryan Reed</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">118 PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-teal animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:450ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-teal/20 flex items-center justify-center mb-3 text-accent-teal font-display font-bold">MP</div>
+            <div class="font-display font-bold text-sm mb-1">Mia Park</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">2.4K PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white p-4 rounded-xl border-t-4 border-accent-red animate-[entrance_0.5s_var(--ease-out-expo)_both] [animation-delay:500ms]">
+          <div class="flex flex-col items-center">
+            <div class="size-12 rounded-full bg-accent-red/20 flex items-center justify-center mb-3 text-accent-red font-display font-bold">TL</div>
+            <div class="font-display font-bold text-sm mb-1">Toby Long</div>
+            <div class="text-[10px] font-bold px-2 py-0.5 bg-navy text-white rounded-full">1.9K PTS</div>
+          </div>
+        </div>
+        <div class="offset-card bg-white/50 border border-dashed border-navy/10 p-4 rounded-xl flex items-center justify-center text-[10px] font-bold text-navy/20 uppercase tracking-widest">Empty Desk</div>
+        <div class="offset-card bg-white/50 border border-dashed border-navy/10 p-4 rounded-xl flex items-center justify-center text-[10px] font-bold text-navy/20 uppercase tracking-widest">Empty Desk</div>
+        <div class="offset-card bg-white/50 border border-dashed border-navy/10 p-4 rounded-xl flex items-center justify-center text-[10px] font-bold text-navy/20 uppercase tracking-widest">Empty Desk</div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;1,9..40,400&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+@theme {
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --color-canvas: #fdfaf5;
+  --color-paper: #ffffff;
+  --color-navy: #0f172a;
+}
+</style>
+<style>
+  .paper-texture {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23000000' fill-opacity='0.02' d='M1 3h1v1H1V3zm2-2h1v1H2V1z'%3E%3C/path%3E%3C/svg%3E");
+  }
+  .washi-teal { clip-path: polygon(2% 0%, 98% 2%, 100% 98%, 0% 100%); }
+  .washi-rose { clip-path: polygon(0% 2%, 100% 0%, 97% 100%, 3% 98%); }
+</style>
+</head>
+<body>
+<div class="min-h-screen bg-canvas font-body text-zinc-900 flex flex-col selection:bg-teal-100">
+  <header class="h-14 bg-navy flex items-center justify-between px-6 shrink-0 z-20">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5 ring-1 ring-white/10">
+        <span class="text-xs font-medium text-white/70 uppercase tracking-wider">Class</span>
+        <span class="text-sm font-medium text-white">Grade 5</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs font-medium ring-1 ring-teal-500/30">3/22 Here</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-300 text-xs font-medium ring-1 ring-zinc-500/30">Hall: All Clear</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="bg-yellow-400/90 text-yellow-950 text-xs font-semibold px-2 py-1 rounded shadow-sm">+15 pts</div>
+      <div class="flex gap-1">
+        <button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white transition-colors"><span>Projector</span></button>
+        <button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white transition-colors"><span>Cheatsheet</span></button>
+        <button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white transition-colors"><span>Shortcuts</span></button>
+      </div>
+    </div>
+  </header>
+  <div class="flex flex-1 overflow-hidden">
+    <aside class="w-64 bg-zinc-50 border-r border-zinc-200 overflow-y-auto p-4 flex flex-col gap-6">
+      <section>
+        <button class="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-zinc-800 transition-colors ring-1 ring-zinc-950">
+          Arrange seats
+        </button>
+      </section>
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">Quick Points</h3>
+          <span class="text-[10px] font-medium text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">+5 to Class</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button class="py-1.5 text-xs font-medium bg-white border border-zinc-200 rounded-md hover:border-teal-300 hover:bg-teal-50 transition-colors shadow-sm">+1</button>
+          <button class="py-1.5 text-xs font-medium bg-white border border-zinc-200 rounded-md hover:border-teal-300 hover:bg-teal-50 transition-colors shadow-sm">+2</button>
+          <button class="py-1.5 text-xs font-medium bg-white border border-zinc-200 rounded-md hover:border-teal-300 hover:bg-teal-50 transition-colors shadow-sm">+5</button>
+          <button class="py-1.5 text-xs font-medium bg-white border border-zinc-200 rounded-md hover:border-teal-300 hover:bg-teal-50 transition-colors shadow-sm">+10</button>
+          <button class="py-1.5 text-xs font-medium bg-white border border-zinc-200 rounded-md hover:border-teal-300 hover:bg-teal-50 transition-colors shadow-sm">+15</button>
+          <button class="py-1.5 text-xs font-medium bg-white border border-zinc-200 rounded-md hover:border-teal-300 hover:bg-teal-50 transition-colors shadow-sm">+20</button>
+        </div>
+      </section>
+      <section class="space-y-1">
+        <h3 class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2 px-1">Tools</h3>
+        <button class="w-full flex items-center pl-2 pr-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-md">Random student</button>
+        <button class="w-full flex items-center pl-2 pr-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-md">Raffle</button>
+        <button class="w-full flex items-center pl-2 pr-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-md">Behavior</button>
+        <button class="w-full flex items-center pl-2 pr-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-md">Attendance</button>
+      </section>
+      <div class="mt-auto pt-6 border-t border-zinc-200 space-y-4">
+        <div class="p-3 bg-zinc-100 rounded-lg">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] font-semibold text-zinc-500 uppercase">Timer</span>
+            <span class="text-xs font-mono font-medium">00:00</span>
+          </div>
+          <div class="flex gap-2">
+            <button class="flex-1 py-1.5 text-xs bg-zinc-900 text-white rounded font-medium">Start</button>
+            <button class="px-2 py-1.5 text-xs bg-white border border-zinc-200 rounded font-medium">Reset</button>
+          </div>
+        </div>
+        <button class="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 rounded-md">
+          Setup & more
+        </button>
+      </div>
+    </aside>
+    <main class="flex-1 overflow-y-auto p-12 paper-texture relative">
+      <div class="max-w-4xl mx-auto mb-16 flex justify-center">
+        <div class="relative bg-amber-50 px-12 py-6 border-2 border-amber-200 rounded-xl shadow-[0_4px_0_0_rgba(217,119,6,0.1)] flex items-center gap-4">
+          <div class="absolute -top-2 left-8 size-4 bg-red-500 rounded-full shadow-md border-2 border-red-600"></div>
+          <div class="absolute -top-2 right-8 size-4 bg-red-500 rounded-full shadow-md border-2 border-red-600"></div>
+          <div class="size-12 bg-amber-200/50 rounded-full grid place-items-center">
+             <svg class="size-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+          </div>
+          <div class="text-center">
+            <h2 class="font-display text-xl text-amber-900 leading-tight">Teacher Desk</h2>
+            <p class="text-sm text-amber-700 font-medium">Front of class — top of screen</p>
+          </div>
+        </div>
+      </div>
+      <div class="max-w-5xl mx-auto grid grid-cols-5 gap-8" id="desk-grid"></div>
+    </main>
+  </div>
+</div>
+<script>
+const students = [
+  ["AJ","Aria Jones","1,882 pts","rose","teal"],["LB","Logan Brown","1,506 pts","teal","amber"],
+  ["EW","Ethan Wong","2,125 pts","purple","pin"],["MS","Mia Smith","938 pts","orange","rose"],
+  ["JD","John Doe","87 pts","indigo","pin"],["ZJ","Zoe Jenkins","1,779 pts","emerald","none"],
+  ["JH","Jackson Hill","1,817 pts","sky","none"],["AR","Aiden Reed","1,523 pts","pink","none"],
+  ["IB","Isabella Bell","548 pts","lime","none"],["MM","Mia Miller","1,687 pts","yellow","none"],
+  ["JB","James Bond","99 pts","teal","teal"],["EV","Evelyn V","938 pts","purple","rose"],
+  ["ET","Ethan T","2,125 pts","teal","pin"],["JW","Joseph W","780 pts","red","teal"],
+  ["LN","Logan N","1,506 pts","yellow","pin"],["AL","Addison L","2,020 pts","teal","none"],
+  ["MD","Madison D","2,106 pts","teal","none"],["OJ","Owen J","1,689 pts","red","rose"],
+  ["PM","Penelope M","1,724 pts","purple","none"],["WA","William A","1,379 pts","teal","teal"]
+];
+const grid = document.getElementById('desk-grid');
+students.forEach(([init,name,pts,c,tape]) => {
+  let deco = '';
+  if (tape === 'teal') deco = '<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-6 bg-teal-200/60 washi-teal rotate-2 z-10"></div>';
+  else if (tape === 'amber') deco = '<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-5 bg-amber-200/60 washi-rose -rotate-3 z-10"></div>';
+  else if (tape === 'rose') deco = '<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-6 bg-rose-200/60 washi-teal rotate-1 z-10"></div>';
+  else if (tape === 'pin') deco = '<div class="absolute -top-1 -right-2 size-4 bg-blue-500 rounded-full shadow-md border-2 border-blue-600 z-10"></div>';
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="relative group">
+      ${deco}
+      <div class="bg-white p-5 pt-7 rounded-sm shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 flex flex-col items-center transition-transform hover:-translate-y-1">
+        <div class="size-12 rounded-full bg-${c}-100 text-${c}-600 font-display flex items-center justify-center text-lg mb-3 ring-4 ring-${c}-50">${init}</div>
+        <h3 class="font-medium text-zinc-900 mb-1">${name}</h3>
+        <div class="px-2.5 py-1 bg-zinc-900 text-white text-[10px] font-bold rounded-full">${pts}</div>
+      </div>
+    </div>`);
+});
+</script>
+</body>
+</html>

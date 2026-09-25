@@ -81,7 +81,7 @@ export function StaffPortalTabInfoPopover({
           variant="ghost"
           size="icon"
           className={cn(
-            'h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:bg-transparent hover:text-foreground',
+            'size-11 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground',
             className,
           )}
           aria-label={ariaLabel}

@@ -55,19 +55,21 @@ export function DisplayViewSwitcher({
   return (
     <nav
       aria-label="Display view"
-      className="pointer-events-auto fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/20 bg-black/55 p-1 shadow-2xl backdrop-blur-md"
+      className="pointer-events-auto fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-0.5 rounded-full border border-white/20 bg-black/55 p-1 shadow-2xl backdrop-blur-md sm:gap-1"
     >
       {options.map(({ view, label, icon: Icon }) => (
         <Link
           key={view}
           href={buildSwitchHref(schoolId, view, current)}
+          aria-label={label}
+          title={label}
           className={cn(
-            'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black uppercase tracking-wide transition-colors',
+            'flex size-11 shrink-0 items-center justify-center gap-2 rounded-full text-xs font-black uppercase tracking-wide transition-colors sm:h-auto sm:w-auto sm:px-4 sm:py-2',
             activeView === view ? 'bg-white text-black' : 'text-white/80 hover:text-white',
           )}
         >
           <Icon className="h-4 w-4" aria-hidden />
-          {label}
+          <span className="hidden sm:inline">{label}</span>
         </Link>
       ))}
     </nav>

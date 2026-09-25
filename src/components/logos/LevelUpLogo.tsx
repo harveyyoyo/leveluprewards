@@ -55,7 +55,7 @@ export function LevelUpLogo({
         <>
           <div
             aria-hidden
-            className="pointer-events-none absolute -inset-24 rounded-full blur-3xl"
+            className="pointer-events-none absolute -inset-24 overflow-hidden rounded-full blur-3xl"
             style={{
               background:
                 'radial-gradient(circle, oklch(0.62 0.16 250 / 0.45), transparent 65%)',

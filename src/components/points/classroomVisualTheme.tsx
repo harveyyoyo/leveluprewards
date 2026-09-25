@@ -233,7 +233,7 @@ function DeskAvatar({
     );
   }
   return (
-    <div className={shell} style={tokenRingStyle}>
+    <div className={shell} style={{ ...tokenRingStyle, fontFamily: 'var(--theme-font-heading, inherit)' }}>
       {initials}
     </div>
   );
@@ -262,7 +262,11 @@ function DeskPointsPill({ points, compact = false }: { points: number; compact?:
         'classroom-on-dark shrink-0 rounded-full px-2 py-0.5 font-black tabular-nums tracking-normal !text-white',
         compact ? 'text-[9px]' : 'text-[10px] sm:text-xs',
       )}
-      style={{ backgroundColor: '#0F172A', color: '#fff' }}
+      style={{
+        backgroundColor: 'var(--theme-header-bg, #0F172A)',
+        color: '#fff',
+        fontFamily: 'var(--theme-font-body, inherit)',
+      }}
     >
       {points.toLocaleString()} pts
     </div>
@@ -297,7 +301,14 @@ function DeskInner({
       visualScale={visualScale}
     />
   );
-  const nameEl = showName && !hideName ? <div className={deskNameClass(design, visualScale)}>{name}</div> : null;
+  const nameEl = showName && !hideName ? (
+    <div
+      style={{ fontFamily: 'var(--theme-font-heading, inherit)' }}
+      className={deskNameClass(design, visualScale)}
+    >
+      {name}
+    </div>
+  ) : null;
 
   if (design === 'minimal') {
     return (
@@ -581,6 +592,7 @@ export function ClassroomTeacherDesk({
   showFrontHint = true,
   leadingAction,
   trailingAction,
+  teacherName,
 }: {
   design: ClassroomDesign;
   frontAtBottom?: boolean;
@@ -590,10 +602,19 @@ export function ClassroomTeacherDesk({
   leadingAction?: ReactNode;
   /** e.g. Undo — right column. */
   trailingAction?: ReactNode;
+  teacherName?: string | null;
 }) {
   const frontHint = frontAtBottom
     ? 'Front of class — bottom of screen'
     : 'Front of class — top of screen';
+  const cleanName = teacherName?.trim();
+  const deskHeading = cleanName
+    ? /desk/i.test(cleanName)
+      ? cleanName
+      : cleanName.endsWith('s') || cleanName.endsWith('S')
+        ? `${cleanName}' Desk`
+        : `${cleanName}'s Desk`
+    : 'Teacher desk';
   const hintEl = showFrontHint ? (
     <p className="text-[10px] text-muted-foreground">{frontHint}</p>
   ) : null;
@@ -614,12 +635,15 @@ export function ClassroomTeacherDesk({
 
   if (design === 'midnight') {
     return wrap(
-      <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-2.5 shadow-inner">
+      <div
+        className="flex items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-2.5 shadow-inner"
+        title={cleanName ? `Teacher desk: ${cleanName}` : 'Teacher desk'}
+      >
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 shadow-lg shadow-indigo-500/30">
           <Monitor className="h-5 w-5 text-white" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold tracking-wide text-white">Teacher desk</p>
+          <p className="text-sm font-bold tracking-wide text-white">{deskHeading}</p>
           {showFrontHint ? <p className="text-[10px] font-semibold !text-white/90">{frontHint}</p> : null}
         </div>
       </div>,
@@ -627,10 +651,13 @@ export function ClassroomTeacherDesk({
   }
   if (design === 'brutalist') {
     return wrap(
-      <div className="flex items-center justify-center gap-3 border-2 border-foreground bg-yellow-300 px-4 py-2 shadow-[4px_4px_0_0_hsl(var(--foreground))]">
+      <div
+        className="flex items-center justify-center gap-3 border-2 border-foreground bg-yellow-300 px-4 py-2 shadow-[4px_4px_0_0_hsl(var(--foreground))]"
+        title={cleanName ? `Teacher desk: ${cleanName}` : 'Teacher desk'}
+      >
         <Monitor className="h-6 w-6 text-foreground" strokeWidth={2.5} />
         <div className="text-center">
-          <p className="text-sm font-black uppercase tracking-wider !text-foreground">Teacher desk</p>
+          <p className="text-sm font-black uppercase tracking-wider !text-foreground">{deskHeading}</p>
           {showFrontHint ? (
             <p className="text-[10px] font-bold uppercase !text-foreground/70">{frontHint}</p>
           ) : null}
@@ -640,12 +667,25 @@ export function ClassroomTeacherDesk({
   }
   if (design === 'playful') {
     return wrap(
-      <div className="flex items-center justify-center gap-3 rounded-3xl border-2 border-white bg-white px-5 py-2.5 shadow-lg">
+      <div
+        className="flex items-center justify-center gap-3 rounded-3xl border-2 border-white bg-white px-5 py-2.5 shadow-lg"
+        title={cleanName ? `Teacher desk: ${cleanName}` : 'Teacher desk'}
+        style={{
+          backgroundColor: 'var(--theme-teacher-desk-bg, undefined)',
+          color: 'var(--theme-teacher-desk-text, undefined)',
+          border: 'var(--theme-card-border, undefined)',
+          boxShadow: 'var(--theme-card-shadow, undefined)',
+          borderRadius: 'var(--theme-card-radius, undefined)',
+          fontFamily: 'var(--theme-font-heading, inherit)',
+        }}
+      >
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md">
           <Monitor className="h-5 w-5" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold !text-foreground">Teacher desk</p>
+          <p className="text-sm font-bold !text-foreground" style={{ color: 'var(--theme-teacher-desk-text, inherit)' }}>
+            {deskHeading}
+          </p>
           {hintEl}
         </div>
       </div>,
@@ -653,10 +693,13 @@ export function ClassroomTeacherDesk({
   }
   if (design === 'minimal') {
     return wrap(
-      <div className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-4 py-2">
+      <div
+        className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-4 py-2"
+        title={cleanName ? `Teacher desk: ${cleanName}` : 'Teacher desk'}
+      >
         <div className="flex items-center gap-2">
           <Monitor className="h-4 w-4 text-muted-foreground" />
-          <p className="text-xs font-semibold text-foreground">Teacher desk</p>
+          <p className="text-xs font-semibold text-foreground">{deskHeading}</p>
         </div>
         {hintEl}
       </div>,
@@ -667,6 +710,7 @@ export function ClassroomTeacherDesk({
       <div
         className="classroom-on-dark flex items-center justify-center gap-3 rounded-2xl px-5 py-2.5 shadow-[4px_6px_0_0_rgba(16,32,51,0.28)]"
         style={{ backgroundColor: CLASSROOM_TOKEN_TEACHER_NAVY, color: '#fff' }}
+        title={cleanName ? `Teacher desk: ${cleanName}` : 'Teacher desk'}
       >
         <div
           className="flex h-10 w-10 items-center justify-center rounded-full shadow-md"
@@ -676,7 +720,7 @@ export function ClassroomTeacherDesk({
         </div>
         <div className="text-center">
           <p className="text-sm font-black tracking-tight !text-white" style={{ color: '#fff' }}>
-            Teacher desk
+            {deskHeading}
           </p>
           {showFrontHint ? (
             <p className="text-[10px] font-semibold !text-white" style={{ color: '#f8fafc' }}>
@@ -688,12 +732,15 @@ export function ClassroomTeacherDesk({
     );
   }
   return wrap(
-    <div className="flex items-center justify-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-primary/10 px-5 py-2.5 shadow-sm">
+    <div
+      className="flex items-center justify-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-primary/10 px-5 py-2.5 shadow-sm"
+      title={cleanName ? `Teacher desk: ${cleanName}` : 'Teacher desk'}
+    >
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md">
         <Monitor className="h-5 w-5" />
       </div>
       <div className="text-center">
-        <p className="text-sm font-bold !text-foreground">Teacher desk</p>
+        <p className="text-sm font-bold !text-foreground">{deskHeading}</p>
         {hintEl}
       </div>
     </div>,

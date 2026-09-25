@@ -223,7 +223,7 @@ export function SmartScreenDisplay({
   const modulesCompact = compact || isMirror;
   const shellHeight = isPreview
     ? 'h-full'
-    : 'h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2.5rem)] lg:h-[calc(100dvh-3rem)]';
+    : 'h-[calc(100dvh-5rem)] sm:h-[calc(100dvh-6rem)] lg:h-[calc(100dvh-6.5rem)]';
   const showWeather = readScreenSetting('smartScreenShowWeather', schoolSettings, screenSettings) !== false;
   const showStats = readScreenSetting('smartScreenShowStats', schoolSettings, screenSettings) !== false;
   const showCompliments = readScreenSetting('smartScreenShowCompliments', schoolSettings, screenSettings) !== false;
@@ -702,7 +702,7 @@ export function SmartScreenDisplay({
       {!isPortrait && !isPreview ? (
         <div
           className={cn(
-            'pointer-events-none fixed bottom-5 right-5 hidden items-center gap-2 rounded-full border px-3 py-2 text-xs font-black uppercase tracking-wide backdrop-blur-md md:flex',
+            'pointer-events-none fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-5 hidden items-center gap-2 rounded-full border px-3 py-2 text-xs font-black uppercase tracking-wide backdrop-blur-md md:flex',
             theme.watermark,
           )}
         >

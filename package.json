@@ -54,6 +54,7 @@
     "generate:legal-pdfs:text": "node scripts/generate-legal-pdfs-from-text.mjs",
     "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",
     "capture:walkthrough": "node scripts/capture-walkthrough-videos.mjs",
+    "capture:pillar-style-screens": "node scripts/capture-pillar-style-screens.mjs",
     "capture:promo-simple": "node scripts/capture-walkthrough-videos.mjs --promo-simple",
     "capture:feature-promo": "node scripts/capture-walkthrough-videos.mjs --feature-promo",
     "capture:kiosk-clips": "node scripts/capture-walkthrough-videos.mjs --kiosk-clips",

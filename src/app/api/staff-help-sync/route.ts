@@ -1,0 +1,42 @@
+export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { guardAiRoute } from '@/lib/apiAuth';
+import { syncAppKnowledge } from '@/lib/appKnowledgeScanner';
+
+export async function POST(req: NextRequest) {
+  try {
+    const guarded = await guardAiRoute(req, {
+      requireSchoolStaff: true,
+      maxRequests: 30,
+      maxBodyBytes: 16 * 1024,
+    });
+    if (!guarded.ok) return guarded.response;
+
+    const result = syncAppKnowledge();
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Failed to update app knowledge on server.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      tabsCount: result.tabsCount,
+      routesCount: result.routesCount,
+      officeCount: result.officeCount,
+      libraryCount: result.libraryCount,
+      featuresCount: result.featuresCount,
+      timestamp: result.timestamp,
+      message: `✅ Internal guide updated! I performed a fresh scan of the entire app:\n- **${result.tabsCount} Admin tabs** & workflows\n- **${result.routesCount} school routes**\n- **${result.officeCount} School Office modules**\n- **${result.libraryCount} Library systems**\n- Student Themes, Kiosks, Coupons & Rewards\n\nMy internal guide is now fully updated with everything the app can do!`,
+    });
+  } catch (err: unknown) {
+    console.error('staff-help-sync error:', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unknown error updating knowledge.' },
+      { status: 500 }
+    );
+  }
+}

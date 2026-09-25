@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Sound Kit — Demo</title>
+<script src="./classroom-sounds.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; background: #faf3e3; color: #1e293b;
+         display: flex; flex-direction: column; align-items: center; gap: 20px;
+         padding: 40px 20px; margin: 0; }
+  h1 { margin: 0; font-size: 24px; }
+  section { background: #fff; border: 2px solid #1e293b; border-radius: 14px;
+            padding: 20px; width: 320px; box-shadow: 4px 4px 0 #1e293b; }
+  h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { cursor: pointer; border: 2px solid #1e293b; border-radius: 8px;
+           background: #fff; padding: 8px 12px; font-size: 13px; font-weight: 600; }
+  button:hover { background: #fef3c7; }
+  button.active { background: #0d9488; color: #fff; }
+  input[type=range] { width: 100%; accent-color: #0d9488; }
+  label { display: flex; justify-content: space-between; align-items: center;
+          font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>🔊 Classroom Sound Kit — Demo</h1>
+<p style="margin:0; font-size:13px;">Click around — every sound is synthesized, no audio files.</p>
+
+<section>
+  <h2>Sound kinds</h2>
+  <div class="row">
+    <button onclick="playSound('pop')">Pop</button>
+    <button onclick="playSound('toggle')">Toggle</button>
+    <button onclick="playSound('reset')">Reset</button>
+    <button onclick="playSound('success')">Success</button>
+    <button onclick="playSound('error')">Error</button>
+    <button onclick="playSound('tick')">Tick</button>
+  </div>
+</section>
+
+<section>
+  <h2>Sound style</h2>
+  <div class="row" id="styles"></div>
+  <label>Volume <span id="volLabel">70%</span></label>
+  <input type="range" id="vol" min="0" max="100" value="70"
+         oninput="document.getElementById('volLabel').textContent=this.value+'%';
+                  configureSound({ volume:+this.value }); playSound('tick');">
+  <label>Sound on
+    <input type="checkbox" checked onchange="configureSound({ enabled:this.checked })">
+  </label>
+  <label>Clicks anywhere blip
+    <input type="checkbox" checked onchange="attachClickSounds(this.checked)">
+  </label>
+</section>
+
+<script>
+  configureSound({ enabled: true, volume: 70, style: "Soft" });
+  attachClickSounds(true);
+  var styles = Object.keys(SOUND_STYLES);
+  var box = document.getElementById("styles");
+  styles.forEach(function (s) {
+    var b = document.createElement("button");
+    b.textContent = s;
+    if (s === "Soft") b.classList.add("active");
+    b.onclick = function () {
+      configureSound({ style: s });
+      box.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      playSound("toggle");
+    };
+    box.appendChild(b);
+  });
+</script>
+</body>
+</html>

@@ -768,508 +768,642 @@ export function SchoolDeveloperLoginForm({
     !showManualSchoolEntry &&
     !googleSchoolLoginError;
 
+  const isWideLayout = !isDeveloperOnly;
+
+  const renderHelpers = () => (
+    <>
+      {allowDeveloperLogin && !hasGoogleUser && !isDeveloperOnly && (
+        <div className="rounded-xl border border-border/70 bg-background/60 p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-muted-foreground">{t('auth.developerModeLocked')}</p>
+              <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
+                {googleSignInBlocked === 'operation-not-allowed'
+                  ? 'Google sign-in is disabled for this Firebase project. Enable Google in Firebase Console → Authentication → Sign-in method.'
+                  : 'Sign in with Google to use developer tools on this device.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleGoogleSignIn()}
+              disabled={isGoogleSigningIn || googleSignInBlocked === 'operation-not-allowed'}
+              className={cn(
+                'shrink-0 h-9 px-3 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold inline-flex items-center justify-center',
+                (isGoogleSigningIn || googleSignInBlocked === 'operation-not-allowed') &&
+                  'opacity-60 pointer-events-none',
+              )}
+            >
+              {googleSignInBlocked === 'operation-not-allowed'
+                ? t('auth.googleNotEnabled')
+                : isGoogleSigningIn
+                  ? t('auth.signingIn')
+                  : t('auth.signInWithGoogle')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {allowDeveloperLogin && hasGoogleUser && !isAllowedGoogleEmail && (
+        <div className="rounded-xl border border-border/70 bg-background/60 p-3.5 space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">{t('auth.developerModeLocked')}</p>
+            <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
+              {t('auth.googleNotAllowed', { email: googleEmail || '(unknown)' })}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => void handleGoogleSignIn({ promptSelectAccount: true })}
+              disabled={isGoogleSigningIn}
+              className="w-full h-10 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {isGoogleSigningIn ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  {t('auth.openingGoogle')}
+                </>
+              ) : (
+                t('auth.useDifferentGoogleAccount')
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleGoogleSignOut()}
+              disabled={isGoogleSigningIn}
+              className="w-full h-7 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {t('auth.signOutGoogle')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(isDeveloperOnly || isDeveloper) && hasGoogleUser && isAllowedGoogleEmail && (
+        <div className="rounded-xl border border-border/70 bg-background/60 p-3 space-y-2 text-center">
+          <p className="text-xs text-muted-foreground">
+            {t('auth.signedInAsGoogle')}{' '}
+            <span className="font-mono font-medium text-foreground">{googleEmail}</span>
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleGoogleSignOut()}
+              disabled={isGoogleSigningIn}
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {t('auth.signOutGoogle')}
+            </button>
+            <span className="text-muted-foreground/40 text-xs">·</span>
+            <button
+              type="button"
+              onClick={() => void handleGoogleSignIn({ promptSelectAccount: true })}
+              disabled={isGoogleSigningIn}
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {t('auth.useDifferentGoogleAccount')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isDeveloperOnly && allowDeveloperToggle && (
+        <div className="flex justify-start text-xs pt-1">
+          <button
+            type="button"
+            onClick={() => setIsDeveloper(!isDeveloper)}
+            className="font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:underline"
+          >
+            {isDeveloper ? t('auth.returnToSchoolLogin') : t('auth.developerClickHere')}
+          </button>
+        </div>
+      )}
+
+      {!isDeveloperOnly && !isDeveloper && (
+        <div className="rounded-xl border border-border/70 bg-background/60 p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-muted-foreground">{t('auth.tryDemoSchool')}</span>
+            <span className="text-[11px] text-muted-foreground">
+              Passcode: <strong className="font-mono text-foreground">1234</strong>
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handleSampleLogin('schoolabc')}
+              aria-label="Sign in to demo school: School ABC"
+              className="flex-1 h-9 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              School ABC
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSampleLogin('yeshiva')}
+              aria-label="Sign in to demo school: Yeshiva Demo"
+              className="flex-1 h-9 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              Yeshiva Demo
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className="min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center transition-colors duration-500 pb-8">
-      <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
+    <div className="min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center transition-colors duration-500 p-4 sm:p-6 md:p-8">
+      <div
+        className={cn(
+          'relative z-10 w-full flex flex-col items-center transition-all',
+          isWideLayout ? 'max-w-md md:max-w-4xl lg:max-w-5xl' : 'max-w-md',
+        )}
+      >
         <div
           className={cn(
-            'w-full rounded-2xl p-8 relative transition-all border bg-card border-border shadow-sm',
+            'w-full rounded-2xl p-6 sm:p-8 md:p-10 relative transition-all border bg-card border-border shadow-sm',
             isShaking && 'animate-arcade-shake',
           )}
         >
-          <div className="text-center mb-6">
-            <Link
-              href={getLevelUpLogoHref()}
-              className="flex items-center justify-center gap-4 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
-              aria-label={t('auth.schoolSignInAria', { appName: APP_NAME })}
-            >
-              {appLogoUrl ? (
-                <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={appLogoUrl}
-                    alt="App logo"
-                    className={
-                      settings.logoDisplayMode === 'cover'
-                        ? 'h-full w-full object-cover'
-                        : 'h-full w-full object-contain'
-                    }
-                  />
+          {isWideLayout ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-start">
+              {/* Left Column: Branding, Guidance & Helpers */}
+              <div className="flex flex-col justify-between h-full space-y-6 md:border-r md:border-border/50 md:pr-10">
+                <div className="space-y-4">
+                  <Link
+                    href={getLevelUpLogoHref()}
+                    className="flex items-center justify-center md:justify-start gap-4 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
+                    aria-label={t('auth.schoolSignInAria', { appName: APP_NAME })}
+                  >
+                    {appLogoUrl ? (
+                      <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={appLogoUrl}
+                          alt="App logo"
+                          className={
+                            settings.logoDisplayMode === 'cover'
+                              ? 'h-full w-full object-cover'
+                              : 'h-full w-full object-contain'
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <Logo className="h-14 w-auto shrink-0" />
+                    )}
+                    <div className="text-left">
+                      <h1 className="text-2xl font-bold font-headline text-foreground">{APP_NAME}</h1>
+                      <p className="text-sm text-muted-foreground">{APP_TAGLINE}</p>
+                    </div>
+                  </Link>
+                  <p className="text-center md:text-left text-sm text-muted-foreground leading-relaxed">
+                    {libraryLogin ? t('auth.enterLibrarySchoolIdHint') : t('auth.enterSchoolIdHint')}
+                  </p>
                 </div>
-              ) : (
-                <Logo className="h-14 w-auto" />
-              )}
-              <div className="text-left">
-                <h1 className="text-2xl font-bold font-headline text-foreground">{APP_NAME}</h1>
-                <p className="text-sm text-muted-foreground">{APP_TAGLINE}</p>
+
+                {/* On desktop: show demo schools and developer helpers here */}
+                <div className="hidden md:flex flex-col space-y-3 pt-4">
+                  {renderHelpers()}
+                </div>
               </div>
-            </Link>
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-              {isDeveloperOnly ? (
-                <>
-                  {allowDevPasscodeLogin ? t('auth.developerOnlyPasscodeHint') : t('auth.developerOnlyGoogleHint')}
+
+              {/* Right Column: Interactive Login Form */}
+              <div className="flex flex-col justify-center space-y-6 md:pl-2">
+                <form
+                  className="space-y-6"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (isDeveloperOnly || isDeveloper) {
+                      handleDeveloperPrimaryAction();
+                      return;
+                    }
+                    void handleSchoolEntry();
+                  }}
+                >
+                  {!isDeveloperOnly && !isDeveloper && (
+                    <div className="space-y-2">
+                      {isResolvingAdminSchool ? (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                          {t('auth.checkingYourSchools')}
+                        </p>
+                      ) : null}
+
+                      {showMatchedSchoolPicker ? (
+                        <motion.div
+                          className="space-y-3"
+                          initial="hidden"
+                          animate="show"
+                          variants={{
+                            hidden: { opacity: 0 },
+                            show: {
+                              opacity: 1,
+                              transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+                            },
+                          }}
+                        >
+                          <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {t('auth.signedInAsGoogle')}{' '}
+                                <span className="font-mono text-foreground font-semibold truncate inline-block max-w-full align-bottom">
+                                  {googleEmail || t('auth.yourAccount')}
+                                </span>
+                                . {t('auth.pickSchoolBelow')}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void handleGoogleSignOut()}
+                              disabled={isGoogleSigningIn}
+                              className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+                            >
+                              {t('auth.signOutGoogle')}
+                            </button>
+                          </div>
+                          <Label className="text-xs font-semibold text-muted-foreground">
+                            {matchedSchools.length === 1
+                              ? t('auth.yourSchool')
+                              : t('auth.chooseYourSchool')}
+                          </Label>
+                          {matchedSchools.map((school) => (
+                            <motion.button
+                              key={school.id}
+                              type="button"
+                              layoutId={`google-school-${school.id}`}
+                              variants={{
+                                hidden: { opacity: 0, y: 10 },
+                                show: {
+                                  opacity: 1,
+                                  y: 0,
+                                  transition: { type: 'spring', stiffness: 380, damping: 28 },
+                                },
+                              }}
+                              onClick={() => void enterMatchedSchool(school.id)}
+                              disabled={isSubmitting || isGoogleSigningIn}
+                              className="w-full h-12 rounded-xl border border-border bg-background hover:bg-muted transition-colors text-sm font-semibold text-foreground px-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60 inline-flex items-center justify-between gap-3"
+                            >
+                              <span className="truncate">{school.name}</span>
+                              <span className="shrink-0 text-xs font-mono text-muted-foreground">
+                                {school.id}
+                              </span>
+                            </motion.button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setShowManualSchoolEntry(true)}
+                            className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                          >
+                            {t('auth.useDifferentSchool')}
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <>
+                          <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
+                            {t('auth.schoolId')}
+                          </Label>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              id="schoolId"
+                              ref={schoolIdRef}
+                              className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
+                              placeholder={t('auth.schoolIdPlaceholder')}
+                              value={schoolId}
+                              onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
+                              autoComplete="username"
+                            />
+                            <button
+                              type="button"
+                              title="Toggle onscreen keyboard"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setActiveField(activeField === 'schoolId' ? null : 'schoolId');
+                                schoolIdRef.current?.focus();
+                              }}
+                              className={cn(
+                                'h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0',
+                                activeField === 'schoolId' && 'bg-primary/10 border-primary text-primary',
+                              )}
+                            >
+                              <Keyboard className="h-5 w-5" />
+                            </button>
+                          </div>
+                          {matchedSchools.length > 0 && showManualSchoolEntry ? (
+                            <button
+                              type="button"
+                              onClick={() => setShowManualSchoolEntry(false)}
+                              className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                            >
+                              {t('auth.backToYourSchools')}
+                            </button>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {(isDeveloperOnly || isDeveloper) && allowDevPasscodeLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="developerPasscode" className="text-xs font-semibold text-muted-foreground">
+                        {t('auth.developerPasscode')}
+                      </Label>
+                      <input
+                        id="developerPasscode"
+                        type="password"
+                        className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.2em] text-center bg-background border border-border text-foreground"
+                        value={developerPasscode}
+                        onChange={(e) => setDeveloperPasscode(e.target.value)}
+                        autoComplete="off"
+                        placeholder={t('auth.passcodePlaceholder')}
+                      />
+                    </div>
+                  )}
+
+                  {!isDeveloperOnly && !isDeveloper && !showMatchedSchoolPicker && (
+                    hasGoogleUser && !googleSchoolLoginError ? (
+                      <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {t('auth.signedInAsGoogle')}{' '}
+                            <span className="font-mono text-foreground font-semibold truncate inline-block max-w-full align-bottom">
+                              {googleEmail || t('auth.yourAccount')}
+                            </span>
+                            .{' '}
+                            {isAllowedGoogleEmail
+                              ? ` ${t('auth.developerNoPasscode')}`
+                              : ` ${t('auth.schoolAccessNoPasscode')}`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleGoogleSignOut()}
+                          disabled={isGoogleSigningIn}
+                          className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+                        >
+                          {t('auth.signOutGoogle')}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
+                          {t('auth.accessPasscode')}
+                        </Label>
+                        {googleSchoolLoginError && (
+                          <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
+                            {t('auth.googleNoSchoolAccess', {
+                              email: googleEmail || t('auth.yourAccount'),
+                            })}
+                          </p>
+                        )}
+                        <div className="flex gap-2 items-center">
+                          <input
+                            id="passcode"
+                            name="school-access-passcode"
+                            type="password"
+                            ref={passcodeRef}
+                            className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
+                            value={schoolPasscode}
+                            onChange={(e) => setSchoolPasscode(e.target.value)}
+                            onInput={(e) => setSchoolPasscode(e.currentTarget.value)}
+                            autoComplete="off"
+                            inputMode="numeric"
+                          />
+                          <button
+                            type="button"
+                            title="Toggle onscreen numeric keypad"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setActiveField(activeField === 'passcode' ? null : 'passcode');
+                              passcodeRef.current?.focus();
+                            }}
+                            className={cn(
+                              'h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0',
+                              activeField === 'passcode' && 'bg-primary/10 border-primary text-primary',
+                            )}
+                          >
+                            <Keyboard className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  <div className="pt-2 flex flex-col gap-3">
+                    {(isSubmitting || isGoogleSigningIn) && (isDeveloperOnly || isDeveloper) ? (
+                      <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>{t('auth.initializingDeveloper')}</span>
+                      </div>
+                    ) : showMatchedSchoolPicker ? (
+                      isSubmitting ? (
+                        <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>{t('auth.signingIn')}</span>
+                        </div>
+                      ) : null
+                    ) : (isDeveloperOnly || isDeveloper) && hasGoogleUser && !isAllowedGoogleEmail ? null : (
+                      <button
+                        type={isDeveloperOnly || isDeveloper ? 'button' : 'submit'}
+                        onClick={
+                          isDeveloperOnly || isDeveloper
+                            ? () => handleDeveloperPrimaryAction()
+                            : undefined
+                        }
+                        aria-label={
+                          isDeveloperOnly || isDeveloper
+                            ? allowDevPasscodeLogin && developerPasscode.trim()
+                              ? t('auth.signInDeveloperPasscode')
+                              : isAllowedGoogleEmail
+                                ? t('auth.continueDeveloperPortal')
+                                : t('auth.signInWithGoogle')
+                            : libraryLogin
+                              ? t('auth.openTheLibrary')
+                              : t('auth.signInToSchool')
+                        }
+                        disabled={isSubmitting || isGoogleSigningIn}
+                        className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
+                      >
+                        {(isSubmitting || isGoogleSigningIn) && (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        )}
+                        {isSubmitting || isGoogleSigningIn
+                          ? loginPhase === 'session'
+                            ? libraryLogin
+                              ? t('auth.openingLibrary')
+                              : 'Opening your school portal…'
+                            : loginPhase === 'verifying'
+                              ? 'Verifying school…'
+                              : t('auth.signingIn')
+                          : isDeveloperOnly || isDeveloper
+                            ? allowDevPasscodeLogin && developerPasscode.trim()
+                              ? t('auth.signInWithPasscode')
+                              : isAllowedGoogleEmail
+                                ? t('auth.continueDeveloperPortal')
+                                : t('auth.signInWithGoogle')
+                            : libraryLogin
+                              ? t('auth.openTheLibrary')
+                              : t('auth.continue')}
+                      </button>
+                    )}
+
+                    {!isDeveloperOnly && !isDeveloper && !hasGoogleUser && googleSignInBlocked !== 'operation-not-allowed' && (
+                      <motion.div
+                        className="space-y-3"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                      >
+                        <div className="flex items-center gap-3" aria-hidden>
+                          <div className="h-px flex-1 bg-border" />
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {t('auth.orUseGoogle')}
+                          </span>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleGoogleSignIn()}
+                          disabled={isGoogleSigningIn}
+                          className="w-full h-12 rounded-xl border border-border bg-card hover:bg-muted transition-colors text-sm font-semibold inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
+                        >
+                          {isGoogleSigningIn ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              {t('auth.openingGoogle')}
+                            </>
+                          ) : (
+                            t('auth.signInWithGoogle')
+                          )}
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
+                </form>
+
+                {/* On mobile: Helpers appear below the main login form */}
+                <div className="flex md:hidden flex-col space-y-3 pt-2 border-t border-border/40">
+                  {renderHelpers()}
+                </div>
+              </div>
+
+              {/* Onscreen Keyboard / Keypad - spans both columns across bottom */}
+              {activeField && (
+                <div className="col-span-1 md:col-span-2 pt-4 border-t border-border/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  {activeField === 'schoolId' && (
+                    <AlphanumericKeyboard
+                      value={schoolId}
+                      onChange={(val) => setSchoolId(val.toLowerCase())}
+                    />
+                  )}
+                  {activeField === 'passcode' && (
+                    <NumericKeypad
+                      value={schoolPasscode}
+                      onChange={(val) => setSchoolPasscode(val)}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Developer-only compact layout */
+            <div>
+              <div className="text-center mb-6">
+                <Link
+                  href={getLevelUpLogoHref()}
+                  className="flex items-center justify-center gap-4 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
+                  aria-label={t('auth.schoolSignInAria', { appName: APP_NAME })}
+                >
+                  {appLogoUrl ? (
+                    <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={appLogoUrl}
+                        alt="App logo"
+                        className={
+                          settings.logoDisplayMode === 'cover'
+                            ? 'h-full w-full object-cover'
+                            : 'h-full w-full object-contain'
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <Logo className="h-14 w-auto" />
+                  )}
+                  <div className="text-left">
+                    <h1 className="text-2xl font-bold font-headline text-foreground">{APP_NAME}</h1>
+                    <p className="text-sm text-muted-foreground">{APP_TAGLINE}</p>
+                  </div>
+                </Link>
+                <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+                  {allowDevPasscodeLogin
+                    ? t('auth.developerOnlyPasscodeHint')
+                    : t('auth.developerOnlyGoogleHint')}
                   <a href="/login" className="font-medium text-foreground underline underline-offset-2">
                     /login
                   </a>
                   .
-                </>
-              ) : (
-              <>{libraryLogin ? t('auth.enterLibrarySchoolIdHint') : t('auth.enterSchoolIdHint')}</>
-              )}
-            </p>
-          </div>
-
-          <form
-            className="space-y-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (isDeveloperOnly || isDeveloper) {
-                handleDeveloperPrimaryAction();
-                return;
-              }
-              void handleSchoolEntry();
-            }}
-          >
-            {!isDeveloperOnly && !isDeveloper && (
-              <div className="space-y-2">
-                {isResolvingAdminSchool ? (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-                    {t('auth.checkingYourSchools')}
-                  </p>
-                ) : null}
-
-                {showMatchedSchoolPicker ? (
-                  <motion.div
-                    className="space-y-3"
-                    initial="hidden"
-                    animate="show"
-                    variants={{
-                      hidden: { opacity: 0 },
-                      show: {
-                        opacity: 1,
-                        transition: { staggerChildren: 0.08, delayChildren: 0.05 },
-                      },
-                    }}
-                  >
-                    <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {t('auth.signedInAsGoogle')}{' '}
-                          <span className="font-mono text-foreground font-semibold truncate inline-block max-w-full align-bottom">
-                            {googleEmail || t('auth.yourAccount')}
-                          </span>
-                          . {t('auth.pickSchoolBelow')}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void handleGoogleSignOut()}
-                        disabled={isGoogleSigningIn}
-                        className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
-                      >
-                        {t('auth.signOutGoogle')}
-                      </button>
-                    </div>
-                    <Label className="text-xs font-semibold text-muted-foreground">
-                      {matchedSchools.length === 1
-                        ? t('auth.yourSchool')
-                        : t('auth.chooseYourSchool')}
-                    </Label>
-                    {matchedSchools.map((school) => (
-                      <motion.button
-                        key={school.id}
-                        type="button"
-                        layoutId={`google-school-${school.id}`}
-                        variants={{
-                          hidden: { opacity: 0, y: 10 },
-                          show: {
-                            opacity: 1,
-                            y: 0,
-                            transition: { type: 'spring', stiffness: 380, damping: 28 },
-                          },
-                        }}
-                        onClick={() => void enterMatchedSchool(school.id)}
-                        disabled={isSubmitting || isGoogleSigningIn}
-                        className="w-full h-12 rounded-xl border border-border bg-background hover:bg-muted transition-colors text-sm font-semibold text-foreground px-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60 inline-flex items-center justify-between gap-3"
-                      >
-                        <span className="truncate">{school.name}</span>
-                        <span className="shrink-0 text-xs font-mono text-muted-foreground">
-                          {school.id}
-                        </span>
-                      </motion.button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setShowManualSchoolEntry(true)}
-                      className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                    >
-                      {t('auth.useDifferentSchool')}
-                    </button>
-                  </motion.div>
-                ) : (
-                  <>
-                    <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
-                      {t('auth.schoolId')}
-                    </Label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        id="schoolId"
-                        ref={schoolIdRef}
-                        className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
-                        placeholder={t('auth.schoolIdPlaceholder')}
-                        value={schoolId}
-                        onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
-                        autoComplete="username"
-                      />
-                      <button
-                        type="button"
-                        title="Toggle onscreen keyboard"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          setActiveField(activeField === 'schoolId' ? null : 'schoolId');
-                          schoolIdRef.current?.focus();
-                        }}
-                        className={cn(
-                          "h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0",
-                          activeField === 'schoolId' && "bg-primary/10 border-primary text-primary"
-                        )}
-                      >
-                        <Keyboard className="h-5 w-5" />
-                      </button>
-                    </div>
-                    {matchedSchools.length > 0 && showManualSchoolEntry ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowManualSchoolEntry(false)}
-                        className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                      >
-                        {t('auth.backToYourSchools')}
-                      </button>
-                    ) : null}
-                  </>
-                )}
+                </p>
               </div>
-            )}
-            {(isDeveloperOnly || isDeveloper) && allowDevPasscodeLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="developerPasscode" className="text-xs font-semibold text-muted-foreground">
-                  {t('auth.developerPasscode')}
-                </Label>
-                <input
-                  id="developerPasscode"
-                  type="password"
-                  className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.2em] text-center bg-background border border-border text-foreground"
-                  value={developerPasscode}
-                  onChange={(e) => setDeveloperPasscode(e.target.value)}
-                  autoComplete="off"
-                  placeholder={t('auth.passcodePlaceholder')}
-                />
-              </div>
-            )}
-            {(!isDeveloperOnly && !isDeveloper && !showMatchedSchoolPicker) && (
-              hasGoogleUser && !googleSchoolLoginError ? (
-                <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {t('auth.signedInAsGoogle')}{' '}
-                      <span className="font-mono text-foreground font-semibold truncate inline-block max-w-full align-bottom">{googleEmail || t('auth.yourAccount')}</span>.
-                      {isAllowedGoogleEmail
-                        ? ` ${t('auth.developerNoPasscode')}`
-                        : ` ${t('auth.schoolAccessNoPasscode')}`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleGoogleSignOut()}
-                    disabled={isGoogleSigningIn}
-                    className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
-                  >
-                    {t('auth.signOutGoogle')}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
-                    {t('auth.accessPasscode')}
-                  </Label>
-                  {googleSchoolLoginError && (
-                    <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
-                      {t('auth.googleNoSchoolAccess', { email: googleEmail || t('auth.yourAccount') })}
-                    </p>
-                  )}
-                  <div className="flex gap-2 items-center">
+
+              <form
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleDeveloperPrimaryAction();
+                }}
+              >
+                {allowDevPasscodeLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="developerPasscode" className="text-xs font-semibold text-muted-foreground">
+                      {t('auth.developerPasscode')}
+                    </Label>
                     <input
-                      id="passcode"
-                      name="school-access-passcode"
+                      id="developerPasscode"
                       type="password"
-                      ref={passcodeRef}
-                      className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
-                      value={schoolPasscode}
-                      onChange={(e) => setSchoolPasscode(e.target.value)}
-                      onInput={(e) => setSchoolPasscode(e.currentTarget.value)}
+                      className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.2em] text-center bg-background border border-border text-foreground"
+                      value={developerPasscode}
+                      onChange={(e) => setDeveloperPasscode(e.target.value)}
                       autoComplete="off"
-                      inputMode="numeric"
+                      placeholder={t('auth.passcodePlaceholder')}
                     />
+                  </div>
+                )}
+
+                <div className="pt-4 flex flex-col gap-3">
+                  {(isSubmitting || isGoogleSigningIn) ? (
+                    <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>{t('auth.initializingDeveloper')}</span>
+                    </div>
+                  ) : hasGoogleUser && !isAllowedGoogleEmail ? null : (
                     <button
                       type="button"
-                      title="Toggle onscreen numeric keypad"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        setActiveField(activeField === 'passcode' ? null : 'passcode');
-                        passcodeRef.current?.focus();
-                      }}
-                      className={cn(
-                        "h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0",
-                        activeField === 'passcode' && "bg-primary/10 border-primary text-primary"
-                      )}
+                      onClick={() => handleDeveloperPrimaryAction()}
+                      aria-label={
+                        allowDevPasscodeLogin && developerPasscode.trim()
+                          ? t('auth.signInDeveloperPasscode')
+                          : isAllowedGoogleEmail
+                            ? t('auth.continueDeveloperPortal')
+                            : t('auth.signInWithGoogle')
+                      }
+                      disabled={isSubmitting || isGoogleSigningIn}
+                      className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
                     >
-                      <Keyboard className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              )
-            )}
-            {activeField === 'schoolId' && (
-              <div className="pt-2 pb-2 border-t border-border/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <AlphanumericKeyboard
-                  value={schoolId}
-                  onChange={(val) => setSchoolId(val.toLowerCase())}
-                />
-              </div>
-            )}
-            {activeField === 'passcode' && (
-              <div className="pt-2 pb-2 border-t border-border/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <NumericKeypad
-                  value={schoolPasscode}
-                  onChange={(val) => setSchoolPasscode(val)}
-                />
-              </div>
-            )}
-            <div className="pt-4 flex flex-col gap-3">
-              {(isSubmitting || isGoogleSigningIn) && (isDeveloperOnly || isDeveloper) ? (
-                <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>{t('auth.initializingDeveloper')}</span>
-                </div>
-              ) : showMatchedSchoolPicker ? (
-                isSubmitting ? (
-                  <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>{t('auth.signingIn')}</span>
-                  </div>
-                ) : null
-              ) : (isDeveloperOnly || isDeveloper) && hasGoogleUser && !isAllowedGoogleEmail ? null : (
-                <button
-                  type={isDeveloperOnly || isDeveloper ? 'button' : 'submit'}
-                  onClick={
-                    isDeveloperOnly || isDeveloper
-                      ? () => handleDeveloperPrimaryAction()
-                      : undefined
-                  }
-                  aria-label={
-                    isDeveloperOnly || isDeveloper
-                      ? allowDevPasscodeLogin && developerPasscode.trim()
-                        ? t('auth.signInDeveloperPasscode')
-                        : isAllowedGoogleEmail
-                          ? t('auth.continueDeveloperPortal')
-                          : t('auth.signInWithGoogle')
-                      : libraryLogin
-                        ? t('auth.openTheLibrary')
-                        : t('auth.signInToSchool')
-                  }
-                  disabled={isSubmitting || isGoogleSigningIn}
-                  className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
-                >
-                  {(isSubmitting || isGoogleSigningIn) && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-                  {isSubmitting || isGoogleSigningIn
-                    ? loginPhase === 'session'
-                      ? libraryLogin
-                        ? t('auth.openingLibrary')
-                        : 'Opening your school portal…'
-                      : loginPhase === 'verifying'
-                        ? 'Verifying school…'
-                        : t('auth.signingIn')
-                    : isDeveloperOnly || isDeveloper
-                      ? allowDevPasscodeLogin && developerPasscode.trim()
+                      {(isSubmitting || isGoogleSigningIn) && (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      )}
+                      {allowDevPasscodeLogin && developerPasscode.trim()
                         ? t('auth.signInWithPasscode')
                         : isAllowedGoogleEmail
                           ? t('auth.continueDeveloperPortal')
-                          : t('auth.signInWithGoogle')
-                      : libraryLogin
-                        ? t('auth.openTheLibrary')
-                        : t('auth.continue')}
-                </button>
-              )}
-
-              {!isDeveloperOnly && !isDeveloper && !hasGoogleUser && googleSignInBlocked !== 'operation-not-allowed' && (
-                <motion.div
-                  className="space-y-3"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                >
-                  <div className="flex items-center gap-3" aria-hidden>
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t('auth.orUseGoogle')}
-                    </span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleGoogleSignIn()}
-                    disabled={isGoogleSigningIn}
-                    className="w-full h-12 rounded-xl border border-border bg-card hover:bg-muted transition-colors text-sm font-semibold inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
-                  >
-                    {isGoogleSigningIn ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        {t('auth.openingGoogle')}
-                      </>
-                    ) : (
-                      t('auth.signInWithGoogle')
-                    )}
-                  </button>
-                </motion.div>
-              )}
-
-              {(isDeveloperOnly || isDeveloper) && hasGoogleUser && isAllowedGoogleEmail && (
-                <div className="rounded-xl border border-border/70 bg-background/60 p-3 space-y-2 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    {t('auth.signedInAsGoogle')}{' '}
-                    <span className="font-mono font-medium text-foreground">{googleEmail}</span>
-                  </p>
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => void handleGoogleSignOut()}
-                      disabled={isGoogleSigningIn}
-                      className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
-                    >
-                      {t('auth.signOutGoogle')}
-                    </button>
-                    <span className="text-muted-foreground/40 text-xs">·</span>
-                    <button
-                      type="button"
-                      onClick={() => void handleGoogleSignIn({ promptSelectAccount: true })}
-                      disabled={isGoogleSigningIn}
-                      className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
-                    >
-                      {t('auth.useDifferentGoogleAccount')}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {allowDeveloperLogin && !hasGoogleUser && !isDeveloperOnly && (
-                <div className="rounded-xl border border-border/70 bg-background/60 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-muted-foreground">{t('auth.developerModeLocked')}</p>
-                      <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
-                        {googleSignInBlocked === 'operation-not-allowed'
-                          ? 'Google sign-in is disabled for this Firebase project. Enable Google in Firebase Console → Authentication → Sign-in method.'
-                          : 'Sign in with Google to use developer tools on this device.'}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleGoogleSignIn()}
-                      disabled={isGoogleSigningIn || googleSignInBlocked === 'operation-not-allowed'}
-                      className={cn(
-                        'shrink-0 h-9 px-3 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold inline-flex items-center justify-center',
-                        (isGoogleSigningIn || googleSignInBlocked === 'operation-not-allowed') &&
-                          'opacity-60 pointer-events-none',
-                      )}
-                    >
-                      {googleSignInBlocked === 'operation-not-allowed'
-                        ? t('auth.googleNotEnabled')
-                        : isGoogleSigningIn
-                          ? t('auth.signingIn')
                           : t('auth.signInWithGoogle')}
                     </button>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {allowDeveloperLogin && hasGoogleUser && !isAllowedGoogleEmail && (
-                <div className="rounded-xl border border-border/70 bg-background/60 p-3 space-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground">{t('auth.developerModeLocked')}</p>
-                    <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
-                      {t('auth.googleNotAllowed', { email: googleEmail || '(unknown)' })}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleGoogleSignIn({ promptSelectAccount: true })}
-                      disabled={isGoogleSigningIn}
-                      className="w-full h-10 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {isGoogleSigningIn ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                          {t('auth.openingGoogle')}
-                        </>
-                      ) : (
-                        t('auth.useDifferentGoogleAccount')
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleGoogleSignOut()}
-                      disabled={isGoogleSigningIn}
-                      className="w-full h-7 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
-                    >
-                      {t('auth.signOutGoogle')}
-                    </button>
-                  </div>
+                  {renderHelpers()}
                 </div>
-              )}
-
-              {!isDeveloperOnly && allowDeveloperToggle && (
-                <div className="flex justify-end text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setIsDeveloper(!isDeveloper)}
-                    className="font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:underline"
-                  >
-                    {isDeveloper ? t('auth.returnToSchoolLogin') : t('auth.developerClickHere')}
-                  </button>
-                </div>
-              )}
+              </form>
             </div>
-
-            {!isDeveloperOnly && !isDeveloper && (
-              <details className="mt-2 rounded-xl border border-border/70 bg-background/60 group">
-                <summary className="cursor-pointer list-none px-4 py-2.5 text-xs font-semibold text-muted-foreground flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl">
-                  <span>{t('auth.tryDemoSchool')}</span>
-                  <span className="text-muted-foreground/60 group-open:rotate-180 transition-transform">▾</span>
-                </summary>
-                <p className="px-4 py-2 text-xs text-muted-foreground">Demo school passcode: <strong className="font-mono text-foreground">1234</strong></p>
-                <div className="px-3 pb-3 pt-1 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleSampleLogin('schoolabc')}
-                    aria-label="Sign in to demo school: School ABC"
-                    className="flex-1 h-9 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    School ABC
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleSampleLogin('yeshiva')}
-                    aria-label="Sign in to demo school: Yeshiva Demo"
-                    className="flex-1 h-9 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    Yeshiva Demo
-                  </button>
-                </div>
-              </details>
-            )}
-          </form>
+          )}
         </div>
       </div>
     </div>

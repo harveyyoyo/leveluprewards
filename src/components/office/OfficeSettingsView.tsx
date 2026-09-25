@@ -359,7 +359,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 {term}
                 <button
                   type="button"
-                  className="rounded-full p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  className="inline-flex size-11 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"
                   aria-label={`Remove ${term}`}
                   onClick={() => removeSchoolTerm(term)}
                 >

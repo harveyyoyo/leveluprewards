@@ -368,7 +368,7 @@ export function ShowcaseLanding() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className="sticky top-0 z-50 w-full border-b border-[#1a2e42]/10 bg-[#fcfaf6]/85 backdrop-blur-md transition-shadow hover:shadow-sm"
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6">
           <Link href="/" className="flex items-center gap-3 outline-none group">
             <motion.div 
               whileHover={{ rotate: 8, scale: 1.05 }}
@@ -389,22 +389,22 @@ export function ShowcaseLanding() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#1a2e42]/80">
-            <a href="#features" className="relative group py-1 transition-colors hover:text-[#102a45]">
+          <nav className="order-3 flex w-full items-center gap-6 overflow-x-auto text-sm font-semibold text-[#1a2e42]/80 md:order-none md:w-auto md:justify-end md:gap-8">
+            <a href="#features" className="relative group shrink-0 whitespace-nowrap py-1 transition-colors hover:text-[#102a45]">
               Features
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
             </a>
-            <a href="#simulator" className="relative group py-1 transition-colors hover:text-[#102a45] flex items-center gap-1">
+            <a href="#simulator" className="relative group shrink-0 whitespace-nowrap py-1 transition-colors hover:text-[#102a45] flex items-center gap-1">
               <Sparkles className="h-3.5 w-3.5 text-[#c9a227] animate-pulse" />
               Try Live Demo
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
             </a>
-            <Link href={MARKETING_FLYERS_HREF} className="relative group py-1 transition-colors hover:text-[#102a45] flex items-center gap-1">
+            <Link href={MARKETING_FLYERS_HREF} className="relative group shrink-0 whitespace-nowrap py-1 transition-colors hover:text-[#102a45] flex items-center gap-1">
               <Printer className="h-3.5 w-3.5" />
               Printable Flyers
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
             </Link>
-            <a href="#audiences" className="relative group py-1 transition-colors hover:text-[#102a45]">
+            <a href="#audiences" className="relative group shrink-0 whitespace-nowrap py-1 transition-colors hover:text-[#102a45]">
               Who We Serve
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
             </a>
@@ -701,23 +701,23 @@ export function ShowcaseLanding() {
                 
                 {/* Header */}
                 <div>
-                  <div className="flex items-center justify-between pb-5 border-b border-[#1a2e42]/10">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-start gap-3 border-b border-[#1a2e42]/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-4">
                       {/* Avatar */}
-                      <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#102a45] to-[#1e446d] font-black text-white text-xl shadow-md border border-white/20">
+                      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-gradient-to-tr from-[#102a45] to-[#1e446d] text-xl font-black text-white shadow-md">
                         JS
                         <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 border-2 border-white">
                           <CheckCircle2 className="h-3 w-3 text-white" />
                         </div>
                       </div>
-                      <div>
-                        <h4 className="text-lg font-bold text-[#102a45]">Jordan Smith</h4>
-                        <p className="text-xs text-[#1a2e42]/60 font-medium">Student ID: #9048 • Oakridge Middle</p>
+                      <div className="min-w-0">
+                        <h4 className="truncate text-lg font-bold text-[#102a45]">Jordan Smith</h4>
+                        <p className="break-words text-xs font-medium text-[#1a2e42]/60">Student ID: #9048 • Oakridge Middle</p>
                       </div>
                     </div>
                     
                     {/* Streak flame */}
-                    <div className="flex items-center gap-1 bg-[#c9a227]/10 px-3 py-1.5 rounded-xl border border-[#c9a227]/25 text-[#102a45] font-black text-xs shadow-sm animate-pulse">
+                    <div className="flex shrink-0 items-center gap-1 rounded-xl border border-[#c9a227]/25 bg-[#c9a227]/10 px-3 py-1.5 text-xs font-black text-[#102a45] shadow-sm animate-pulse">
                       <Flame className="h-4 w-4 fill-current text-amber-500" />
                       <span>{streak}-Day Streak</span>
                     </div>

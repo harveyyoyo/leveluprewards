@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Dices, Shuffle, Sparkles, Timer, Users } from 'lucide-react';
+import { Dices, Music, Radio, Shuffle, Sparkles, Timer, Users, Vote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,10 @@ import {
 } from '@/components/ui/select';
 import { ClassroomWhosOutPulse } from '@/components/classroom/ClassroomWhosOutPulse';
 import { RandomStudentPickerModal } from '@/components/classroom/RandomStudentPickerModal';
+import { ClassroomMissionTimerModal } from '@/components/classroom/ClassroomMissionTimerModal';
+import { ClassroomNoiseRadarModal } from '@/components/classroom/ClassroomNoiseRadarModal';
+import { ClassroomSoundboardModal } from '@/components/classroom/ClassroomSoundboardModal';
+import { ClassroomQuickVoteModal } from '@/components/classroom/ClassroomQuickVoteModal';
 import { useClassroomTeachNow } from '@/hooks/useClassroomTeachNow';
 import { classroomRealmManageHref } from '@/lib/classroomRealmUrl';
 import { isClassroomRaffleSectionVisible } from '@/lib/classroom/classroomTabSections';
@@ -46,6 +50,10 @@ export function ClassroomTeachNowDock({
     activeTeacherId,
   });
   const [isRandomModalOpen, setIsRandomModalOpen] = useState(false);
+  const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
+  const [isNoiseRadarOpen, setIsNoiseRadarOpen] = useState(false);
+  const [isSoundboardOpen, setIsSoundboardOpen] = useState(false);
+  const [isQuickVoteOpen, setIsQuickVoteOpen] = useState(false);
   const { settings } = useSettings();
   const showRaffle = isClassroomRaffleSectionVisible(settings, variant);
 
@@ -142,6 +150,46 @@ export function ClassroomTeachNowDock({
               type="button"
               variant="outline"
               size="sm"
+              onClick={() => setIsTimerModalOpen(true)}
+              className="h-9 rounded-xl border-cyan-400/40 bg-cyan-500/10 font-bold text-xs text-cyan-200 hover:bg-cyan-500/20 hover:text-white"
+            >
+              <Timer className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              Timer
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsNoiseRadarOpen(true)}
+              className="h-9 rounded-xl border-indigo-400/40 bg-indigo-500/10 font-bold text-xs text-indigo-200 hover:bg-indigo-500/20 hover:text-white"
+            >
+              <Radio className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              Noise Radar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSoundboardOpen(true)}
+              className="h-9 rounded-xl border-amber-300/40 bg-amber-400/10 font-bold text-xs text-amber-100 hover:bg-amber-400/20 hover:text-white"
+            >
+              <Music className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              Soundboard
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsQuickVoteOpen(true)}
+              className="h-9 rounded-xl border-violet-400/40 bg-violet-500/10 font-bold text-xs text-violet-200 hover:bg-violet-500/20 hover:text-white"
+            >
+              <Vote className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              Quick Check
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setIsRandomModalOpen(true)}
               disabled={teach.classStudents.length === 0}
               className="h-9 rounded-xl border-amber-300/40 bg-amber-400/10 font-bold text-xs text-amber-100 hover:bg-amber-400/20 hover:text-white"
@@ -177,9 +225,28 @@ export function ClassroomTeachNowDock({
         isOpen={isRandomModalOpen}
         onClose={() => setIsRandomModalOpen(false)}
         students={teach.classStudents}
+        attendanceMap={teach.attendanceMap}
         onAward={teach.handleRandomAward}
         defaultPoints={5}
         defaultReason="Random student spotlight"
+      />
+      <ClassroomMissionTimerModal
+        open={isTimerModalOpen}
+        onOpenChange={setIsTimerModalOpen}
+        title={`${teach.activeClass?.name || 'Classroom'} Timer`}
+      />
+      <ClassroomNoiseRadarModal
+        open={isNoiseRadarOpen}
+        onOpenChange={setIsNoiseRadarOpen}
+      />
+      <ClassroomSoundboardModal
+        open={isSoundboardOpen}
+        onOpenChange={setIsSoundboardOpen}
+      />
+      <ClassroomQuickVoteModal
+        open={isQuickVoteOpen}
+        onOpenChange={setIsQuickVoteOpen}
+        classNameLabel={teach.activeClass?.name || 'Classroom'}
       />
     </motion.div>
   );

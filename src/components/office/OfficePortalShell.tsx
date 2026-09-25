@@ -128,7 +128,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             // Fixed height, no overflow of its own — the header and footer below always stay
             // put, and only the nav list (which has its own `overflow-y-auto`) scrolls if
             // there isn't room for every section.
-            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:shrink-0 lg:translate-x-0',
+            'fixed inset-y-0 left-0 z-40 flex h-dvh max-h-dvh w-64 flex-col overflow-hidden border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:max-h-none lg:shrink-0 lg:translate-x-0',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
@@ -206,7 +206,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             })}
           </nav>
 
-          <div className="space-y-2 border-t border-white/10 p-4">
+          <div className="shrink-0 space-y-2 border-t border-white/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {/* Sign out sits in a small menu on the person's name so it isn't clicked by accident. */}
             {userName ? (
               <DropdownMenu modal={false}>
@@ -278,7 +278,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                 type="button"
                 variant="outline"
                 size="icon"
-                className="lg:hidden"
+                className="size-11 shrink-0 lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open menu"
               >

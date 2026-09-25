@@ -36,7 +36,7 @@ export function StudentPointsTypeButton({ student, className }: StudentPointsTyp
           variant="outline"
           size="icon"
           className={cn(
-            'h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center shrink-0',
+            'size-11 shrink-0 rounded-full sm:justify-self-center',
             'border-ring/35 bg-background/80 font-black tabular-nums text-[9px] sm:text-[10px] leading-none',
             totals.length > 0
               ? 'text-primary border-primary/40 hover:bg-primary/10'

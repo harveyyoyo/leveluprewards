@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ExternalLink, LayoutGrid } from 'lucide-react';
+import { ExternalLink, LayoutGrid, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { classroomRealmOpenHref } from '@/lib/classroomRealmUrl';
 import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
@@ -13,6 +13,7 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
   const { settings } = useSettings();
   const classroomOn = isClassroomPillarOn(settings);
   const classroomUrl = classroomRealmOpenHref(schoolId);
+  const themesUrl = `/${encodeURIComponent(schoolId.toLowerCase())}/classroom/themes`;
 
   if (!classroomOn) {
     return (
@@ -44,19 +45,36 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
         </p>
       </div>
 
-      <Button
-        asChild
-        size="lg"
-        className="min-w-[14rem] rounded-full bg-gradient-to-r from-lime-700 to-amber-600 px-8 text-base font-bold shadow-lg hover:from-lime-600 hover:to-amber-500"
-      >
-        <a
-          href={classroomUrl}
-          onClick={(event) => openStandalonePage(classroomUrl, event)}
+      <div className="flex flex-col items-center gap-3">
+        <Button
+          asChild
+          size="lg"
+          className="min-w-[14rem] rounded-full bg-gradient-to-r from-lime-700 to-amber-600 px-8 text-base font-bold shadow-lg hover:from-lime-600 hover:to-amber-500"
         >
-          <ExternalLink className="mr-2 h-5 w-5" aria-hidden />
-          Open Classroom
-        </a>
-      </Button>
+          <a
+            href={classroomUrl}
+            onClick={(event) => openStandalonePage(classroomUrl, event)}
+          >
+            <ExternalLink className="mr-2 h-5 w-5" aria-hidden />
+            Open Classroom
+          </a>
+        </Button>
+
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="rounded-full border-border/80 px-4 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5"
+        >
+          <a
+            href={themesUrl}
+            onClick={(event) => openStandalonePage(themesUrl, event)}
+          >
+            <Palette className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            Browse 15 Classroom Themes
+          </a>
+        </Button>
+      </div>
 
       <p className="text-xs text-muted-foreground">Opens as its own page</p>
     </div>

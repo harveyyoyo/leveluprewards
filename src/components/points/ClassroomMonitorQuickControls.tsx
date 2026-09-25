@@ -66,7 +66,11 @@ function monitorSelectTriggerLook(
       isFullscreen && 'px-2 py-1.5 text-xs',
       look.className,
     ),
-    style: look.style,
+    style: {
+      ...look.style,
+      borderRadius: 'var(--theme-card-radius, undefined)',
+      fontFamily: 'var(--theme-font-heading, inherit)',
+    },
     ink: look.ink,
   };
 }
@@ -96,12 +100,11 @@ function CollapsedToolIcon({
   return (
     <motion.button
       type="button"
-      variants={{
-        hidden: { opacity: 0, scale: 0.85 },
-        visible: { opacity: 1, scale: 1, transition: spring },
-      }}
       data-look={design}
-      style={look.style}
+      style={{
+        ...look.style,
+        borderRadius: 'var(--theme-card-radius, undefined)',
+      }}
       className={cn(
         'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm shadow-black/15',
         look.className,
@@ -323,12 +326,6 @@ export function ClassroomMonitorQuickControls({
         <motion.div
           key="classroom-monitor-icon-rail"
           layoutId="classroom-monitor-tabs"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { ...spring, staggerChildren: 0.04 } },
-          }}
           className="flex h-full min-h-0 w-full flex-col items-center justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
           data-testid="classroom-monitor-icon-rail"
         >

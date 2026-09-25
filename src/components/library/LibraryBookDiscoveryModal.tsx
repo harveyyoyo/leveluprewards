@@ -368,13 +368,13 @@ export function LibraryBookDiscoveryModal({
         </DialogHeader>
 
         {/* Browse vs. "not sure what to read" mode switch */}
-        <div className="flex gap-1.5 rounded-xl border bg-muted/40 p-1">
+        <div className="flex flex-col gap-1.5 rounded-xl border bg-muted/40 p-1 sm:flex-row">
           {showForYou ? (
             <Button
               type="button"
               variant={mode === 'forYou' ? 'default' : 'ghost'}
               size="sm"
-              className="flex-1 h-8 rounded-lg text-xs font-bold gap-1.5"
+              className="min-h-10 w-full flex-1 gap-1.5 rounded-lg text-xs font-bold sm:w-auto"
               onClick={() => setMode('forYou')}
             >
               <Heart className="h-3.5 w-3.5" />
@@ -385,7 +385,7 @@ export function LibraryBookDiscoveryModal({
             type="button"
             variant={mode === 'browse' ? 'default' : 'ghost'}
             size="sm"
-            className="flex-1 h-8 rounded-lg text-xs font-bold gap-1.5"
+            className="min-h-10 w-full flex-1 gap-1.5 rounded-lg text-xs font-bold sm:w-auto"
             onClick={() => setMode('browse')}
           >
             <Search className="h-3.5 w-3.5" />
@@ -395,7 +395,7 @@ export function LibraryBookDiscoveryModal({
             type="button"
             variant={mode === 'suggest' ? 'default' : 'ghost'}
             size="sm"
-            className="flex-1 h-8 rounded-lg text-xs font-bold gap-1.5"
+            className="min-h-10 w-full flex-1 gap-1.5 rounded-lg text-xs font-bold sm:w-auto"
             onClick={() => {
               if (mode !== 'suggest') resetQuiz();
               setMode('suggest');

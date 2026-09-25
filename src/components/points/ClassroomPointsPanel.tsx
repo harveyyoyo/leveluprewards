@@ -190,6 +190,10 @@ import { isClassroomNoteShortcutKey } from '@/lib/classroom/classroomNoteShortcu
 import { isClassroomRaffleSectionVisible } from '@/lib/classroom/classroomTabSections';
 import { isClassroomTokenDesign } from '@/lib/classroom/classroomTokenTheme';
 import {
+  buildThemeKitCssProperties,
+  buildThemeGoogleFontsUrl,
+} from '@/lib/classroom/classroomThemeKitStyles';
+import {
   buildClassroomRandomPickSequence,
   classroomRandomPickStepDelayMs,
 } from '@/lib/classroom/classroomRandomPick';
@@ -232,6 +236,7 @@ type ClassroomPointsPanelProps = {
   schoolId: string;
   students: Student[];
   classes: Class[];
+  teachers?: Teacher[];
   /** School point categories (same list as Points → Categories). */
   categories?: Category[];
   storageScope: string;
@@ -270,6 +275,7 @@ function ClassroomPointsPanelInner({
   schoolId,
   students,
   classes,
+  teachers: teachersProp,
   categories = [],
   storageScope,
   variant = 'embedded',
@@ -353,6 +359,12 @@ function ClassroomPointsPanelInner({
   const activeRecessPasses = useActiveRecessPasses(schoolId, true);
   const operatorId = teacherDocId || storageScope;
   const operatorName = userName || storageScope;
+  const teachersQuery = useMemoFirebase(
+    () => (firestore && schoolId && !teachersProp ? collection(firestore, 'schools', schoolId, 'teachers') : null),
+    [firestore, schoolId, teachersProp],
+  );
+  const { data: queriedTeachers } = useCollection<Teacher>(teachersQuery);
+  const allTeachers = useMemo(() => teachersProp || queriedTeachers || [], [teachersProp, queriedTeachers]);
   const [behaviorNoteStudent, setBehaviorNoteStudent] = useState<Student | null>(null);
   const [behaviorNotePoints, setBehaviorNotePoints] = useState<{ label?: string; amount?: number }>({});
   const [behaviorNoteShortcutKey, setBehaviorNoteShortcutKey] =
@@ -643,6 +655,16 @@ function ClassroomPointsPanelInner({
     [classStudents],
   );
 
+  const themeKitStyle = useMemo(() => {
+    return buildThemeKitCssProperties(prefs.themeKitSlug, prefs.themeKitSettings);
+  }, [prefs.themeKitSlug, prefs.themeKitSettings]);
+
+  const customFontLink = useMemo(() => {
+    const url = buildThemeGoogleFontsUrl(prefs.themeKitSlug, prefs.themeKitSettings);
+    if (!url) return null;
+    return <link rel="stylesheet" href={url} />;
+  }, [prefs.themeKitSlug, prefs.themeKitSettings]);
+
   const studentById = useMemo(() => {
     const map = new Map<string, Student>();
     classStudents.forEach((s) => map.set(s.id, s));
@@ -671,6 +693,49 @@ function ClassroomPointsPanelInner({
     if (viewingAllStudents) return CLASSROOM_ALL_STUDENTS_LABEL;
     return effectiveClassId ? classes.find((c) => c.id === effectiveClassId)?.name : undefined;
   }, [classes, effectiveClassId, viewingAllStudents]);
+
+  const activeTeacherName = useMemo(() => {
+    if (prefs.teacherDeskLabel?.trim()) {
+      return prefs.teacherDeskLabel.trim();
+    }
+
+    if (effectiveClassId && effectiveClassId !== CLASSROOM_ALL_STUDENTS_FILTER_ID) {
+      const activeClassObj = classes.find((c) => c.id === effectiveClassId);
+      if (activeClassObj?.primaryTeacherId) {
+        const classTeacher = allTeachers.find((t) => t.id === activeClassObj.primaryTeacherId);
+        if (classTeacher?.name?.trim()) {
+          return classTeacher.name.trim();
+        }
+      }
+    }
+
+    if (budgetOptions?.currentTeacher?.name?.trim()) {
+      return budgetOptions.currentTeacher.name.trim();
+    }
+
+    if (loginState === 'teacher' && userName?.trim() && userName.toLowerCase() !== 'teacher') {
+      return userName.trim();
+    }
+
+    if (operatorName?.trim() && !['admin', 'staff', 'developer'].includes(operatorName.toLowerCase())) {
+      const match = allTeachers.find(
+        (t) => t.id === operatorId || t.name.toLowerCase() === operatorName.toLowerCase(),
+      );
+      if (match?.name) return match.name;
+    }
+
+    return null;
+  }, [
+    prefs.teacherDeskLabel,
+    effectiveClassId,
+    classes,
+    allTeachers,
+    budgetOptions?.currentTeacher,
+    loginState,
+    userName,
+    operatorName,
+    operatorId,
+  ]);
 
   const classScreenUrl = useMemo(() => {
     if (!isFullscreen || isStudentAudience) return null;
@@ -873,6 +938,7 @@ function ClassroomPointsPanelInner({
 
   const gridHandlersRef = useRef<ClassroomGridHandlers>({
     onDeskTap: () => {},
+    onDeskMenu: () => {},
     onDeduct: () => {},
     onBehaviorNote: () => {},
     onDragStart: () => {},
@@ -2065,6 +2131,7 @@ function ClassroomPointsPanelInner({
 
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
+    onDeskMenu: handleDeskMenu,
     onDeduct: undefined,
     onBehaviorNote: (studentId, shortcutKey, fromHeldKey) => {
       const s = studentById.get(studentId);
@@ -2419,6 +2486,7 @@ function ClassroomPointsPanelInner({
       design={design}
       frontAtBottom={frontAtBottom}
       showFrontHint={!isStudentAudience}
+      teacherName={activeTeacherName}
       trailingAction={
         !isStudentAudience && !editMode ? (
           <ClassroomLiveCheatsheetDesk
@@ -2476,14 +2544,22 @@ function ClassroomPointsPanelInner({
 
   return (
     <div
+      style={{
+        ...themeKitStyle,
+        backgroundColor: 'var(--theme-canvas-bg, undefined)',
+        backgroundImage: 'var(--theme-canvas-pattern, undefined)',
+        filter: 'var(--theme-filter, undefined)',
+      }}
       className={cn(
         'classroom-native-colors classroom-readable',
-        design !== 'midnight' && 'text-foreground',
-        classroomDesignShellClass(design, isFullscreen),
+        prefs.themeKitSettings?.darkMode && 'dark',
+        design !== 'midnight' && !prefs.themeKitSettings?.darkMode && 'text-foreground',
+        !prefs.themeKitSlug && classroomDesignShellClass(design, isFullscreen),
         isFullscreen && 'h-full min-h-0 w-full gap-0 p-0',
         !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-1 flex-col',
       )}
     >
+      {customFontLink}
       {isStudentAudience && effectiveClassName ? (
         <div className="shrink-0 px-3 py-2 text-center">
           <p className="classroom-readable text-base font-bold tracking-normal text-foreground">
@@ -2657,24 +2733,22 @@ function ClassroomPointsPanelInner({
             !editMode && classroomChartSurfaceClass(design),
           )}
         >
-      {chartNeedsRosterPlacement && !isFullscreen ? (
-        <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-amber-950 dark:text-amber-50">
+      {chartNeedsRosterPlacement ? (
+        <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 sm:flex-row sm:items-center sm:justify-between mx-4 mt-2">
+          <p className="text-xs text-amber-950 dark:text-amber-50">
             <span className="font-bold">No students on the chart.</span>{' '}
             {effectiveClassName ? `${effectiveClassName} has ` : ''}
-            {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in the roster but none are
-            on seats yet.
+            {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in the roster ready to be seated.
           </p>
-          <Button type="button" size="sm" className="shrink-0 rounded-xl font-bold" onClick={fillChartFromRoster}>
+          <Button type="button" size="sm" className="h-7 shrink-0 rounded-lg text-xs font-bold" onClick={fillChartFromRoster}>
             Place class on chart
           </Button>
         </div>
       ) : null}
-      {noStudentsInClass && !isFullscreen ? (
-        <p className="shrink-0 rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-          No students in {effectiveClassName || 'this class'} yet. Add them under{' '}
-          <span className="font-semibold text-foreground">Students</span> (or import a roster), then return here.
-        </p>
+      {noStudentsInClass ? (
+        <div className="mx-4 mt-2 rounded-xl border border-dashed border-black/15 bg-white/70 px-4 py-2.5 text-center text-xs text-muted-foreground shadow-sm">
+          No students in {effectiveClassName || 'this class'} yet. Use the class menu at the top to switch to another class.
+        </div>
       ) : null}
 
       {bathroomEnabled && !isStudentAudience && !isFullscreen && activeBathroomList.length > 0 ? (
@@ -2773,7 +2847,7 @@ function ClassroomPointsPanelInner({
           fitViewport={isFullscreen}
           hideEmptyDesks={isStudentAudience}
           deskMenuEnabled={
-            prefs.instantTap && interactionMode !== 'attendance' && !isStudentAudience && !editMode
+            interactionMode !== 'attendance' && !isStudentAudience && !editMode
           }
         />
         {frontAtBottom && teacherDesk}

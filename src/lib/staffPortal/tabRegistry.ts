@@ -53,6 +53,25 @@ export const STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES = [
   'student-portal',
 ] as const;
 
+/**
+ * Tab values presented inside the Welcome tab pillar boxes (the middle).
+ * These are excluded from the left sidebar when displayed in the middle.
+ */
+export const STAFF_PORTAL_WELCOME_PILLAR_TABS = [
+  'prizes',
+  'categories',
+  'bonuspoints',
+  'goals',
+  'houses',
+  'classroom',
+  'attendance',
+  'library',
+] as const;
+
+export const STAFF_PORTAL_WELCOME_PILLAR_SET: ReadonlySet<string> = new Set(
+  STAFF_PORTAL_WELCOME_PILLAR_TABS,
+);
+
 function teacherAddonEnabled(
   settings: Settings,
   tabValue: string,

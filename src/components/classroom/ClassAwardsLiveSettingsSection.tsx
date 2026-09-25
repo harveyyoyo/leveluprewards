@@ -39,6 +39,13 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -239,6 +246,67 @@ export function ClassAwardsLiveSettingsSection({
                 Open portal
               </Link>
             </Button>
+          </div>
+        </div>
+      </SettingsPanel>
+
+      <SettingsPanel icon={Timer} title="Futurist classroom tools" iconClassName="h-4 w-4 text-cyan-500">
+        <p className="text-[11px] text-muted-foreground">
+          Settings for the activity countdown timer, sound level radar, and attention chimes on the live smartboard.
+        </p>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-2xl border bg-card/60 p-3 space-y-2">
+            <Label htmlFor="classroom-default-timer" className="text-xs font-bold">
+              Default activity timer duration
+            </Label>
+            <Select
+              value={String(settings.classroomDefaultTimerMinutes || 5)}
+              disabled={!canEdit}
+              onValueChange={(val) => updateSettings({ classroomDefaultTimerMinutes: Number(val) })}
+            >
+              <SelectTrigger id="classroom-default-timer" className="h-9 rounded-xl text-xs font-semibold">
+                <SelectValue placeholder="Select duration" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 minute (Quick Sprint)</SelectItem>
+                <SelectItem value="2">2 minutes (Pair Talk)</SelectItem>
+                <SelectItem value="3">3 minutes (Warm-Up)</SelectItem>
+                <SelectItem value="5">5 minutes (Quick Lab)</SelectItem>
+                <SelectItem value="10">10 minutes (Deep Focus)</SelectItem>
+                <SelectItem value="15">15 minutes (Group Mission)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Teachers can still change the time on the fly with quick buttons or custom minutes.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-card/60 p-3 space-y-2">
+            <Label htmlFor="classroom-default-noise-goal" className="text-xs font-bold">
+              Default noise goal
+            </Label>
+            <Select
+              value={settings.classroomNoiseRadarDefaultZone || 'whisper'}
+              disabled={!canEdit}
+              onValueChange={(val) =>
+                updateSettings({
+                  classroomNoiseRadarDefaultZone: val as 'silent' | 'whisper' | 'collaborative' | 'presentation',
+                })
+              }
+            >
+              <SelectTrigger id="classroom-default-noise-goal" className="h-9 rounded-xl text-xs font-semibold">
+                <SelectValue placeholder="Select noise goal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="silent">🤫 Silent Orbit (Tests / Reading)</SelectItem>
+                <SelectItem value="whisper">💬 Whisper Nebula (Pair Consultations)</SelectItem>
+                <SelectItem value="collaborative">👥 Group Station (Team Challenges)</SelectItem>
+                <SelectItem value="presentation">📢 Presentation Deck (Class Discussions)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              The noise radar monitors ambient sound in the room and alerts when volume exceeds this limit.
+            </p>
           </div>
         </div>
       </SettingsPanel>

@@ -36,7 +36,7 @@ export function StudentKioskTopBar({
   return (
     <div
       className={cn(
-        'relative z-10 w-full shrink-0 rounded-2xl border-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 [@media(max-height:760px)]:px-2 [@media(max-height:760px)]:py-1',
+        'relative z-10 w-full shrink-0 rounded-2xl border-2 px-2.5 py-1.5 sm:px-5 sm:py-2 [@media(max-height:760px)]:px-2 [@media(max-height:760px)]:py-1',
         studentKioskHeaderGapClass,
         !themed && 'border-primary/35 bg-card/95 shadow-sm',
       )}
@@ -49,7 +49,7 @@ export function StudentKioskTopBar({
           : undefined
       }
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 sm:gap-x-3">
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-y-3 items-center gap-x-2 sm:gap-x-3">
         <div className="flex min-w-0 items-center gap-2 [@media(max-height:760px)]:gap-1.5">
           <div
             className={cn(
@@ -93,7 +93,7 @@ export function StudentKioskTopBar({
               {headerExtras ? <div className="shrink-0">{headerExtras}</div> : null}
             </div>
             <h1
-              className="min-w-0 truncate text-base font-black uppercase leading-none tracking-wide sm:text-lg md:text-xl [@media(max-height:760px)]:text-sm"
+              className="min-w-0 truncate text-base font-black leading-tight tracking-tight sm:text-lg md:text-xl [@media(max-height:760px)]:text-sm"
               style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
             >
               {displayName}
@@ -101,13 +101,13 @@ export function StudentKioskTopBar({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 justify-center text-center">
+        <div className="flex items-center gap-5 justify-start text-center">
           <div>
             <p
-              className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
+              className="text-xs font-semibold opacity-80"
               style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
             >
-              Spendable
+              Points to spend
             </p>
             <p
               className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl"
@@ -126,13 +126,13 @@ export function StudentKioskTopBar({
           />
           <div>
             <p
-              className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
+              className="text-xs font-semibold opacity-80"
               style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
             >
-              All-Time
+              Total earned
             </p>
             <p
-              className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl opacity-90"
+              className="text-lg font-bold tabular-nums leading-none sm:text-xl opacity-75"
               style={{ color: themed ? 'var(--theme-page-text)' : 'hsl(var(--foreground))' }}
             >
               {(student.lifetimePoints ?? points ?? 0).toLocaleString()}
@@ -162,7 +162,6 @@ export function StudentKioskPointCategoriesPanel({
   themed,
   footer,
 }: StudentKioskPointCategoriesPanelProps) {
-  const { t } = useTranslation();
   if (totals.length === 0 && !footer) return footer ?? null;
 
   return (
@@ -181,14 +180,14 @@ export function StudentKioskPointCategoriesPanel({
       }
     >
       {totals.length > 0 ? (
-        <>
-          <p
-            className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-75 sm:text-xs"
+        <details>
+          <summary
+            className="cursor-pointer text-sm font-bold"
             style={themed ? { color: 'var(--theme-page-text)' } : undefined}
           >
-            {t('student.kiosk.categories')}
-          </p>
-          <ul className="space-y-1.5">
+            Points by category
+          </summary>
+          <ul className="mt-3 space-y-1.5">
             {totals.map((row) => (
               <li
                 key={row.label}
@@ -205,7 +204,7 @@ export function StudentKioskPointCategoriesPanel({
               </li>
             ))}
           </ul>
-        </>
+        </details>
       ) : null}
       {footer ? <div className={cn(totals.length > 0 && 'mt-3 border-t pt-3', themed && 'border-[color-mix(in_srgb,var(--theme-primary)_22%,transparent)]')}>{footer}</div> : null}
     </div>

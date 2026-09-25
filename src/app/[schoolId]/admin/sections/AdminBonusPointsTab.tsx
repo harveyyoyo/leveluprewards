@@ -160,9 +160,10 @@ export function AdminBonusPointsTab(props: any) {
                 ))}
               </ul>
             ) : (
-              <ul className="pr-1 space-y-1.5">
+              <ul className="overflow-x-auto pb-2 pr-1 space-y-1.5">
                 {achievements && achievements.length > 0 ? (
                   <AdminRecordListHeader
+                    className="min-w-[800px]"
                     gridClassName="grid-cols-[64px_68px_minmax(180px,1fr)_minmax(150px,190px)_110px_minmax(80px,100px)_44px]"
                     columns={[
                       { label: 'Status' },
@@ -200,7 +201,7 @@ export function AdminBonusPointsTab(props: any) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold text-xs"
+                          className="h-11 gap-1 rounded-lg border-primary/20 bg-background text-xs font-semibold text-primary hover:bg-primary/5"
                           onClick={() => {
                             setEditingAchievement(ach);
                             setIsBadgeModalOpen(true);
@@ -256,7 +257,7 @@ export function AdminBonusPointsTab(props: any) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                          className="size-11 rounded-lg text-destructive hover:bg-destructive/10"
                           onClick={() => setAchievementToDelete(ach)}
                           title="Delete milestone"
                         >

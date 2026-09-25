@@ -7,6 +7,20 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "Theme Kit Fixes Dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:/Users/Administrator/leveluprewards-theme-kit-fixes", "run", "dev"],
+      "port": 3057,
+      "autoPort": true
+    },
+    {
+      "name": "Card Designer Dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:/Users/Administrator/leveluprewards-card-designer", "run", "dev"],
+      "port": 3061,
+      "autoPort": true
     }
   ]
 }

@@ -74,6 +74,26 @@ Open http://localhost:3333 → **WidescreenPromo** → **Props** (right sidebar)
 
 In Studio: use **Save default props** to persist edits to the composition.
 
+## Six-school-tool style samples
+
+Six fast social-video samples are available in matching 1080×1920 phone and 1920×1080 widescreen versions. Each covers Rewards, Attendance, Library, Classroom, Office, or Houses, with a different visual treatment and a short tool-specific hook.
+
+Capture the six fresh School ABC product views from the repository root:
+
+```console
+npm run capture:pillar-style-screens
+```
+
+Render one format or both:
+
+```console
+npm run render:pillar:styles
+npm run render:pillar:landscape
+npm run render:pillar:all
+```
+
+Outputs are written to `out/pillar-style-samples/` and `out/pillar-style-samples-landscape/` and are kept out of Git.
+
 **Edit timeline as JSON** (optional):
 
 ```console

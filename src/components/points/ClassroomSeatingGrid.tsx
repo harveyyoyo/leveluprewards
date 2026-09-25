@@ -266,12 +266,14 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   const suppressClickForBathroomRef = useRef(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFiredRef = useRef(false);
+  const pointerStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const clearLongPressTimer = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    pointerStartPosRef.current = null;
   }, []);
 
   useEffect(() => () => clearLongPressTimer(), [clearLongPressTimer]);
@@ -288,17 +290,42 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (editMode || !studentId || e.button !== 0 || attendanceLook !== 'manual') return;
+      if (editMode || !studentId || e.button !== 0) return;
       if (isBathroomAltModifier(e, handlersRef.current)) return;
+      const h = handlersRef.current;
+      if (!h) return;
+      const action = classroomDeskContextAction({
+        takingAttendance: attendanceLook === 'manual',
+        hasDeskMenu: Boolean(deskMenuEnabled && h.onDeskMenu),
+        hasAttendanceOverride: Boolean(h.onAttendanceOverride),
+      });
+      if (action === 'none') return;
       clearLongPressTimer();
       longPressFiredRef.current = false;
+      pointerStartPosRef.current = { x: e.clientX, y: e.clientY };
       longPressTimerRef.current = setTimeout(() => {
         longPressTimerRef.current = null;
         longPressFiredRef.current = true;
-        handlersRef.current?.onAttendanceOverride?.(studentId, 'late');
-      }, 520);
+        if (action === 'menu') {
+          h.onDeskMenu?.(studentId, cellIndex);
+          return;
+        }
+        h.onAttendanceOverride?.(studentId, attendanceLook === 'manual' ? 'late' : 'present');
+      }, 500);
     },
-    [attendanceLook, clearLongPressTimer, editMode, handlersRef, studentId],
+    [attendanceLook, cellIndex, clearLongPressTimer, deskMenuEnabled, editMode, handlersRef, studentId],
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!longPressTimerRef.current || !pointerStartPosRef.current) return;
+      const dx = e.clientX - pointerStartPosRef.current.x;
+      const dy = e.clientY - pointerStartPosRef.current.y;
+      if (Math.hypot(dx, dy) > 12) {
+        clearLongPressTimer();
+      }
+    },
+    [clearLongPressTimer],
   );
 
   const onClick = useCallback(
@@ -386,6 +413,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
         }}
         onMouseDown={onMouseDown}
         onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
         onPointerUp={clearLongPressTimer}
         onPointerCancel={clearLongPressTimer}
         onPointerLeave={clearLongPressTimer}
@@ -411,7 +439,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
           (attendanceLook === 'manual' || attendanceLook === 'card-scan') && hasStudent
             ? 'Tap to mark here or not here. Hold for late.'
             : deskMenuEnabled && hasStudent
-              ? 'Left click awards points. Right click opens the menu.'
+              ? 'Click to award points. Right-click or hold for more options.'
               : undefined
         }
         disabled={!hasStudent && !editMode}
@@ -426,8 +454,8 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
             ? { scale: 0.98, transition: tokenSpring }
             : undefined
         }
-        style={
-          tokenLook && hasStudent
+        style={{
+          ...(tokenLook && hasStudent
             ? attendanceDropped
               ? {
                   ...classroomTokenDeskStyle(visualColIndex),
@@ -435,8 +463,16 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
                   borderColor: 'rgba(15, 23, 42, 0.28)',
                 }
               : classroomTokenDeskStyle(visualColIndex)
-            : undefined
-        }
+            : undefined),
+          ...(hasStudent
+            ? {
+                backgroundColor: 'var(--theme-card-bg, undefined)',
+                borderColor: 'var(--theme-card-border, undefined)',
+                boxShadow: 'var(--theme-card-shadow, undefined)',
+                borderRadius: 'var(--theme-card-radius, undefined)',
+              }
+            : undefined),
+        }}
         aria-busy={isAwarding || undefined}
         className={cn(
           'absolute inset-0 h-full w-full',

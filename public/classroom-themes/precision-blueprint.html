@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;1,9..40,400&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+@theme {
+  --color-canvas: hsl(38 25% 96%);
+  --color-navy: hsl(220 40% 12%);
+  --color-border-thin: hsl(220 10% 10% / 0.08);
+  --color-accent-red: hsl(0 72% 51%);
+  --color-accent-teal: hsl(174 72% 41%);
+  --color-accent-yellow: hsl(45 93% 47%);
+  --color-accent-purple: hsl(262 60% 50%);
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-stagger-in > * {
+  opacity: 0;
+  animation: slideUp 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</style>
+</head>
+<body>
+<div class="min-h-screen bg-canvas font-body text-navy/90 flex flex-col">
+  <nav class="h-14 bg-navy text-white px-6 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <div class="size-2 bg-accent-teal rounded-full animate-pulse"></div>
+        <span class="font-display font-bold text-sm tracking-tight">CLASSROOM.LIVE</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <div class="flex items-center gap-4 text-[13px] font-medium">
+        <span class="text-white/60">Grade 5 / Room 204</span>
+        <div class="px-2 py-0.5 bg-white/10 rounded-sm border border-white/5 font-mono text-[10px]">3/22 HERE</div>
+        <div class="px-2 py-0.5 bg-accent-teal/20 text-accent-teal rounded-sm border border-accent-teal/20 font-mono text-[10px]">HALL: ALL CLEAR</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-sm border border-white/10">
+        <span class="text-[10px] font-mono text-white/50">POINTS</span>
+        <span class="text-xs font-bold font-display">+15</span>
+      </div>
+      <div class="flex gap-1 ml-4">
+        <button class="px-3 py-1.5 hover:bg-white/10 transition-colors text-[11px] font-medium tracking-wide uppercase">Projector</button>
+        <button class="px-3 py-1.5 hover:bg-white/10 transition-colors text-[11px] font-medium tracking-wide uppercase">Cheatsheet</button>
+        <button class="px-3 py-1.5 bg-white/10 transition-colors text-[11px] font-medium tracking-wide uppercase">Shortcuts</button>
+      </div>
+    </div>
+  </nav>
+  <div class="flex flex-1 overflow-hidden">
+    <aside class="w-60 border-r border-border-thin bg-white flex flex-col overflow-y-auto shrink-0">
+      <div class="p-4 flex flex-col gap-6">
+        <section>
+          <span class="text-[9px] font-bold text-navy/40 tracking-[0.2em] uppercase mb-3 block">Seating Controls</span>
+          <button class="w-full text-left py-2 px-3 border border-navy/10 rounded-sm text-sm hover:border-navy transition-all mb-2 flex justify-between">
+            <span>Arrange Seats</span>
+            <span class="font-mono text-[10px] opacity-40">CMD+A</span>
+          </button>
+        </section>
+        <section>
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-[9px] font-bold text-navy/40 tracking-[0.2em] uppercase block">Group Award</span>
+            <span class="font-mono text-[10px] text-accent-teal">+5 PTS</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1">
+            <button class="py-2 bg-navy/5 text-[10px] font-mono hover:bg-navy hover:text-white transition-colors">+1</button>
+            <button class="py-2 bg-navy/5 text-[10px] font-mono hover:bg-navy hover:text-white transition-colors">+5</button>
+            <button class="py-2 bg-navy/5 text-[10px] font-mono hover:bg-navy hover:text-white transition-colors">+10</button>
+            <button class="py-2 bg-navy/5 text-[10px] font-mono hover:bg-navy hover:text-white transition-colors">+15</button>
+            <button class="py-2 bg-navy/5 text-[10px] font-mono hover:bg-navy hover:text-white transition-colors">+20</button>
+            <button class="py-2 bg-navy/5 text-[10px] font-mono hover:bg-navy hover:text-white transition-colors">CUSTOM</button>
+          </div>
+        </section>
+        <section class="space-y-1">
+          <span class="text-[9px] font-bold text-navy/40 tracking-[0.2em] uppercase mb-3 block">Quick Actions</span>
+          <button class="w-full text-left text-[13px] py-1.5 px-2 hover:bg-navy/5 rounded-sm transition-colors italic text-navy/60">Random Student</button>
+          <button class="w-full text-left text-[13px] py-1.5 px-2 hover:bg-navy/5 rounded-sm transition-colors italic text-navy/60">Raffle Wheel</button>
+          <button class="w-full text-left text-[13px] py-1.5 px-2 hover:bg-navy/5 rounded-sm transition-colors italic text-navy/60">Behavior Track</button>
+          <button class="w-full text-left text-[13px] py-1.5 px-2 hover:bg-navy/5 rounded-sm transition-colors italic text-navy/60">Sound Board</button>
+        </section>
+        <section class="pt-4 border-t border-border-thin">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-display font-bold">GROUP TIMER</span>
+            <span class="font-mono text-xs">00:00</span>
+          </div>
+          <div class="flex gap-1">
+            <button class="flex-1 py-1.5 bg-navy text-white text-[10px] font-bold tracking-widest">START</button>
+            <button class="px-3 py-1.5 border border-navy/10 text-[10px] font-bold tracking-widest">RESET</button>
+          </div>
+        </section>
+      </div>
+      <div class="mt-auto p-4">
+        <button class="w-full py-2 bg-navy/5 text-[11px] font-bold tracking-wide uppercase hover:bg-navy hover:text-white transition-colors">Setup & More</button>
+      </div>
+    </aside>
+    <main class="flex-1 overflow-y-auto p-8 flex flex-col items-center">
+      <div class="mb-12 flex flex-col items-center">
+        <div class="w-48 h-10 border border-navy/20 bg-white flex items-center justify-center relative">
+          <div class="absolute -top-px left-1/2 -translate-x-1/2 w-12 h-1 bg-navy/10"></div>
+          <span class="text-[10px] font-display font-bold tracking-[0.3em] uppercase opacity-50">Teacher Desk</span>
+        </div>
+        <div class="mt-2 text-[9px] font-mono text-navy/30 uppercase">Screen / Front of Class</div>
+      </div>
+      <div class="grid grid-cols-5 gap-6 max-w-5xl w-full animate-stagger-in" id="desk-grid"></div>
+    </main>
+  </div>
+</div>
+<script>
+const students = [
+  ["AB","Archer Brooks","1,402 PTS","teal"],["EW","Emily Wong","892 PTS","red"],["ZM","Zane Miller","2,110 PTS","yellow"],
+  ["JH","Jade Hayes","1,740 PTS","purple"],["EO","Ethan Ortiz","529 PTS","teal"],["SK","Sana Khan","1,202 PTS","red"],
+  ["LJ","Lucas Jensen","938 PTS","yellow"],["MV","Mia Vance","3,004 PTS","purple"],["RC","Riley Chen","1,155 PTS","teal"],
+  ["TB","Theo Bell","780 PTS","red"],["AL","Addison Lee","2,020 PTS","teal"],["MM","Mia Moore","1,687 PTS","red"],
+  ["MG","Michael Gray","376 PTS","teal"],["AR","Aiden Ross","1,523 PTS","purple"],["MD","Madison Day","2,106 PTS","teal"],
+  ["OJ","Owen Jones","1,689 PTS","red"],["AY","Aria Young","1,882 PTS","yellow"],["IB","Isabella Blue","548 PTS","teal"],
+  ["PM","Penelope May","1,724 PTS","purple"],["WA","William Ash","1,379 PTS","teal"],["DA","David Ann","132 PTS","purple"]
+];
+const grid = document.getElementById('desk-grid');
+students.forEach(([init,name,pts,c], i) => {
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="group relative bg-white border border-border-thin p-4 hover:border-navy/20 transition-all duration-300" style="animation-delay:${(i+1)*50}ms">
+      <div class="flex flex-col items-center">
+        <div class="size-10 rounded-full border border-border-thin flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+          <span class="text-xs font-display font-bold text-accent-${c}">${init}</span>
+        </div>
+        <h3 class="text-[13px] font-medium mb-2">${name}</h3>
+        <div class="px-2 py-0.5 bg-navy/5 rounded-full font-mono text-[10px] text-navy/50">${pts}</div>
+      </div>
+    </div>`);
+});
+</script>
+</body>
+</html>

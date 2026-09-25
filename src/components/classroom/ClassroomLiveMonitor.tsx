@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
+import { ClassroomSignInPrompt } from '@/components/classroom/ClassroomSignInPrompt';
 import {
   ClassroomLiveTeachChrome,
   type ClassroomLiveHeaderControls,
@@ -28,6 +29,12 @@ import { classroomHref, classroomPortalHomeHref } from '@/lib/classroomRealmUrl'
 import { pickClassroomActiveClass, rememberClassroomActiveClass } from '@/lib/classroom/classroomActiveClass';
 import { teacherWithBudgetAfterSpend } from '@/lib/teacherBudget';
 import { useClassroomIdleExit } from '@/hooks/useClassroomIdleExit';
+import { loadClassroomPrefs } from '@/lib/classroomSeatingChart';
+import {
+  buildThemeKitCssProperties,
+  buildThemeGoogleFontsUrl,
+} from '@/lib/classroom/classroomThemeKitStyles';
+import { cn } from '@/lib/utils';
 
 const spring = { type: 'spring' as const, stiffness: 280, damping: 28 };
 
@@ -53,6 +60,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     studentsLoading,
     classes,
     classesLoading,
+    teachers,
     categories: rawCategories,
     categoriesLoading,
     canReadRoster,
@@ -66,6 +74,23 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   const [liveHeaderControls, setLiveHeaderControls] = useState<ClassroomLiveHeaderControls | null>(
     null,
   );
+
+  const initialPrefs = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return loadClassroomPrefs(schoolId, storageScope);
+  }, [schoolId, storageScope]);
+
+  const currentPrefs = liveHeaderControls?.appearance?.prefs ?? initialPrefs;
+  const activeThemeKitSlug = currentPrefs?.themeKitSlug;
+  const activeThemeKitSettings = currentPrefs?.themeKitSettings;
+
+  const themeVariables = useMemo(() => {
+    return buildThemeKitCssProperties(activeThemeKitSlug, activeThemeKitSettings);
+  }, [activeThemeKitSlug, activeThemeKitSettings]);
+
+  const googleFontsUrl = useMemo(() => {
+    return buildThemeGoogleFontsUrl(activeThemeKitSlug, activeThemeKitSettings);
+  }, [activeThemeKitSlug, activeThemeKitSettings]);
 
   const categories = useMemo(
     () =>
@@ -130,17 +155,19 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     return () => document.documentElement.removeAttribute('data-classroom-realm');
   }, []);
 
-  useEffect(() => {
-    if (!isInitialized) return;
-    if (!canAccessHallOfFameRoute(loginState)) {
-      router.replace(schoolId ? `/${schoolId}/portal` : '/');
+  const monitorClassId = useMemo(() => {
+    if (classIdFromUrl === CLASSROOM_ALL_STUDENTS_FILTER_ID) {
+      return CLASSROOM_ALL_STUDENTS_FILTER_ID;
     }
-  }, [isInitialized, loginState, router, schoolId]);
-
-  const monitorClassId =
-    classIdFromUrl === CLASSROOM_ALL_STUDENTS_FILTER_ID
-      ? CLASSROOM_ALL_STUDENTS_FILTER_ID
-      : pickClassroomActiveClass(classes, classIdFromUrl);
+    const chosen = pickClassroomActiveClass(classes, classIdFromUrl);
+    if (classIdFromUrl || !classes.length) return chosen;
+    const studentClassIds = new Set(students.map((s) => s.classId).filter(Boolean));
+    if (studentClassIds.size > 0 && !studentClassIds.has(chosen)) {
+      const withStudents = classes.find((c) => studentClassIds.has(c.id));
+      if (withStudents) return withStudents.id;
+    }
+    return chosen;
+  }, [classIdFromUrl, classes, students]);
 
   const teach = useClassroomTeachNow({
     schoolId,
@@ -151,7 +178,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     initialClassId: monitorClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID ? undefined : monitorClassId,
   });
 
-  if (!isInitialized || !canAccessHallOfFameRoute(loginState)) {
+  if (!isInitialized) {
     return (
       <div
         className="fixed inset-0 flex items-center justify-center"
@@ -165,16 +192,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   if (!canReadRoster) {
     return (
       <ClassroomRealmShell schoolId={schoolId} hideChrome={hideRealmChrome}>
-        <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-          <p className="text-lg font-black tracking-tight text-white">Sign in as teacher or admin</p>
-          <p className="max-w-md text-sm text-white/60">
-            This sign-in can’t open the class list. Use the teacher or admin passcode, then open
-            Classroom again.
-          </p>
-          <Button type="button" variant="outline" asChild className="border-white/20 text-white hover:bg-white/10">
-            <Link href={schoolId ? `/${schoolId}/portal` : '/'}>Back to portal</Link>
-          </Button>
-        </div>
+        <ClassroomSignInPrompt schoolId={schoolId} />
       </ClassroomRealmShell>
     );
   }
@@ -211,12 +229,22 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={spring}
-      className="classroom-realm-root classroom-realm-manage classroom-readable fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
-      style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+      className={cn(
+        'classroom-realm-root classroom-realm-manage classroom-readable fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden',
+        activeThemeKitSettings?.darkMode && 'dark',
+      )}
+      style={{
+        backgroundColor: 'var(--theme-canvas-bg, var(--cr-base, #102016))',
+        ...themeVariables,
+      }}
     >
+      {googleFontsUrl ? <link rel="stylesheet" href={googleFontsUrl} /> : null}
       <div
         className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden"
-        style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+        style={{
+          backgroundColor: 'var(--theme-canvas-bg, var(--cr-base, #102016))',
+          backgroundImage: 'var(--theme-canvas-pattern, none)',
+        }}
       >
         {!isStudentAudience && !liveHeaderControls?.arranging ? (
           <ClassroomLiveTeachChrome
@@ -248,6 +276,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
             schoolId={schoolId}
             students={deferredStudents}
             classes={classes}
+            teachers={teachers}
             categories={categories}
             storageScope={storageScope}
             initialClassId={monitorClassId || undefined}

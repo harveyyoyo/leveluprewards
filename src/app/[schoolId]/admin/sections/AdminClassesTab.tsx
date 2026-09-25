@@ -116,9 +116,10 @@ export function AdminClassesTab({
     >
     <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardContent>
-        <ul className="space-y-4 pr-1">
+        <ul className="space-y-4 overflow-x-auto pb-2 pr-1">
           {classes && classes.length > 0 ? (
             <AdminRecordListHeader
+              className="min-w-[600px]"
               gridClassName="grid-cols-[minmax(160px,1.2fr)_minmax(200px,2fr)_110px_44px]"
               columns={[
                 { label: 'Class Name' },
@@ -169,7 +170,7 @@ export function AdminClassesTab({
                           <button
                             type="button"
                             onClick={() => void handleRemoveTeacherFromClass(c, tid)}
-                            className="text-muted-foreground hover:text-destructive rounded-full p-0.5 transition-colors cursor-pointer"
+                            className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-destructive"
                             title={`Remove ${name}`}
                           >
                             <X className="h-3 w-3" />
@@ -209,7 +210,7 @@ export function AdminClassesTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 w-full gap-1.5 rounded-lg border-ring/35 bg-background hover:bg-secondary text-primary font-semibold"
+                      className="h-11 w-full gap-1.5 rounded-lg border-ring/35 bg-background font-semibold text-primary hover:bg-secondary"
                       onClick={() => toggleExpand(c.id)}
                     >
                       {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -220,7 +221,7 @@ export function AdminClassesTab({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 min-h-0 min-w-0 text-destructive hover:bg-destructive/10"
+                      className="size-11 text-destructive hover:bg-destructive/10"
                       onClick={() => onDeleteClass(c.id, students || [])}
                     >
                       <Trash2 className="w-4 h-4" />

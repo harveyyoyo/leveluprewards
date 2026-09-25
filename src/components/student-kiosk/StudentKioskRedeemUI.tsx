@@ -39,6 +39,7 @@ export function StudentKioskLogoutControls({
   logoutTimer,
   sessionTimeoutSec = 10,
   onLogout,
+  onStaySignedIn,
   className,
 }: {
   themed: StudentKioskThemed;
@@ -48,15 +49,11 @@ export function StudentKioskLogoutControls({
   logoutTimer: number;
   sessionTimeoutSec?: number;
   onLogout: () => void;
+  onStaySignedIn?: () => void;
   className?: string;
 }) {
   const { t: tr } = useTranslation();
   const t = themed.active;
-  const maxSec = Math.max(1, sessionTimeoutSec);
-  const progress = Math.min(1, Math.max(0, logoutTimer / maxSec));
-  const ringRadius = 14;
-  const ringCircumference = 2 * Math.PI * ringRadius;
-  const ringOffset = ringCircumference * (1 - progress);
   const urgent = autoLogoutEnabled && !isKioskLocked && logoutTimer <= 3;
 
   const lockedPillStyle = t
@@ -76,18 +73,10 @@ export function StudentKioskLogoutControls({
       }
     : undefined;
 
-  const ringStroke = t
-    ? urgent
-      ? '#f97316'
-      : 'var(--theme-primary)'
-    : urgent
-      ? '#f97316'
-      : 'hsl(var(--primary))';
-
   return (
     <div
       className={cn(
-        'flex w-fit flex-col items-center gap-1 rounded-xl border-2 p-1.5 shadow-sm transition-shadow',
+        'grid w-fit grid-cols-2 items-center gap-2 rounded-xl border p-2 shadow-sm transition-shadow',
         urgent && 'shadow-[0_0_0_2px_color-mix(in_srgb,#f97316_35%,transparent)]',
         !t && 'border-slate-200/90 bg-white/95 dark:border-slate-600 dark:bg-slate-900/90',
         className,
@@ -117,46 +106,7 @@ export function StudentKioskLogoutControls({
           {tr('student.kiosk.locked')}
         </div>
       ) : autoLogoutEnabled ? (
-        <div
-          className="relative h-8 w-8 shrink-0"
-          role="timer"
-          aria-live="polite"
-          aria-label={`Auto logout in ${logoutTimer} ${logoutTimer === 1 ? 'second' : 'seconds'}`}
-          title={logoutTimer === 1 ? '1 second until auto logout' : `${logoutTimer} seconds until auto logout`}
-        >
-          <svg className="h-8 w-8 -rotate-90" viewBox="0 0 36 36" aria-hidden>
-            <circle
-              cx="18"
-              cy="18"
-              r={ringRadius}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              className="opacity-20"
-            />
-            <circle
-              cx="18"
-              cy="18"
-              r={ringRadius}
-              fill="none"
-              stroke={ringStroke}
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={ringCircumference}
-              strokeDashoffset={ringOffset}
-              className="transition-[stroke-dashoffset] duration-1000 ease-linear"
-            />
-          </svg>
-          <span
-            className={cn(
-              'absolute inset-0 flex items-center justify-center text-xs font-black tabular-nums leading-none',
-              urgent && !t && 'text-orange-600 dark:text-orange-400',
-            )}
-            style={t && urgent ? { color: '#f97316' } : undefined}
-          >
-            {logoutTimer}
-          </span>
-        </div>
+        <p role="timer" aria-live="off" className="col-span-2 text-center text-xs font-semibold">Signing out in {logoutTimer}s</p>
       ) : (
         <p
           className={cn(
@@ -169,10 +119,11 @@ export function StudentKioskLogoutControls({
           {tr('student.kiosk.sessionStaysOpen')}
         </p>
       )}
+      {!isKioskLocked && autoLogoutEnabled && onStaySignedIn && <button type="button" onClick={onStaySignedIn} className="min-h-11 rounded px-2 py-1 text-xs font-bold underline underline-offset-4">Stay signed in</button>}
       <Button
         type="button"
         className={cn(
-          'h-8 w-8 min-h-8 min-w-8 shrink-0 rounded-full border-2 p-0 shadow-sm [&_svg]:size-3',
+          'h-11 shrink-0 rounded-xl border-2 px-3 text-xs font-bold shadow-sm [&_svg]:size-3',
           !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
         )}
         style={
@@ -188,7 +139,8 @@ export function StudentKioskLogoutControls({
         aria-label={tr('student.kiosk.logOutNowAria')}
         title={tr('student.kiosk.logOutNowAria')}
       >
-        <LogOut aria-hidden />
+        <LogOut className="mr-1.5" aria-hidden />
+        {tr('student.kiosk.signOut')}
       </Button>
     </div>
   );
@@ -357,7 +309,7 @@ export function StudentKioskRewardRail({
   return (
     <div className={cn('flex min-h-0 min-w-0 flex-col gap-2', className)}>
       <p
-        className="shrink-0 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-70"
+        className="shrink-0 text-center text-[10px] font-bold tracking-[0.2em] opacity-70"
         style={t ? { color: 'var(--theme-page-text)' } : undefined}
       >
         {label}
@@ -457,7 +409,7 @@ function ScanCouponScanZone({
   return (
     <div
       className={cn(
-        'relative flex flex-wrap items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed px-4 py-5 min-h-[5.5rem] text-center sm:min-h-[6.5rem] sm:gap-4 sm:px-5 sm:py-6 [@media(max-height:760px)]:min-h-[4.5rem] [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:px-3 [@media(max-height:760px)]:py-3',
+        'relative flex flex-wrap items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed px-4 py-5 min-h-[5.5rem] text-center sm:min-h-[6.5rem] sm:gap-4 sm:px-5 sm:py-4 [@media(max-height:760px)]:min-h-[4.5rem] [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:px-3 [@media(max-height:760px)]:py-3',
         !t &&
           'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/90 to-amber-900/95 text-amber-50 dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/90 dark:to-amber-900/95',
       )}
@@ -574,10 +526,11 @@ export function StudentKioskRedeemHero({
         }}
       >
         <Input
+          aria-label={tr('student.kiosk.codePlaceholder')}
           placeholder={tr('student.kiosk.codePlaceholder')}
           value={couponCode}
           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-          className="h-12 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1 [@media(max-height:760px)]:h-10"
+          className="h-12 w-full min-w-0 rounded-xl border-2 text-left text-base placeholder:text-current placeholder:opacity-65 sm:flex-1 [@media(max-height:760px)]:h-10"
           style={
             t
               ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }
@@ -588,7 +541,7 @@ export function StudentKioskRedeemHero({
         />
         <Button
           type="submit"
-          className="h-12 w-full shrink-0 rounded-xl px-8 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto [@media(max-height:760px)]:h-10"
+          className="h-12 w-full shrink-0 rounded-xl px-8 text-sm font-bold shadow-lg transition-all active:scale-95 sm:w-auto [@media(max-height:760px)]:h-10"
           style={
             t
               ? {
@@ -617,12 +570,12 @@ export function StudentKioskRedeemHero({
             />
             <span
               className={cn(
-                'text-center text-2xl font-black uppercase tracking-[0.14em] leading-none sm:text-3xl md:text-4xl lg:text-5xl sm:tracking-[0.2em] [@media(max-height:760px)]:text-xl',
+                'text-center text-xl font-bold leading-tight sm:text-2xl',
                 !t && 'text-amber-50',
               )}
               style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
             >
-              {extendedScanModes ? tr('student.kiosk.scanCouponOrLibSticker') : tr('student.kiosk.scanCoupon')}
+              Ready to scan
             </span>
           </div>
           <p
@@ -635,14 +588,6 @@ export function StudentKioskRedeemHero({
           </p>
         </div>
       </ScanCouponScanZone>
-      <p
-        className="text-center text-[9px] [@media(max-height:760px)]:hidden"
-        style={
-          t ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }
-        }
-      >
-        {tr('student.kiosk.adminCouponHint')}
-      </p>
     </div>
   );
 
@@ -683,7 +628,7 @@ export function StudentKioskRedeemHero({
     >
       <CardHeader className="border-b px-4 pb-3 pt-4 text-center sm:px-6 sm:pb-4 sm:pt-5 [@media(max-height:760px)]:px-3 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-3" style={t ? { borderColor: 'var(--theme-bg)' } : undefined}>
         <Helper content={couponHelperText}>
-          <CardTitle className="flex items-center justify-center gap-2 text-xl font-black uppercase tracking-wide sm:text-2xl md:text-3xl [@media(max-height:760px)]:text-lg [@media(max-height:760px)]:gap-1.5">
+          <CardTitle className="flex items-center justify-center gap-2 text-xl font-bold tracking-tight sm:text-2xl [@media(max-height:760px)]:text-lg [@media(max-height:760px)]:gap-1.5">
             <div
               className={cn(
                 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8',
@@ -709,10 +654,11 @@ export function StudentKioskRedeemHero({
               }}
             >
               <Input
+                aria-label={tr('student.kiosk.codePlaceholder')}
                 placeholder={tr('student.kiosk.couponPlaceholder')}
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                className="h-10 w-full min-w-0 rounded-lg border-2 font-mono text-left text-sm tracking-widest sm:flex-1 [@media(max-height:760px)]:h-9"
+                className="h-10 w-full min-w-0 rounded-lg border-2 text-left text-sm placeholder:text-current placeholder:opacity-65 sm:flex-1 [@media(max-height:760px)]:h-9"
                 style={
                   t
                     ? {
@@ -726,7 +672,7 @@ export function StudentKioskRedeemHero({
               />
               <Button
                 type="submit"
-                className="h-10 w-full shrink-0 rounded-lg px-6 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto [@media(max-height:760px)]:h-9"
+                className="h-10 w-full shrink-0 rounded-lg px-6 text-xs font-bold shadow-lg transition-all active:scale-95 sm:w-auto [@media(max-height:760px)]:h-9"
                 style={
                   t
                     ? {
@@ -782,7 +728,7 @@ export function StudentKioskMorePrizesButton({
         data-intro-tour="kiosk-more-prizes"
         onClick={onClick}
         className={cn(
-          'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
+          'h-12 w-full shrink-0 text-sm font-bold shadow-md sm:h-14 sm:text-base',
           !t && 'bg-gradient-to-r from-primary to-primary/90',
           className,
         )}
@@ -805,7 +751,7 @@ export function StudentKioskMorePrizesButton({
       asChild
       data-intro-tour="kiosk-more-prizes"
       className={cn(
-        'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
+        'h-12 w-full shrink-0 text-sm font-bold shadow-md sm:h-14 sm:text-base',
         !t && 'bg-gradient-to-r from-primary to-primary/90',
         className,
       )}
@@ -849,7 +795,7 @@ export function StudentKioskMoreActivityButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
+        'h-12 w-full shrink-0 text-sm font-bold shadow-md sm:h-14 sm:text-base',
         !t && 'bg-gradient-to-r from-primary to-primary/90',
         className,
       )}
@@ -891,7 +837,7 @@ export function StudentKioskMobileRewardsGrid({
 
   return (
     <div className={cn('flex min-h-0 min-w-0 flex-col gap-2', className)}>
-      <p className="shrink-0 text-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="shrink-0 text-center text-[10px] font-bold tracking-[0.2em] text-muted-foreground">
         Eligible rewards
       </p>
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pb-2">
@@ -948,7 +894,7 @@ export function StudentKioskMobileRewardsGrid({
                   </Badge>
                   <span
                     className={cn(
-                      'inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest sm:text-[11px]',
+                      'inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px]',
                       !t &&
                         'bg-primary/10 text-primary ring-1 ring-inset ring-primary/25 dark:bg-primary/20 dark:text-primary',
                     )}

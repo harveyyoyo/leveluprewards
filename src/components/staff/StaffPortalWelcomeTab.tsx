@@ -1,22 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronRight, TableProperties } from 'lucide-react';
+import {
+  ChevronRight,
+  GraduationCap,
+  UserCheck,
+  Users,
+  Gift,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   StaffPortalSectionCard,
   StaffPortalSectionCardContent,
 } from '@/components/staff/StaffPortalSection';
-import {
-  staffPortalAddOnTabs,
-  staffPortalCoreTabs,
-  staffPortalTabDescription,
-  type StaffPortalRole,
-} from '@/lib/staffPortal';
+import type { StaffPortalRole } from '@/lib/staffPortal';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { adminWelcomeTitle } from '@/lib/staffPortalQuickActions';
+import { useAppContext } from '@/components/AppProvider';
 
 export type StaffPortalWelcomeStats = {
   studentCount: number;
@@ -42,6 +45,8 @@ type StaffPortalWelcomeTabProps = {
   welcomeStats?: StaffPortalWelcomeStats;
   /** @deprecated Use welcomeStats */
   adminStats?: StaffPortalWelcomeStats;
+  /** Tab values visible on the left sidebar — removed from the middle. */
+  sidebarTabValues?: string[];
   className?: string;
 };
 
@@ -51,21 +56,23 @@ function formatStat(n: number): string {
 
 function useCountUp(target: number, duration = 800, enabled = true): number {
   const [current, setCurrent] = useState(0);
-  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (!enabled || hasAnimated.current || target === 0) {
+    if (!enabled || target === 0) {
       setCurrent(target);
       return;
     }
-    hasAnimated.current = true;
 
-    const startTime = performance.now();
+    setCurrent(0);
+    let startTime: number | null = null;
     let rafId: number;
 
     const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+      if (startTime === null) {
+        startTime = now;
+      }
+      const elapsed = Math.max(0, now - startTime);
+      const progress = Math.min(Math.max(elapsed / duration, 0), 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       setCurrent(Math.round(eased * target));
 
@@ -81,168 +88,330 @@ function useCountUp(target: number, duration = 800, enabled = true): number {
   return current;
 }
 
-function AnimatedStat({ value, label }: { value: number; label: string }) {
+function AnimatedStat({
+  value,
+  label,
+  icon: Icon,
+  iconBg,
+  gradient,
+}: {
+  value: number;
+  label: string;
+  icon: LucideIcon;
+  iconBg: string;
+  gradient: string;
+}) {
   const animatedValue = useCountUp(value, 800);
 
   return (
-    <div className="rounded-xl border border-border/60 bg-primary/5 px-3 py-3 sm:px-4 sm:py-3.5">
-      <p className="text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
-        {formatStat(animatedValue)}
-      </p>
-      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
-        {label}
-      </p>
+    <div className="group relative flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-muted/50 cursor-default">
+      <div
+        className={cn(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg shadow-xs transition-transform duration-200 group-hover:scale-110',
+          iconBg,
+        )}
+      >
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <div className="flex flex-col text-left">
+        <span
+          className={cn(
+            'text-base sm:text-lg font-black tabular-nums tracking-tight leading-none bg-gradient-to-r bg-clip-text text-transparent',
+            gradient,
+          )}
+        >
+          {formatStat(animatedValue)}
+        </span>
+        <span className="mt-1 text-[9.5px] sm:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap leading-none">
+          {label}
+        </span>
+      </div>
     </div>
   );
 }
 
-function TabLinkRow({
+type PortalLargeButtonDef = {
+  id: string;
+  href: string;
+  tabValue?: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  accentColor: string;
+};
+
+function PortalLargeButton({
+  item,
+  onGoToTab,
+}: {
+  item: PortalLargeButtonDef;
+  onGoToTab?: (tabValue: string) => void;
+}) {
+  const handleClick = (e: React.MouseEvent) => {
+    if (item.tabValue && onGoToTab) {
+      e.preventDefault();
+      onGoToTab(item.tabValue);
+    }
+  };
+
+  return (
+    <Link
+      href={item.href}
+      onClick={handleClick}
+      className={cn(
+        'group relative flex flex-col items-center rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-2 sm:p-2.5 text-center shadow-xs transition-all duration-300',
+        'hover:border-primary/50 hover:shadow-xl hover:-translate-y-1',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      )}
+    >
+      {/* Top illustration container */}
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl sm:rounded-2xl bg-muted/20">
+        <img
+          src={item.image}
+          alt={item.title}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="eager"
+        />
+      </div>
+
+      {/* Title & subtitle below */}
+      <div className="flex flex-col items-center text-center mt-2 pb-0.5 px-1 min-w-0 w-full">
+        <h3 className="text-xs sm:text-sm font-bold tracking-tight text-foreground transition-colors group-hover:text-primary truncate w-full">
+          {item.title}
+        </h3>
+        <span className="mt-0.5 text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground truncate w-full">
+          {item.subtitle}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+type PillarBoxLink = {
+  tabValue: string;
+  icon: LucideIcon;
+  label: string;
+  description: string;
+};
+
+function PillarLinkRow({
   icon: Icon,
   label,
   description,
   onOpen,
-  tabValue,
 }: {
   icon: LucideIcon;
   label: string;
   description: string;
   onOpen: () => void;
-  tabValue?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      data-intro-tour={tabValue ? `addon-link-${tabValue}` : undefined}
       className={cn(
-        'group flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
-        'border-border/70 bg-card hover:border-ring/30 hover:bg-muted/30',
+        'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
+        'hover:bg-muted/40',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35',
       )}
     >
       <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ring/10 text-ring transition-colors group-hover:bg-ring/20"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-ring/10 text-ring transition-colors group-hover:bg-ring/20"
         aria-hidden
       >
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold leading-snug text-foreground">{label}</p>
-        <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p>
+        <p className="text-sm font-semibold leading-snug text-foreground">{label}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-muted-foreground">{description}</p>
       </div>
       <ChevronRight
-        className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground"
+        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground"
         aria-hidden
       />
     </button>
   );
 }
 
-function StaffPortalWelcomeHero({
-  schoolName,
-  staffName,
-  stats,
-  description,
-  statLabels,
-  greeting,
+function PillarBox({
+  icon: Icon,
+  gradient,
+  title,
+  subtitle,
+  links,
+  onGoToTab,
 }: {
-  schoolName: string | null;
-  staffName: string | null;
-  stats: StaffPortalWelcomeStats;
-  description: string;
-  statLabels: [string, string, string, string];
-  greeting?: string;
+  icon: LucideIcon;
+  gradient: string;
+  title: string;
+  subtitle: string;
+  links: PillarBoxLink[];
+  onGoToTab: (tabValue: string) => void;
 }) {
-  const statTiles = [
-    { label: statLabels[0], value: Number(stats.studentCount ?? 0) || 0 },
-    { label: statLabels[1], value: Number(stats.classCount ?? 0) || 0 },
-    { label: statLabels[2], value: Number(stats.staffCount ?? 0) || 0 },
-    { label: statLabels[3], value: Number(stats.activePrizeCount ?? 0) || 0 },
-  ];
-
-  const greetingText = greeting ?? (staffName ? `Welcome back, ${staffName} 👋` : 'Welcome back 👋');
+  if (links.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-3">
-          {schoolName ? (
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              {schoolName}
-            </p>
-          ) : null}
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{greetingText}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              {description}
-            </p>
-          </div>
+    <div className="space-y-4 rounded-2xl border bg-background p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-md bg-gradient-to-br', gradient)}>
+          <Icon className="h-6 w-6 text-white" aria-hidden />
+        </div>
+        <div>
+          <h3 className="text-xl font-black tracking-tight text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {statTiles.map((tile) => (
-          <AnimatedStat key={tile.label} value={tile.value} label={tile.label} />
+      <div className="divide-y divide-border/50">
+        {links.map((link) => (
+          <PillarLinkRow
+            key={link.tabValue}
+            icon={link.icon}
+            label={link.label}
+            description={link.description}
+            onOpen={() => onGoToTab(link.tabValue)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function ImportRosterCard({ onOpen }: { onOpen: () => void }) {
+function StaffPortalWelcomeHero({
+  staffName,
+  stats,
+  statLabels,
+  greeting,
+}: {
+  schoolName?: string | null;
+  staffName: string | null;
+  stats: StaffPortalWelcomeStats;
+  description?: string;
+  statLabels: [string, string, string, string];
+  greeting?: string;
+}) {
+  const statTiles = [
+    {
+      label: statLabels[0],
+      value: Number(stats.studentCount ?? 0) || 0,
+      icon: Users,
+      iconBg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/25',
+      gradient: 'from-blue-600 via-sky-500 to-cyan-500 dark:from-blue-400 dark:to-cyan-300',
+    },
+    {
+      label: statLabels[1],
+      value: Number(stats.classCount ?? 0) || 0,
+      icon: GraduationCap,
+      iconBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500/25',
+      gradient: 'from-emerald-600 via-teal-500 to-teal-400 dark:from-emerald-400 dark:to-teal-300',
+    },
+    {
+      label: statLabels[2],
+      value: Number(stats.staffCount ?? 0) || 0,
+      icon: UserCheck,
+      iconBg: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 group-hover:bg-purple-500/25',
+      gradient: 'from-purple-600 via-indigo-500 to-indigo-400 dark:from-purple-400 dark:to-indigo-300',
+    },
+    {
+      label: statLabels[3],
+      value: Number(stats.activePrizeCount ?? 0) || 0,
+      icon: Gift,
+      iconBg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500/25',
+      gradient: 'from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:to-orange-300',
+    },
+  ];
+
+  const greetingText = greeting ?? (staffName ? `Welcome back, ${staffName}` : 'Welcome back');
+
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-      <div className="flex min-w-0 items-start gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-ring"
-          aria-hidden
-        >
-          <TableProperties className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="font-semibold text-foreground">Import your roster</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Upload CSV files or paste a spreadsheet to set up classes, staff, and students.
-          </p>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          {greetingText}
+        </h2>
+
+        {/* Compact stats dash */}
+        <div className="grid w-full shrink-0 grid-cols-2 items-center gap-1 rounded-2xl border border-border/80 bg-card/85 p-1 shadow-xs backdrop-blur-md sm:inline-flex sm:w-fit">
+          {statTiles.map((tile, idx) => (
+            <div key={tile.label} className="flex min-w-0 items-center">
+              {idx > 0 && <div className="mx-0.5 hidden h-6 w-px bg-border/60 sm:block" />}
+              <AnimatedStat
+                value={tile.value}
+                label={tile.label}
+                icon={tile.icon}
+                iconBg={tile.iconBg}
+                gradient={tile.gradient}
+              />
+            </div>
+          ))}
         </div>
       </div>
-      <Button
-        type="button"
-        size="sm"
-        className="shrink-0 rounded-lg font-semibold sm:self-center"
-        onClick={onOpen}
-      >
-        Open import
-      </Button>
     </div>
   );
 }
-
-const ADMIN_WELCOME_DESCRIPTION =
-  'This is your control center. Manage students, award points, run the prize shop, and power the screens around your school — all from one place.';
-
-const TEACHER_WELCOME_DESCRIPTION =
-  'Award points, print coupons, manage your classes, and track student progress — all from one place.';
 
 export function StaffPortalWelcomeTab({
   role,
   settings,
   onGoToTab,
-  onBulkRoster,
   schoolName,
   staffName,
   welcomeStats,
   adminStats,
+  sidebarTabValues,
   className,
 }: StaffPortalWelcomeTabProps) {
   const stats = welcomeStats ?? adminStats;
-  const core = staffPortalCoreTabs(role, settings);
-  const addons = staffPortalAddOnTabs(role, settings);
-  const trimmedSchoolName = schoolName?.trim() || null;
   const trimmedStaffName = staffName?.trim() || null;
 
-  const heroDescription =
-    role === 'teacher' ? TEACHER_WELCOME_DESCRIPTION : ADMIN_WELCOME_DESCRIPTION;
+  const { schoolId } = useAppContext();
+  const root = schoolId ? `/${schoolId.toLowerCase()}` : '';
+
+  const largePillarButtons = useMemo<PortalLargeButtonDef[]>(() => {
+    return [
+      {
+        id: 'rewards',
+        href: `${root}/admin?tab=prizes`,
+        tabValue: 'prizes',
+        title: 'Rewards',
+        subtitle: 'STUDENT INCENTIVES',
+        image: '/pillars/pillar-rewards.png',
+        accentColor: '#d97706',
+      },
+      {
+        id: 'office',
+        href: `${root}/office`,
+        title: 'School Office',
+        subtitle: 'ADMINISTRATION',
+        image: '/pillars/pillar-office.png',
+        accentColor: '#4f46e5',
+      },
+      {
+        id: 'classroom',
+        href: `${root}/classroom`,
+        title: 'Classroom',
+        subtitle: 'ACTIVE LEARNING',
+        image: '/pillars/pillar-classroom.png',
+        accentColor: '#059669',
+      },
+      {
+        id: 'attendance',
+        href: `${root}/admin?tab=attendance`,
+        tabValue: 'attendance',
+        title: 'Attendance',
+        subtitle: 'DAILY REGISTRY',
+        image: '/pillars/pillar-attendance.png',
+        accentColor: '#e11d48',
+      },
+      {
+        id: 'library',
+        href: `${root}/library`,
+        title: 'Library',
+        subtitle: 'RESOURCES',
+        image: '/pillars/pillar-library.png',
+        accentColor: '#7c3aed',
+      },
+    ];
+  }, [root]);
 
   const heroStatLabels: [string, string, string, string] =
     role === 'teacher'
@@ -250,66 +419,31 @@ export function StaffPortalWelcomeTab({
       : ['Students', 'Classes', 'Staff', 'Active prizes'];
 
   const heroGreeting =
-    role === 'admin' ? `${adminWelcomeTitle(trimmedStaffName)} 👋` : undefined;
+    role === 'admin' ? adminWelcomeTitle(trimmedStaffName) : undefined;
 
   return (
     <StaffPortalSectionCard className={className}>
       <StaffPortalSectionCardContent className="space-y-6 p-5 sm:p-6">
         {stats ? (
           <StaffPortalWelcomeHero
-            schoolName={trimmedSchoolName}
+            schoolName={schoolName}
             staffName={trimmedStaffName}
             stats={stats}
-            description={heroDescription}
             statLabels={heroStatLabels}
             greeting={heroGreeting}
           />
         ) : null}
 
-        {role === 'admin' && onBulkRoster ? <ImportRosterCard onOpen={onBulkRoster} /> : null}
-
-        {core.length > 0 ? (
-          <section className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Main areas
-            </h4>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {core.map((tab) => (
-                <TabLinkRow
-                  key={tab.value}
-                  icon={tab.icon}
-                  label={tab.label}
-                  description={staffPortalTabDescription(tab)}
-                  onOpen={() => onGoToTab(tab.value)}
-                  tabValue={tab.value}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {addons.length > 0 ? (
-          <section className="space-y-2.5">
-            <div>
-              <h4 className="text-sm font-medium text-foreground">More tools</h4>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Turn these on and pin them from Add more when you need them.
-              </p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {addons.map((tab) => (
-                <TabLinkRow
-                  key={tab.value}
-                  icon={tab.icon}
-                  label={tab.label}
-                  description={staffPortalTabDescription(tab)}
-                  onOpen={() => onGoToTab(tab.value)}
-                  tabValue={tab.value}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
+        {/* Pillar boxes: 5 cards in a single row on desktop */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 items-stretch">
+          {largePillarButtons.map((item) => (
+            <PortalLargeButton
+              key={item.id}
+              item={item}
+              onGoToTab={onGoToTab}
+            />
+          ))}
+        </section>
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
   );

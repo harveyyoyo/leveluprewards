@@ -318,7 +318,7 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
                         key={opt.id}
                         type="button"
                         className={cn(
-                          'rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors',
+                          'min-h-11 rounded-lg px-3 text-xs font-semibold transition-colors',
                           status === opt.id ? STATUS_STYLES[opt.id] : 'bg-muted text-muted-foreground hover:bg-muted/70',
                         )}
                         onClick={() => setMarks((prev) => ({ ...prev, [s.id]: opt.id }))}
