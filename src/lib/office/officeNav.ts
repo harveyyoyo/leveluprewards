@@ -199,7 +199,6 @@ export function formatCents(cents: number): string {
  * (`action=add` opens the Add form; Settings opens on a tab). The assistant picks one by key.
  */
 export const OFFICE_GO_TARGETS = {
-  home: { page: 'home' },
   students: { page: 'students' },
   'students:add': { page: 'students', params: { action: 'add' } },
   classes: { page: 'classes' },
@@ -219,6 +218,7 @@ export const OFFICE_GO_TARGETS = {
   'settings:fields': { page: 'settings', params: { tab: 'fields' } },
   'settings:staff': { page: 'settings', params: { tab: 'staff' } },
   'settings:import': { page: 'settings', params: { tab: 'import' } },
+  'settings:customize': { page: 'settings', params: { tab: 'customize' } },
 } as const satisfies Record<string, { page: OfficeNavId; params?: Record<string, string> }>;
 
 export type OfficeGoTarget = keyof typeof OFFICE_GO_TARGETS;

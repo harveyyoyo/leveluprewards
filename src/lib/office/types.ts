@@ -79,6 +79,8 @@ export type OfficeStudent = {
   tags?: string[] | null;
   /** Defaults to `active` when unset. Withdrawn/graduated students are hidden from the main roster by default. */
   status?: 'active' | 'withdrawn' | 'graduated' | null;
+  /** The matching levelUp student, when students are shared with levelUp. */
+  levelUpId?: string | null;
   /** Optional details — see `OFFICE_STUDENT_DETAIL_FIELDS`. */
   studentNumber?: string | null;
   gender?: string | null;
@@ -613,6 +615,8 @@ export type OfficeSettings = {
   studentCustomFields?: OfficeCustomFieldDef[] | null;
   /** Where the school is, so the Transportation map opens there. */
   transportSchoolLocation?: { address?: string | null; lat: number; lng: number } | null;
+  /** What's shared with levelUp, and which way (Settings → levelUp sync). */
+  levelUpSync?: import('@/lib/office/officeLevelUpSync').OfficeLevelUpSyncSettings | null;
   updatedAt: number;
   updatedBy?: string | null;
 };

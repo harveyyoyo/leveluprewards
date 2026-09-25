@@ -423,8 +423,8 @@ export function OfficeAiImportSection({
       <Alert className="mt-4 rounded-xl border-teal-200/60 bg-teal-50/40 dark:border-teal-900/40 dark:bg-teal-950/20">
         <AlertTitle className="text-sm font-semibold">Tip</AlertTitle>
         <AlertDescription className="text-xs leading-relaxed pt-1">
-          Combine multiple snippets in one go (e.g. a grade spreadsheet plus a family billing export). Use "Import from a spreadsheet"
-          on Students or Grades when columns are already standard.
+          Combine multiple snippets in one go (e.g. a grade spreadsheet plus a family billing export). The Import buttons on
+          Students and Grades open this same import.
         </AlertDescription>
       </Alert>
 

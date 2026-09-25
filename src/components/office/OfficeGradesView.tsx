@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
-import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
+import { OfficeAiImportDialog } from '@/components/office/OfficeAiImportDialog';
 import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -457,14 +457,7 @@ export function OfficeGradesView({
         </div>
       </div>
 
-      <OfficeCsvImportDialog
-        schoolId={schoolId}
-        mode="grades"
-        students={students}
-        userName={userName}
-        disabled={students.length === 0}
-        openRef={openGradesImport}
-      />
+      <OfficeAiImportDialog openRef={openGradesImport} />
 
       {missingForTerm.length > 0 ? (
         <button
