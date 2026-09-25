@@ -12,9 +12,11 @@ import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import { useAppContext } from '@/components/AppProvider';
 import {
   BUS_ALERT_LABEL,
+  BUS_EXCEPTION_LABEL,
   BUS_RUN_LABEL,
   STOP_ARRIVAL_RADIUS_M,
   currentRun,
+  clockLabel,
   distanceMeters,
   formatDistance,
   localIsoDate,
@@ -340,6 +342,8 @@ function DrivingScreen({
   const [releaseNote, setReleaseNote] = useState('');
   const [releaseSaving, setReleaseSaving] = useState(false);
   const [offlineSaved, setOfflineSaved] = useState(false);
+  const [acknowledgingExceptionId, setAcknowledgingExceptionId] = useState<string | null>(null);
+  const [exceptionNow, setExceptionNow] = useState<number | null>(null);
 
   useEffect(() => {
     setLastServerAt(trip.location?.at ?? null);
@@ -347,6 +351,12 @@ function DrivingScreen({
     setSyncError(null);
     // Reset only when the run changes; live location updates should not reset the sync badge.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip.id]);
+
+  useEffect(() => {
+    setExceptionNow(Date.now());
+    const timer = window.setInterval(() => setExceptionNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
   }, [trip.id]);
 
   useEffect(() => {
@@ -563,6 +573,20 @@ function DrivingScreen({
     }
   };
 
+  const acknowledgeException = async (exceptionId: string) => {
+    if (!ensureOnline() || acknowledgingExceptionId) return;
+    setAcknowledgingExceptionId(exceptionId);
+    try {
+      await transport.acknowledgeOfficeBusRunException(trip.id, exceptionId);
+      toast({ title: 'Exception acknowledged', description: 'The School Office can see that you received it.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not acknowledge the exception', description: (error as Error).message });
+    } finally {
+      setAcknowledgingExceptionId(null);
+    }
+  };
+
+  const exceptions = Object.values(trip.exceptions ?? {}).sort((a, b) => b.createdAt - a.createdAt);
   const unresolved = riders.filter((k) => status[k.id]?.status !== 'off' && status[k.id]?.status !== 'absent');
   const missingReleaseRiders = useMemo(() => {
     const ids = new Set(missingReleaseStudentIds(trip));
@@ -788,6 +812,26 @@ function DrivingScreen({
               <AlertTriangle className="mr-2 h-4 w-4" /> Report a problem
             </Button>
           </div>
+
+          {exceptions.length > 0 ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm dark:border-amber-900 dark:bg-amber-950/30">
+              <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Temporary route exceptions</h2>
+              <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">Acknowledge anything the Office needs you to know. This does not message families.</p>
+              <ul className="mt-3 space-y-2">
+                {exceptions.map((exception) => (
+                  <li key={exception.id} className="rounded-xl border border-amber-200/80 bg-white/80 p-3 text-sm dark:border-amber-900 dark:bg-slate-900/60">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium">{BUS_EXCEPTION_LABEL[exception.kind]}{exception.stopId ? ` · ${activeRoute.stops.find((stop) => stop.id === exception.stopId)?.name ?? 'Stop'}` : ''}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{exception.status === 'resolved' ? 'Resolved' : exceptionNow == null ? 'Checking…' : exception.expiresAt <= exceptionNow ? 'Expired' : exception.status === 'acknowledged' ? 'Acknowledged' : 'Needs acknowledgment'}</span>
+                    </div>
+                    {exception.note ? <p className="mt-1 text-sm">{exception.note}</p> : null}
+                    <p className="mt-1 text-xs text-muted-foreground">Added {clockLabel(exception.createdAt)} · expires {clockLabel(exception.expiresAt)}</p>
+                    {exception.status === 'open' && exceptionNow != null && exception.expiresAt > exceptionNow ? <Button type="button" variant="outline" className="mt-3 h-10 w-full rounded-lg" disabled={readOnly || acknowledgingExceptionId === exception.id} onClick={() => void acknowledgeException(exception.id)}>{acknowledgingExceptionId === exception.id ? 'Saving…' : 'Acknowledge'}</Button> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {Object.keys(trip.stopArrivals ?? {}).length > 0 ? (
             <details className="rounded-2xl bg-white p-4 text-sm shadow-sm dark:bg-slate-900">

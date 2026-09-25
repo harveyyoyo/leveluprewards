@@ -282,6 +282,26 @@ export type OfficeBusTripAlert = {
   by?: string | null;
 };
 
+export type OfficeBusRunExceptionKind = 'closed_stop' | 'detour' | 'replacement_vehicle' | 'pickup_change' | 'delay';
+export type OfficeBusRunExceptionStatus = 'open' | 'acknowledged' | 'resolved';
+
+export type OfficeBusRunException = {
+  id: string;
+  tripId: string;
+  routeId: string;
+  kind: OfficeBusRunExceptionKind;
+  stopId?: string | null;
+  note?: string | null;
+  status: OfficeBusRunExceptionStatus;
+  createdAt: number;
+  createdBy: string;
+  expiresAt: number;
+  acknowledgedAt?: number | null;
+  acknowledgedBy?: string | null;
+  resolvedAt?: number | null;
+  resolvedBy?: string | null;
+};
+
 export type OfficeBusLocation = {
   lat: number;
   lng: number;
@@ -362,6 +382,8 @@ export type OfficeBusTrip = {
   /** Release confirmation for each rider who was marked off. */
   releases?: Record<string, OfficeBusRelease> | null;
   alerts?: OfficeBusTripAlert[] | null;
+  /** Temporary route changes that Office and the assigned driver can track. */
+  exceptions?: Record<string, OfficeBusRunException> | null;
   /** Append-only rider and stop events kept for the safety record. */
   events?: OfficeBusEvent[] | null;
   /** Driver walked the bus at the end and confirmed nobody was left on. */

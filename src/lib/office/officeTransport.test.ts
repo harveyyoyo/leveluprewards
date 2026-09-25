@@ -239,6 +239,26 @@ describe('officeTransport', () => {
     expect(stale.some((w) => w.id === 't1-stale')).toBe(true);
   });
 
+  it('surfaces temporary route exceptions for Office review', () => {
+    const names = new Map<string, string>();
+    const exception = {
+      id: 'exception-1',
+      tripId: 't1',
+      routeId: 'r1',
+      kind: 'detour' as const,
+      stopId: 'a',
+      status: 'open' as const,
+      createdAt: at(7, 5),
+      createdBy: 'office',
+      expiresAt: at(9, 5),
+    };
+    const warnings = tripWarnings([route], [trip({ exceptions: { 'exception-1': exception } })], names, at(7, 10));
+    expect(warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 't1-exception-1', tone: 'caution' }),
+    ]));
+    expect(warnings.find((warning) => warning.id === 't1-exception-1')?.text).toContain('Oak');
+  });
+
   it('warns when a new run has a rider release still missing', () => {
     const names = new Map([['kid1', 'Maya Lopez']]);
     const newTrip = trip({

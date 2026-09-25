@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
@@ -14,6 +14,8 @@ import type {
   OfficeBusLocation,
   OfficeBusRelease,
   OfficeBusReleaseMethod,
+  OfficeBusRunException,
+  OfficeBusRunExceptionKind,
   OfficeBusRiderStatus,
   OfficeBusRoute,
   OfficeBusRun,
@@ -31,6 +33,10 @@ const MAX_BODY_BYTES = 64 * 1024;
 const MAX_STOPS = 100;
 const MAX_RIDERS = 300;
 const ALERT_KINDS = new Set<OfficeBusTripAlert['kind']>(['delay', 'breakdown', 'accident', 'behavior', 'other']);
+const EXCEPTION_KINDS = new Set<OfficeBusRunExceptionKind>(['closed_stop', 'detour', 'replacement_vehicle', 'pickup_change', 'delay']);
+const MAX_RUN_EXCEPTIONS = 20;
+const MAX_RUN_EXCEPTION_RECORDS = 50;
+const RESERVED_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor', 'toString']);
 const RELEASE_METHODS = new Set<OfficeBusReleaseMethod>(['authorized_contact', 'id_checked', 'office_override']);
 const locationAttempts = new Map<string, { startedAt: number; count: number }>();
 const MAX_FAMILY_UPDATES_PER_TRIP = 20;
@@ -65,7 +71,7 @@ function optionalString(value: unknown, label: string, max = 500): string | null
 
 function safeId(value: unknown, label: string): string {
   const clean = stringValue(value, label, 120);
-  if (!/^[A-Za-z0-9_-]+$/.test(clean)) throw new Error(`${label} is invalid.`);
+  if (!/^[A-Za-z0-9_-]+$/.test(clean) || RESERVED_OBJECT_KEYS.has(clean)) throw new Error(`${label} is invalid.`);
   return clean;
 }
 
@@ -243,6 +249,49 @@ function assertCanOperate(auth: AuthContext, trip: OfficeBusTrip): void {
 
 function assertActive(trip: OfficeBusTrip): void {
   if (trip.status !== 'active') throw new AuthError('This bus run has already ended.', 409);
+}
+
+function assertAssignedDriver(auth: AuthContext, trip: OfficeBusTrip): void {
+  if (!trip.driverId || trip.driverId !== auth.uid) {
+    throw new AuthError('Only the assigned driver can acknowledge a route exception.', 403);
+  }
+}
+
+function readRunException(trip: OfficeBusTrip, exceptionId: string): OfficeBusRunException {
+  const map = trip.exceptions;
+  if (!map || !Object.prototype.hasOwnProperty.call(map, exceptionId)) {
+    throw new AuthError('That route exception was not found.', 404);
+  }
+  const value = (map as Record<string, unknown>)[exceptionId];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthError('That route exception record is invalid. Ask an administrator to review it.', 409);
+  }
+  const candidate = value as Partial<OfficeBusRunException>;
+  const validStatus = candidate.status === 'open' || candidate.status === 'acknowledged' || candidate.status === 'resolved';
+  const validOptionalText = (value: unknown) => value == null || typeof value === 'string';
+  const validOptionalTime = (value: unknown) => value == null || (typeof value === 'number' && Number.isFinite(value));
+  if (
+    candidate.id !== exceptionId ||
+    candidate.tripId !== trip.id ||
+    candidate.routeId !== trip.routeId ||
+    typeof candidate.kind !== 'string' ||
+    !EXCEPTION_KINDS.has(candidate.kind as OfficeBusRunExceptionKind) ||
+    !validStatus ||
+    typeof candidate.createdBy !== 'string' ||
+    typeof candidate.createdAt !== 'number' ||
+    !Number.isFinite(candidate.createdAt) ||
+    typeof candidate.expiresAt !== 'number' ||
+    !Number.isFinite(candidate.expiresAt) ||
+    !validOptionalText(candidate.stopId) ||
+    !validOptionalText(candidate.note) ||
+    !validOptionalText(candidate.acknowledgedBy) ||
+    !validOptionalText(candidate.resolvedBy) ||
+    !validOptionalTime(candidate.acknowledgedAt) ||
+    !validOptionalTime(candidate.resolvedAt)
+  ) {
+    throw new AuthError('That route exception record is invalid. Ask an administrator to review it.', 409);
+  }
+  return candidate as OfficeBusRunException;
 }
 
 async function resetDemoTransport(auth: AuthContext, schoolId: string): Promise<{ ok: true }> {
@@ -908,6 +957,141 @@ function alertFamilyMessage(kind: OfficeBusTripAlert['kind'], minutes: number | 
     .join('\n\n');
 }
 
+async function createRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(trip);
+  assertCanOperate(auth, trip);
+  const kind = body.kind;
+  if (typeof kind !== 'string' || !EXCEPTION_KINDS.has(kind as OfficeBusRunExceptionKind)) throw new Error('Choose a route exception type.');
+  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? ({ id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute) : undefined;
+  const effectiveRoute = routeForTrip(currentRoute, trip);
+  const stopId = body.stopId == null || body.stopId === '' ? null : safeId(body.stopId, 'Stop');
+  if (stopId && !effectiveRoute?.stops.some((stop) => stop.id === stopId)) throw new Error('That stop is not part of this run.');
+  const note = optionalString(body.note, 'Exception note', 300);
+  const minutes = body.expiresInMinutes == null ? 120 : numberInRange(body.expiresInMinutes, 'Exception duration', 15, 720);
+  const now = Date.now();
+  const id = `exception-${createHash('sha256').update(`${tripId}|${kind}|${now}|${auth.uid}|${randomBytes(6).toString('hex')}`).digest('hex').slice(0, 16)}`;
+  const exception: OfficeBusRunException = {
+    id,
+    tripId,
+    routeId: trip.routeId,
+    kind: kind as OfficeBusRunExceptionKind,
+    stopId,
+    note,
+    status: 'open',
+    createdAt: now,
+    createdBy: auth.uid,
+    expiresAt: now + minutes * 60_000,
+  };
+  const ref = tripRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run is no longer active.', 409);
+    if (current.routeId !== trip.routeId || current.date !== trip.date || current.run !== trip.run) {
+      throw new AuthError('This bus run changed while the exception was being saved. Refresh and try again.', 409);
+    }
+    assertCanOperate(auth, current);
+    const records = current.exceptions ?? {};
+    const recordCount = Object.keys(records).length;
+    if (recordCount >= MAX_RUN_EXCEPTION_RECORDS) throw new Error('This run has reached its route-exception history limit.');
+    const openCount = Object.values(records).filter((item) => item.status !== 'resolved').length;
+    if (openCount >= MAX_RUN_EXCEPTIONS) throw new Error('This run already has the maximum number of open route exceptions.');
+    transaction.set(ref, { [`exceptions.${id}`]: exception, updatedAt: now }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-exception-create-${id}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: `Added a temporary route exception: ${exception.kind}`,
+        after: { exceptionId: id, kind: exception.kind, expiresAt: exception.expiresAt },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+  });
+  return { exception };
+}
+
+async function acknowledgeRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const exceptionId = safeId(body.exceptionId, 'Exception');
+  const ref = tripRef(auth.db, schoolId, tripId);
+  let result: OfficeBusRunException | null = null;
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run is no longer active.', 409);
+    assertAssignedDriver(auth, current);
+    const existing = readRunException(current, exceptionId);
+    if (existing.status === 'resolved') throw new AuthError('That route exception is already resolved.', 409);
+    if (existing.status === 'acknowledged') {
+      result = existing;
+      return;
+    }
+    const now = Date.now();
+    if (existing.expiresAt <= now) throw new AuthError('This temporary exception has expired. Ask the School Office to review it.', 409);
+    const updated: OfficeBusRunException = { ...existing, status: 'acknowledged', acknowledgedAt: now, acknowledgedBy: auth.uid };
+    transaction.set(ref, { [`exceptions.${exceptionId}`]: updated, updatedAt: now }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-exception-ack-${tripId}-${exceptionId}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: 'Assigned driver acknowledged a route exception',
+        before: { exceptionId, status: 'open' },
+        after: { exceptionId, status: 'acknowledged', acknowledgedAt: now, acknowledgedBy: auth.uid },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+    result = updated;
+  });
+  if (!result) throw new Error('The route exception could not be saved.');
+  return { exception: result };
+}
+
+async function resolveRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
+  if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) throw new AuthError('Only School Office staff can resolve a route exception.', 403);
+  const tripId = safeId(body.tripId, 'Trip');
+  const exceptionId = safeId(body.exceptionId, 'Exception');
+  const ref = tripRef(auth.db, schoolId, tripId);
+  let result: OfficeBusRunException | null = null;
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current) throw new AuthError('That bus run was not found.', 404);
+    const existing = readRunException(current, exceptionId);
+    if (existing.status === 'resolved') {
+      result = existing;
+      return;
+    }
+    const now = Date.now();
+    const updated: OfficeBusRunException = { ...existing, status: 'resolved', resolvedAt: now, resolvedBy: auth.uid };
+    transaction.set(ref, { [`exceptions.${exceptionId}`]: updated, updatedAt: now }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-exception-resolve-${tripId}-${exceptionId}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: 'School Office resolved a route exception',
+        before: { exceptionId, status: existing.status },
+        after: { exceptionId, status: 'resolved', resolvedAt: now, resolvedBy: auth.uid },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+    result = updated;
+  });
+  if (!result) throw new Error('The route exception could not be saved.');
+  return { exception: result };
+}
+
 async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promise<{
   ok: true;
   notificationsQueued: number;
@@ -1103,6 +1287,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await queueFamilyUpdate(auth, schoolId, body));
       case 'alert':
         return NextResponse.json(await addAlert(auth, schoolId, body));
+      case 'exception-create':
+        return NextResponse.json(await createRunException(auth, schoolId, body));
+      case 'exception-acknowledge':
+        return NextResponse.json(await acknowledgeRunException(auth, schoolId, body));
+      case 'exception-resolve':
+        return NextResponse.json(await resolveRunException(auth, schoolId, body));
       case 'end':
         return NextResponse.json(await endTrip(auth, schoolId, body));
       case 'close-stale':

@@ -6,6 +6,7 @@ import type {
   OfficeBusAlertKind,
   OfficeBusLocation,
   OfficeBusReleaseMethod,
+  OfficeBusRunExceptionKind,
   OfficeBusRiderStatus,
   OfficeBusRoute,
   OfficeBusRun,
@@ -60,6 +61,12 @@ export function useOfficeTransportApi(schoolId: string | null) {
         _route: OfficeBusRoute,
         alert: { kind: OfficeBusAlertKind; message?: string | null; minutes?: number | null },
       ) => call<{ ok: true; notificationsQueued: number; notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' | 'office_only' }>({ action: 'alert', tripId: trip.id, run: trip.run, ...alert }),
+      createOfficeBusRunException: (tripId: string, input: { kind: OfficeBusRunExceptionKind; stopId?: string | null; note?: string | null; expiresInMinutes?: number }) =>
+        call<{ exception: unknown }>({ action: 'exception-create', tripId, ...input }),
+      acknowledgeOfficeBusRunException: (tripId: string, exceptionId: string) =>
+        call<{ exception: unknown }>({ action: 'exception-acknowledge', tripId, exceptionId }),
+      resolveOfficeBusRunException: (tripId: string, exceptionId: string) =>
+        call<{ exception: unknown }>({ action: 'exception-resolve', tripId, exceptionId }),
       endOfficeBusTrip: (trip: Pick<OfficeBusTrip, 'id' | 'run'>, _route: OfficeBusRoute, childCheckDone: boolean) =>
         call<{ ok: true }>({ action: 'end', tripId: trip.id, run: trip.run, childCheckDone }),
       closeStaleOfficeBusTrip: (tripId: string, reason: string, sameDay = false) =>

@@ -2,6 +2,7 @@ import type {
   OfficeBusAlertKind,
   OfficeBusLocation,
   OfficeBusReleaseMethod,
+  OfficeBusRunExceptionKind,
   OfficeBusRiderManifestEntry,
   OfficeBusRoute,
   OfficeBusRouteSnapshot,
@@ -25,6 +26,14 @@ export const TRANSPORT_MODE_LABEL: Record<OfficeTransportMode, string> = {
 };
 
 export const BUS_RUN_LABEL: Record<OfficeBusRun, string> = { am: 'Morning', pm: 'Afternoon' };
+
+export const BUS_EXCEPTION_LABEL: Record<OfficeBusRunExceptionKind, string> = {
+  closed_stop: 'Stop temporarily closed',
+  detour: 'Bus taking a detour',
+  replacement_vehicle: 'Replacement vehicle',
+  pickup_change: 'Temporary pickup change',
+  delay: 'Temporary delay',
+};
 
 export const BUS_ALERT_LABEL: Record<OfficeBusAlertKind, string> = {
   delay: 'Running late',
@@ -234,6 +243,17 @@ export function tripWarnings(
         tone: alert.kind === 'accident' || alert.kind === 'breakdown' ? 'danger' : alert.kind === 'delay' ? 'caution' : 'info',
         routeId: route.id,
         text: `${bus}: ${BUS_ALERT_LABEL[alert.kind]}${alert.minutes ? ` (about ${alert.minutes} min)` : ''}${alert.message ? ` — ${alert.message}` : ''}`,
+      });
+    }
+    for (const exception of Object.values(trip.exceptions ?? {})) {
+      if (exception.status === 'resolved') continue;
+      const stop = exception.stopId ? route.stops.find((item) => item.id === exception.stopId) : null;
+      const expired = exception.expiresAt <= now;
+      out.push({
+        id: `${trip.id}-${exception.id}`,
+        tone: 'caution',
+        routeId: route.id,
+        text: `${bus}: ${BUS_EXCEPTION_LABEL[exception.kind]}${stop ? ` at ${stop.name}` : ''} is ${expired ? 'expired and needs Office review' : exception.status === 'acknowledged' ? 'acknowledged' : 'waiting for driver acknowledgment'}.`,
       });
     }
     if (!isFreshLocation(trip.location, now)) {

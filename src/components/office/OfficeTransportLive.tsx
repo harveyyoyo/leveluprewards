@@ -27,6 +27,7 @@ import { OfficeTransportMap, type TransportMapLine, type TransportMapMarker } fr
 import { useNow } from '@/lib/office/useOfficeTransport';
 import {
   BUS_ALERT_LABEL,
+  BUS_EXCEPTION_LABEL,
   BUS_RUN_LABEL,
   LATE_THRESHOLD_MIN,
   isFreshLocation,
@@ -58,7 +59,7 @@ import {
 } from '@/lib/office/officeTransport';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import { buildAnnouncementMailto } from '@/lib/office/officeUtils';
-import type { OfficeBusRoute, OfficeBusRun, OfficeBusTrip, OfficeFamily, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBusRoute, OfficeBusRun, OfficeBusRunExceptionKind, OfficeBusTrip, OfficeFamily, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -101,8 +102,14 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
     () => (selected ? ridersForTrip(selectedTrip, students, selected.id) : []),
     [selected, selectedTrip, students],
   );
+  const hasOpenRouteException = Boolean(selectedTrip && Object.values(selectedTrip.exceptions ?? {}).some((exception) => exception.status !== 'resolved'));
+  const confirmFamilyUpdate = () => {
+    if (!hasOpenRouteException) return true;
+    return window.confirm('This run has a temporary route exception. The family update will not include the internal note. Continue?');
+  };
   const emailSelectedFamilies = () => {
     if (!selectedDisplayRoute) return;
+    if (!confirmFamilyUpdate()) return;
     if (selectedFamilyEmails.length === 0) {
       toast({ title: 'No family email addresses found', description: 'Add an email to a family contact first.' });
       return;
@@ -141,6 +148,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
       toast({ title: 'Start the bus run first', description: 'The office can queue an update after the run has started.' });
       return;
     }
+    if (!confirmFamilyUpdate()) return;
     try {
       const result = await transport.queueOfficeBusFamilyUpdate(selectedTrip);
       toast({
@@ -153,6 +161,25 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
       });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not queue the update', description: (error as Error).message });
+    }
+  };
+
+  const createException = async (trip: OfficeBusTrip, kind: OfficeBusRunExceptionKind, stopId: string | null, note: string): Promise<boolean> => {
+    try {
+      await transport.createOfficeBusRunException(trip.id, { kind, stopId, note: note || null });
+      toast({ title: 'Route exception added', description: 'Office and the assigned driver can now track it.' });
+      return true;
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not add the route exception', description: (error as Error).message });
+      return false;
+    }
+  };
+  const resolveException = async (trip: OfficeBusTrip, exceptionId: string) => {
+    try {
+      await transport.resolveOfficeBusRunException(trip.id, exceptionId);
+      toast({ title: 'Route exception resolved' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not resolve the exception', description: (error as Error).message });
     }
   };
 
@@ -426,6 +453,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
               onCopyPhoneStatus={copyPhoneStatus}
               onSpeakPhoneStatus={speakPhoneStatus}
               onCopy={async () => {
+                if (!confirmFamilyUpdate()) return;
                 try {
                   await navigator.clipboard.writeText(familyUpdateMessage(selectedDisplayRoute ?? selected, selectedTrip, now));
                   toast({ title: 'Update copied', description: 'Paste it into a text or email to families.' });
@@ -436,6 +464,8 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
               onEmailFamilies={emailSelectedFamilies}
               familyRecipientCount={selectedFamilyEmails.length}
               onQueueEmail={queueSelectedFamilyUpdate}
+              onCreateException={createException}
+              onResolveException={resolveException}
             />
           ) : (
             <ul className="divide-y dark:divide-slate-800">
@@ -580,6 +610,8 @@ function RouteDetail({
   onEmailFamilies,
   familyRecipientCount,
   onQueueEmail,
+  onCreateException,
+  onResolveException,
 }: {
   route: OfficeBusRoute;
   trip: OfficeBusTrip | null;
@@ -597,12 +629,25 @@ function RouteDetail({
   onEmailFamilies: () => void;
   familyRecipientCount: number;
   onQueueEmail: () => void;
+  onCreateException: (trip: OfficeBusTrip, kind: OfficeBusRunExceptionKind, stopId: string | null, note: string) => Promise<boolean>;
+  onResolveException: (trip: OfficeBusTrip, exceptionId: string) => void;
 }) {
   const displayRoute = trip ? routeForTrip(route, trip) ?? route : route;
   const status = statusOf(displayRoute, trip, now);
   const stops = orderedStops(displayRoute, run);
   const next = trip?.status === 'active' ? nextStop(displayRoute, trip) : null;
   const riderStatus = trip?.riders ?? {};
+  const [exceptionFormOpen, setExceptionFormOpen] = useState(false);
+  const [exceptionKind, setExceptionKind] = useState<OfficeBusRunExceptionKind>('detour');
+  const [exceptionStopId, setExceptionStopId] = useState('');
+  const [exceptionNote, setExceptionNote] = useState('');
+  const [exceptionSaving, setExceptionSaving] = useState(false);
+  const exceptions = Object.values(trip?.exceptions ?? {}).sort((a, b) => b.createdAt - a.createdAt);
+  useEffect(() => {
+    setExceptionFormOpen(false);
+    setExceptionStopId('');
+    setExceptionNote('');
+  }, [route.id, trip?.id]);
   const counts = { on: 0, off: 0, absent: 0, waiting: 0 };
   for (const kid of riders) {
     const st = riderStatus[kid.id]?.status;
@@ -715,8 +760,62 @@ function RouteDetail({
           </section>
         ) : null}
 
-        <section>
-          <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{BUS_RUN_LABEL[run]} stops</h3>
+        {trip?.status === 'active' && !isPractice ? (
+           <section className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+             <div className="flex items-center justify-between gap-2">
+               <h3 className="text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-100">Temporary route exceptions</h3>
+               <Button type="button" variant="outline" size="sm" className="h-7 rounded-lg text-xs" onClick={() => setExceptionFormOpen((open) => !open)}>
+                 {exceptionFormOpen ? 'Cancel' : 'Add exception'}
+               </Button>
+             </div>
+             {exceptionFormOpen ? (
+               <div className="mt-3 space-y-2">
+                 <select aria-label="Exception type" value={exceptionKind} onChange={(event) => setExceptionKind(event.target.value as OfficeBusRunExceptionKind)} className="h-9 w-full rounded-lg border bg-background px-2 text-sm">
+                   {Object.entries(BUS_EXCEPTION_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                 </select>
+                 <select aria-label="Exception stop" value={exceptionStopId} onChange={(event) => setExceptionStopId(event.target.value)} className="h-9 w-full rounded-lg border bg-background px-2 text-sm">
+                   <option value="">No specific stop</option>
+                   {stops.filter((stop) => !stop.isSchool).map((stop) => <option key={stop.id} value={stop.id}>{stop.name}</option>)}
+                 </select>
+                 <input aria-label="Internal exception note" value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} maxLength={300} placeholder="Short internal note (optional)" className="h-9 w-full rounded-lg border bg-background px-2 text-sm" />
+                 <Button type="button" className="h-9 w-full rounded-lg" disabled={exceptionSaving} onClick={async () => {
+                   setExceptionSaving(true);
+                   try {
+                     const saved = await onCreateException(trip, exceptionKind, exceptionStopId || null, exceptionNote.trim());
+                     if (saved) {
+                       setExceptionNote('');
+                       setExceptionStopId('');
+                       setExceptionFormOpen(false);
+                     }
+                   } finally {
+                     setExceptionSaving(false);
+                   }
+                 }}>
+                   {exceptionSaving ? 'Saving…' : 'Save exception'}
+                 </Button>
+               </div>
+             ) : null}
+             {exceptions.length > 0 ? (
+               <ul className="mt-3 space-y-2">
+                 {exceptions.map((exception) => (
+                   <li key={exception.id} className="rounded-lg border border-amber-200/80 bg-white/70 p-2.5 text-xs dark:border-amber-900 dark:bg-slate-900/50">
+                     <div className="flex items-start justify-between gap-2">
+                       <span className="font-medium">{BUS_EXCEPTION_LABEL[exception.kind]}{exception.stopId ? ` · ${displayRoute.stops.find((stop) => stop.id === exception.stopId)?.name ?? 'Stop'}` : ''}</span>
+                       <span className="shrink-0 text-[11px] text-muted-foreground">{exception.status === 'resolved' ? 'Resolved' : exception.expiresAt <= now ? 'Expired' : exception.status === 'acknowledged' ? 'Acknowledged' : 'Open'}</span>
+                     </div>
+                     {exception.note ? <p className="mt-1">{exception.note}</p> : null}
+                     <p className="mt-1 text-[11px] text-muted-foreground">Added {clockLabel(exception.createdAt)} · expires {clockLabel(exception.expiresAt)}</p>
+                     {exception.status !== 'resolved' && (exception.status === 'acknowledged' || exception.expiresAt <= now) ? <Button type="button" variant="outline" size="sm" className="mt-2 h-7 rounded-lg text-xs" onClick={() => onResolveException(trip, exception.id)}>Mark resolved</Button> : null}
+                   </li>
+                 ))}
+               </ul>
+             ) : <p className="mt-2 text-xs text-muted-foreground">No temporary exceptions on this run.</p>}
+             <p className="mt-2 text-[11px] text-muted-foreground">Internal notes for Office and the assigned driver. Nothing here is sent to families automatically. If you prepare a family update, the page will ask you to confirm first.</p>
+           </section>
+         ) : null}
+
+         <section>
+           <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{BUS_RUN_LABEL[run]} stops</h3>
           <ol className="mt-2">
             {stops.map((s, i) => {
               const reached = trip?.stopArrivals?.[s.id];

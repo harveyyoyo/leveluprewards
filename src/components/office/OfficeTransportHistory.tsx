@@ -12,6 +12,7 @@ import { downloadCsv } from '@/lib/office/officeUtils';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import {
   BUS_ALERT_LABEL,
+  BUS_EXCEPTION_LABEL,
   BUS_RELEASE_METHOD_LABEL,
   BUS_RUN_LABEL,
   clockLabel,
@@ -56,6 +57,7 @@ export function OfficeTransportHistory({
   const staleTrips = activeTrips.filter((trip) => !isFreshLocation(trip.location, now) && (trip.date < today || (trip.date === today && isAbandonedRunCandidate(trip, now))));
   const transport = useOfficeTransportApi(schoolId);
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [resolvingExceptionId, setResolvingExceptionId] = useState<string | null>(null);
   const summary = useMemo(() => transportDaySummary(trips, routes), [trips, routes]);
   const { toast } = useToast();
   // Removed routes are still named here so old trips stay readable.
@@ -87,6 +89,18 @@ export function OfficeTransportHistory({
       toast({ variant: 'destructive', title: 'Could not close the run', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
     } finally {
       setClosingId(null);
+    }
+  };
+
+  const resolveException = async (trip: OfficeBusTrip, exceptionId: string) => {
+    setResolvingExceptionId(exceptionId);
+    try {
+      await transport.resolveOfficeBusRunException(trip.id, exceptionId);
+      toast({ title: 'Route exception resolved', description: 'The change is saved in the run history.' });
+    } catch (cause) {
+      toast({ variant: 'destructive', title: 'Could not resolve the exception', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
+    } finally {
+      setResolvingExceptionId(null);
     }
   };
 
@@ -206,6 +220,9 @@ export function OfficeTransportHistory({
               canCloseStale={trip.status === 'active' && trip.date < today}
               closing={closingId === trip.id}
               onCloseStale={() => void closeStaleRun(trip)}
+              now={now}
+              resolvingExceptionId={resolvingExceptionId}
+              onResolveException={(exceptionId) => void resolveException(trip, exceptionId)}
             />
           ))}
         </ul>
@@ -232,6 +249,9 @@ function TripRow({
   canCloseStale,
   closing,
   onCloseStale,
+  now,
+  resolvingExceptionId,
+  onResolveException,
 }: {
   trip: OfficeBusTrip;
   route: OfficeBusRoute | undefined;
@@ -241,6 +261,9 @@ function TripRow({
   canCloseStale: boolean;
   closing: boolean;
   onCloseStale: () => void;
+  now: number;
+  resolvingExceptionId: string | null;
+  onResolveException: (exceptionId: string) => void;
 }) {
   const riders = Object.entries(trip.riders ?? {});
   const riderEvents = (trip.events ?? []).filter(
@@ -252,6 +275,8 @@ function TripRow({
   const rode = riders.filter(([, r]) => r.status !== 'absent').length;
   const leftOn = riders.filter(([, r]) => r.status === 'on');
   const alerts = trip.alerts ?? [];
+  const exceptions = Object.values(trip.exceptions ?? {}).sort((a, b) => b.createdAt - a.createdAt);
+  const openExceptions = exceptions.filter((exception) => exception.status !== 'resolved');
   const minutes = trip.endedAt ? Math.round((trip.endedAt - trip.startedAt) / 60_000) : null;
   const stops = route ? orderedStops(route, trip.run) : [];
   const vehicle = vehicleLabel(route?.vehicle);
@@ -289,6 +314,7 @@ function TripRow({
               <Flag tone="danger">{leftOn.length} never marked off</Flag>
             ) : null}
             {alerts.length ? <Flag tone="caution">{alerts.length} report{alerts.length === 1 ? '' : 's'} from driver</Flag> : null}
+             {openExceptions.length ? <Flag tone="caution">{openExceptions.length} open route exception{openExceptions.length === 1 ? '' : 's'}</Flag> : null}
             {trip.status === 'done' ? (
               trip.closedByOffice ? (
                 <Flag tone="caution">Closed without finishing check</Flag>
@@ -358,6 +384,28 @@ function TripRow({
                   ))}
                 </ul>
               </>
+            ) : null}
+            {exceptions.length > 0 ? (
+              <div className="mt-4 border-t pt-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Temporary route exceptions</p>
+                <ul className="mt-1.5 space-y-2">
+                  {exceptions.map((exception) => {
+                    const stop = exception.stopId ? stops.find((item) => item.id === exception.stopId) : null;
+                    const status = exception.status === 'resolved' ? 'Resolved' : exception.expiresAt <= now ? 'Expired' : exception.status === 'acknowledged' ? 'Acknowledged' : 'Open';
+                    return (
+                      <li key={exception.id} className="rounded-lg border border-amber-200/80 bg-white/70 p-2.5 text-xs dark:border-amber-900 dark:bg-slate-900/50">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium">{BUS_EXCEPTION_LABEL[exception.kind]}{stop ? ` · ${stop.name}` : ''}</span>
+                          <span className="shrink-0 text-muted-foreground">{status}</span>
+                        </div>
+                        {exception.note ? <p className="mt-1">{exception.note}</p> : null}
+                        <p className="mt-1 text-[11px] text-muted-foreground">Added {clockLabel(exception.createdAt)} · expires {clockLabel(exception.expiresAt)}</p>
+                         {exception.status !== 'resolved' ? <Button type="button" variant="outline" size="sm" className="mt-2 h-7 rounded-lg text-xs" disabled={resolvingExceptionId === exception.id} onClick={() => onResolveException(exception.id)}>{resolvingExceptionId === exception.id ? 'Resolving…' : 'Mark resolved'}</Button> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : null}
           </div>
           <div>
