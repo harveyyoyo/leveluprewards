@@ -174,6 +174,11 @@ export function LibraryPortalHub({
           {HUB_CARDS.map((card) => {
             const Icon = card.icon;
             const text = cardText[card.id];
+            // `card.iconColor` is a dark shade tuned for the light card background most
+            // Ambiance themes use. Night Desk / Midnight Archive give this same swatch a
+            // near-black card, which would leave a dark icon on a dark background — reuse
+            // the card's own (light) spine color there instead, so the icon stays readable.
+            const iconColorClass = theme.tone === 'dark' ? card.spine.replace(/^bg-/, 'text-') : card.iconColor;
             return (
               <motion.button
                 key={card.id}
@@ -205,7 +210,7 @@ export function LibraryPortalHub({
                         theme.classes.card,
                       )}
                     >
-                      <Icon className={cn('h-4 w-4 lg:h-6 lg:w-6', card.iconColor)} />
+                      <Icon className={cn('h-4 w-4 lg:h-6 lg:w-6', iconColorClass)} />
                     </span>
                     <span
                       className={cn(

@@ -47,6 +47,7 @@ import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
+import { pickReadableOn } from '@/lib/themeContrast';
 import { formatDueDate, computeDaysOverdue, resolveStudentMaxCheckouts } from '@/lib/library/libraryPolicy';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
@@ -862,8 +863,8 @@ export function LibraryInfoDesk({
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className="text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded text-white"
-                      style={{ backgroundColor: bookClassification.color }}
+                      className="text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
+                      style={{ backgroundColor: bookClassification.color, color: pickReadableOn(bookClassification.color) }}
                     >
                       {bookClassification.genre.callPrefix} &middot; {bookClassification.genre.label}
                     </span>

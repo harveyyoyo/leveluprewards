@@ -12,10 +12,14 @@ export type LibraryHeaderTab = 'hub' | 'desk' | 'catalog' | 'kiosk' | 'reports' 
 export type LibraryHeaderNavTab = 'desk' | 'catalog' | 'kiosk' | 'reports';
 
 // Reports isn't a top-nav tab — it's opened from a link on the Librarian page.
+// Dark Ambiance themes (Night Desk, Midnight Archive) give this bar a near-black
+// background, so the active tab uses a lighter shade of the same hue there —
+// the plain `activeColor` is tuned for the light-background themes and reads
+// low-contrast on dark ones.
 const NAV_TABS = [
-  { id: 'desk', label: 'Librarian', icon: Library, activeColor: '#2563eb' },
-  { id: 'catalog', label: 'Catalog', icon: BookOpen, activeColor: '#059669' },
-  { id: 'kiosk', label: 'Kiosk', icon: Monitor, activeColor: '#d97706' },
+  { id: 'desk', label: 'Librarian', icon: Library, activeColor: '#2563eb', activeColorDark: '#60a5fa' },
+  { id: 'catalog', label: 'Catalog', icon: BookOpen, activeColor: '#059669', activeColorDark: '#34d399' },
+  { id: 'kiosk', label: 'Kiosk', icon: Monitor, activeColor: '#d97706', activeColorDark: '#fbbf24' },
 ] as const;
 
 /**
@@ -93,7 +97,7 @@ export function LibraryHeaderBar({
         </div>
 
         <div className="library-header-nav library-readable flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto sm:gap-3 md:gap-6">
-          {NAV_TABS.map(({ id, label, icon: TabIcon, activeColor }) => (
+          {NAV_TABS.map(({ id, label, icon: TabIcon, activeColor, activeColorDark }) => (
             <button
               key={id}
               type="button"
@@ -101,7 +105,7 @@ export function LibraryHeaderBar({
               title={label}
               aria-label={label}
               className="flex items-center gap-1.5 sm:gap-2 py-1.5 px-2 sm:px-0 text-sm sm:text-base font-black tracking-tight transition-colors"
-              style={{ color: activeTab === id ? activeColor : theme.swatches.text }}
+              style={{ color: activeTab === id ? (theme.tone === 'dark' ? activeColorDark : activeColor) : theme.swatches.text }}
             >
               <TabIcon className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
               <span className="hidden lg:inline">{label}</span>

@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { resolveBookClassification, getActiveLibraryGenres } from '@/lib/library/libraryClassification';
+import { pickReadableOn } from '@/lib/themeContrast';
 import { formatDueDate } from '@/lib/library/libraryPolicy';
 import type { LibraryItem } from '@/lib/types';
 import type { BookRecommendation } from '@/lib/library/libraryRecommendations';
@@ -280,8 +281,8 @@ export function LibraryBookDiscoveryModal({
             />
           ) : (
             <div
-              className="h-full w-full flex flex-col items-center justify-center p-1.5 text-center text-[10px] font-bold text-white"
-              style={{ backgroundColor: classification.color }}
+              className="h-full w-full flex flex-col items-center justify-center p-1.5 text-center text-[10px] font-bold"
+              style={{ backgroundColor: classification.color, color: pickReadableOn(classification.color) }}
             >
               <BookOpen className="h-5 w-5 mb-1 opacity-80" />
               <span className="line-clamp-2 leading-tight">{item.name}</span>

@@ -54,6 +54,7 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
+import { pickReadableOn } from '@/lib/themeContrast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -2051,8 +2052,11 @@ export function LibraryWorkspace({
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs"
-                              style={{ backgroundColor: primaryGroup.color || 'var(--primary)' }}
+                              className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs"
+                              style={{
+                                backgroundColor: primaryGroup.color || 'var(--primary)',
+                                color: primaryGroup.color ? pickReadableOn(primaryGroup.color) : '#ffffff',
+                              }}
                             >
                               {activeScheme === 'genre_then_author' ? (
                                 <Tag className="h-4 w-4" />
