@@ -434,23 +434,30 @@
       "min": 150
     },
     {
-      "name": "done",
+      "name": "read",
       "voices": [
         2
       ],
-      "min": 110
+      "min": 130
+    },
+    {
+      "name": "return",
+      "voices": [
+        3
+      ],
+      "min": 200
     },
     {
       "name": "happy",
       "voices": [
-        3
+        4
       ],
       "min": 70
     },
     {
       "name": "end",
       "voices": [
-        4
+        5
       ],
       "min": 100,
       "tail": 30
@@ -985,6 +992,44 @@
         4
       ],
       "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-library-tworeturns": [
+    {
+      "name": "meet",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "ava",
+      "voices": [
+        1
+      ],
+      "min": 160
+    },
+    {
+      "name": "leo",
+      "voices": [
+        2
+      ],
+      "min": 170
+    },
+    {
+      "name": "awman",
+      "voices": [
+        3
+      ],
+      "min": 50
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 110,
       "tail": 30
     }
   ]

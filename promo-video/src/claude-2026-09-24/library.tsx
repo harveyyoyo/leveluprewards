@@ -1,6 +1,6 @@
 /** Library pillar: "Storybook" (widescreen) and "Text Messages" (vertical). */
 import React from "react";
-import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   BrandBug,
   LogoLockup,
@@ -84,7 +84,7 @@ const StickyNote: React.FC<{ text: string; delay: number; style: React.CSSProper
 const Reveal: React.FC<{ s: SceneTiming }> = ({ s }) => {
   const frame = useCurrentFrame();
   const enter = usePop(0, 18, 90);
-  const zoom = interpolate(frame, [0, s.dur], [1, 1.07], clamp);
+  const zoom = interpolate(frame, [s.dur * 0.35, s.dur * 0.8], [1, 1.7], { ...clamp, easing: Easing.inOut(Easing.cubic) });
   return (
     <Parchment>
       <div
@@ -100,7 +100,7 @@ const Reveal: React.FC<{ s: SceneTiming }> = ({ s }) => {
         }}
       >
         <div style={{ width: 1420, height: 799, overflow: "hidden" }}>
-          <Img src={shot("library-full.png")} style={{ width: 1420, transform: `scale(${zoom})`, transformOrigin: "50% 45%" }} />
+          <Img src={shot("library-full.png")} style={{ width: 1420, transform: `scale(${zoom})`, transformOrigin: "80% 60%" }} />
         </div>
       </div>
       <StickyNote text="📚 Scan any barcode — it's in!" delay={Math.round(s.dur * 0.35)} tilt={-6} style={{ left: 70, top: 640 }} />

@@ -55,8 +55,6 @@ const READER_ARM = reachAngle({ x: READER_CENTER.x - 18 - STOP_X, y: READER_CENT
  * Library: Self Checkout (1920x1080)
  * ════════════════════════════════════════════════════════════════════ */
 
-export const libraryCheckoutTimeline = buildTimeline("story-library-checkout");
-
 export const LibraryRoom: React.FC = () => (
   <g>
     <defs>
@@ -110,110 +108,13 @@ export const LibraryScreen: React.FC<{ done: boolean; t: number }> = ({ done, t 
         <text x={120} y={254} textAnchor="middle" fontFamily={jakarta} fontWeight={700} fontSize={18} fill="#78350f">
           Jordan · due Oct 9
         </text>
-        <rect x={30} y={278} width={180} height={40} rx={20} fill="#facc15" />
-        <text x={120} y={305} textAnchor="middle" fontFamily={outfit} fontWeight={800} fontSize={18} fill="#78350f">
-          ⭐ +5 reading pts
+        <text x={120} y={300} textAnchor="middle" fontFamily={jakarta} fontWeight={600} fontSize={16} fill="#92400e">
+          Happy reading! 📖
         </text>
       </g>
     )}
   </g>
 );
-
-const LibraryWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
-  const frame = useCurrentFrame();
-  const F = tl.at("find");
-  const Sc = tl.at("scan").start;
-  const Dn = tl.at("done").start;
-  const Hp = tl.at("happy").start;
-  const shelfX = 640;
-  const reachAt = Math.round(F.dur * 0.6);
-  const grabAt = Math.round(F.dur * 0.78);
-  const scanAt = Sc + 84;
-
-  const w1 = walkTo(frame, 12, Math.round(F.dur * 0.55), -160, shelfX);
-  const w2 = walkTo(frame, Sc + 4, Sc + 60, shelfX, STOP_X);
-  const x = frame < Sc ? w1.x : w2.x;
-  const walking = w1.walking || w2.walking;
-
-  let arm: number | undefined;
-  if (frame >= reachAt && frame < grabAt + 10) arm = interpolate(frame, [reachAt, reachAt + 10, grabAt, grabAt + 10], [90, -55, -55, 60], clamp);
-  else if (frame >= grabAt + 10 && frame < Sc + 62) arm = walking ? undefined : 60;
-  if (frame >= Sc + 62 && frame < Hp) arm = interpolate(frame, [Sc + 62, Sc + 76, Hp - 10, Hp], [60, READER_ARM - 8, READER_ARM - 8, 60], clamp);
-  if (frame >= Hp) arm = -80 + Math.sin(frame * 0.4) * 6;
-  const hasBook = frame >= grabAt;
-  const jump = frame >= Hp + 4 ? Math.abs(Math.sin((frame - Hp) * 0.25)) * 40 : 0;
-  const laser = frame >= Sc + 76 && frame < scanAt;
-  const scanned = frame >= scanAt;
-
-  const cam: CamKey[] = [
-    { f: 0, s: 1, x: 960, y: 540 },
-    { f: reachAt - 6, s: 1.5, x: shelfX + 60, y: 470 },
-    { f: grabAt + 16, s: 1.5, x: shelfX + 60, y: 470 },
-    { f: Sc + 20, s: 1, x: 960, y: 540 },
-    { f: Sc + 60, s: 1, x: 960, y: 540 },
-    { f: Sc + 78, s: 1.9, x: 1440, y: 540 },
-    { f: Dn, s: 1.9, x: 1440, y: 540 },
-    { f: Dn + 14, s: 2.4, x: SCREEN_MID.x, y: SCREEN_MID.y },
-    { f: Hp - 6, s: 2.4, x: SCREEN_MID.x, y: SCREEN_MID.y },
-    { f: Hp + 10, s: 1.25, x: 1260, y: 560 },
-  ];
-
-  return (
-    <Stage frame={frame} cam={cam} tall={(f) => (f < Sc + 62 ? { s: f >= reachAt - 6 && f < grabAt + 16 ? 1.25 : 1, x: x + 100, y: 540 } : camAt(f, cam))}>
-        <LibraryRoom />
-        <Kiosk scanned={scanned} led={scanned ? 1 : 0} ring={interpolate(frame, [scanAt, scanAt + 22], [0, 1], clamp)} screen={<LibraryScreen done={scanned} t={(frame - scanAt) / 30} />} />
-        {laser ? (
-          <g opacity={frame % 4 < 2 ? 1 : 0.5}>
-            <path d={`M ${READER_CENTER.x} ${READER_CENTER.y} L ${READER_CENTER.x - 70} ${READER_CENTER.y - 40} L ${READER_CENTER.x - 70} ${READER_CENTER.y + 40} Z`} fill="rgba(239,68,68,0.35)" />
-            <line x1={READER_CENTER.x - 70} y1={READER_CENTER.y - 30} x2={READER_CENTER.x - 70} y2={READER_CENTER.y + 30} stroke="#ef4444" strokeWidth={4} />
-          </g>
-        ) : null}
-        <Placed x={x} y={GROUND}>
-          <Character
-            look={LOOKS.jordan}
-            walking={walking}
-            phase={frame * 0.32}
-            arm={arm}
-            hold={hasBook ? "book" : "none"}
-            frame={frame}
-            jump={jump}
-            happy={frame >= Hp ? 1 : 0}
-            blink={frame % 88 < 4}
-          />
-        </Placed>
-        {scanned && frame < Hp ? <Coins x={SCREEN_MID.x} y={SCREEN.y + 290} t={interpolate(frame - Dn, [0, 30], [0, 1], clamp)} n={6} spread={160} /> : null}
-        <Bubble x={x + 40} y={260} text="Best. Library. Ever!" pop={interpolate(frame, [Hp + 4, Hp + 12], [0, 1], clamp)} w={440} />
-    </Stage>
-  );
-};
-
-export const StoryLibraryCheckout: React.FC = () => {
-  const tl = libraryCheckoutTimeline;
-  const Sc = tl.at("scan").start;
-  const end = tl.at("end");
-  return (
-    <AbsoluteFill style={{ background: "#fef3c7" }}>
-      <Sequence durationInFrames={end.start + 8}>
-        <SceneFade dur={end.start + 8} inFrames={6} outFrames={8}>
-          <LibraryWorld tl={tl} />
-        </SceneFade>
-      </Sequence>
-      <Sequence from={end.start}>
-        <SceneFade dur={end.dur} inFrames={8} outFrames={1}>
-          <StoryEnd title="Library" tagline="Made for readers." color="#b45309" featured={["Library"]} bg="linear-gradient(135deg, #fef3c7, #fed7aa)" />
-        </SceneFade>
-      </Sequence>
-      <BrandBug pillar="Library" dark={false} />
-      <Sfx at={Math.round(tl.at("find").dur * 0.78)} name="pop" volume={0.4} />
-      <Sfx at={Sc + 84} name="beep" volume={0.4} />
-      <Sfx at={tl.at("done").start} name="coin" volume={0.5} />
-      <Sfx at={tl.at("happy").start + 4} name="levelup" volume={0.35} />
-      <Sfx at={end.start} name="chime" volume={0.45} />
-      <Music timeline={tl} track="cozy-jazz" volume={0.5} duckTo={0.4} />
-      <Narration timeline={tl} />
-    </AbsoluteFill>
-  );
-};
 
 /* ════════════════════════════════════════════════════════════════════
  * Rewards: Prize Day (1920x1080)

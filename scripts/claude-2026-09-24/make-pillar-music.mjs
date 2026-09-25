@@ -852,7 +852,7 @@ const TRACK_VIDEO = {
   'stadium-stomp': 'houses-race',
   'gameshow-swing': 'raffle-gameshow',
   'playful-pizz': 'story-classroom-onetap',
-  'sneaky-tiptoe': 'story-classroom-hallpass',
+  'sneaky-tiptoe': ['story-classroom-hallpass', 'story-library-tworeturns'],
   'cozy-jazz': 'story-library-checkout',
   'pizza-funk': 'story-rewards-prizeday',
   'assembly-anthem': 'story-houses-assembly',
@@ -940,6 +940,23 @@ function sfx() {
         L[i] = (bp(noise(), 900 + 300 * Math.sin(TAU * 0.7 * t), 0.8) + 0.5 * bp2(noise(), 2400, 1.2)) * swell * chatter;
         if (rand() < 0.0009 && t < 2) put(L, t, I.clap(0.5), 1);
       }
+    }),
+    wahwah: one(2.2, (L) => {
+      // Sad trombone: four sliding notes down, last one wobbles.
+      [[63, 0.35], [62, 0.35], [61, 0.35], [60, 1.0]].forEach(([n, d], i) => {
+        const start = i * 0.42;
+        const b = buf(d);
+        const lp = svf('lp');
+        let ph = 0;
+        for (let k = 0; k < b.length; k++) {
+          const tt = k / SR;
+          const bend = i === 3 ? 0.3 * Math.sin(TAU * 6 * tt) : -0.4 * (tt / d);
+          ph += (mtof(n - 12 + bend)) / SR;
+          const saw = 2 * (ph % 1) - 1;
+          b[k] = lp(saw, 900 + 600 * Math.exp(-tt * 4)) * Math.min(1, tt / 0.03) * Math.min(1, (d - tt) / 0.08);
+        }
+        put(L, start, b);
+      });
     }),
     type: one(0.35, (L) => {
       for (const t of [0, 0.09, 0.2]) put(L, t, I.snap(1));

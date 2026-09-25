@@ -312,6 +312,9 @@ export const camAt = (frame: number, cam: CamKey[] | CamFn) => {
   };
 };
 
+/** When true, cartoon scenes render in wide 1920x1080 layout even inside a tall video (see tallFrame.tsx). */
+export const ForceWide = React.createContext(false);
+
 /**
  * Renders the 1920x1080 cartoon world into the composition, wide or tall.
  * Tall videos use `tall` camera moves when given; the view is kept inside the world.
@@ -322,7 +325,10 @@ export const Stage: React.FC<{ frame: number; cam: CamKey[] | CamFn; tall?: CamK
   tall,
   children,
 }) => {
-  const { width, height } = useVideoConfig();
+  const cfg = useVideoConfig();
+  const wide = React.useContext(ForceWide);
+  const width = wide ? 1920 : cfg.width;
+  const height = wide ? 1080 : cfg.height;
   const portrait = height > width;
   const c = camAt(frame, portrait && tall ? tall : cam);
   const base = portrait ? height / 1080 : width / 1920;
@@ -341,7 +347,8 @@ export const Stage: React.FC<{ frame: number; cam: CamKey[] | CamFn; tall?: CamK
 /** True when the composition is taller than it is wide. */
 export const useTall = () => {
   const { width, height } = useVideoConfig();
-  return height > width;
+  const wide = React.useContext(ForceWide);
+  return !wide && height > width;
 };
 
 /** Walk from x0 to x1 between frames f0..f1; returns x and whether walking. */

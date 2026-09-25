@@ -374,7 +374,17 @@ const NewsOpen: React.FC = () => {
       {frame > 40 && (
         <>
           <Monitor enterDelay={42}>
-            <Img src={shot("attendance-full.png")} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 80%" }} />
+            <Img
+              src={shot("attendance-full.png")}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "50% 80%",
+                transform: `scale(${interpolate(frame, [50, 110], [1, 1.5], clamp)})`,
+                transformOrigin: "60% 80%",
+              }}
+            />
           </Monitor>
           <LowerThird kicker="BREAKING" headline="Students showing up ON TIME at School ABC" delay={46} />
         </>

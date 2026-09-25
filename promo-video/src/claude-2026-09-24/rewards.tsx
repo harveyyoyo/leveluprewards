@@ -415,11 +415,13 @@ const RankScene: React.FC<{
   image: string;
   caption: string;
   crop?: React.CSSProperties;
-}> = ({ n, color, bg, image, caption, crop }) => {
+  /** Point (in % of the image) the camera glides in on. */
+  focus?: string;
+}> = ({ n, color, bg, image, caption, crop, focus = "50% 50%" }) => {
   const frame = useCurrentFrame();
   const num = usePop(0, 9, 220);
   const card = usePop(8, 14, 130);
-  const drift = interpolate(frame, [0, 150], [1, 1.08], clamp);
+  const drift = interpolate(frame, [14, 90], [1, 1.9], { ...clamp, easing: Easing.inOut(Easing.cubic) });
   return (
     <AbsoluteFill style={{ background: bg, alignItems: "center" }}>
       <div
@@ -453,7 +455,7 @@ const RankScene: React.FC<{
           background: "white",
         }}
       >
-        <Img src={image} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${drift})`, ...crop }} />
+        <Img src={image} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${drift})`, transformOrigin: focus, ...crop }} />
       </div>
       <div style={{ position: "absolute", bottom: 230, left: 0, right: 0 }}>
         <Caption text={caption} color={color} />
@@ -538,6 +540,7 @@ export const RewardsTop3Countdown: React.FC = () => {
               image={shot("kiosk-rewards-shop.png")}
               caption={CAPTIONS.three}
               crop={{ objectPosition: "50% 60%" }}
+              focus="50% 62%"
             />
           ),
           two: () => (
@@ -547,6 +550,7 @@ export const RewardsTop3Countdown: React.FC = () => {
               bg="#e0f2fe"
               image={shot("kiosk-welcome.png")}
               caption={CAPTIONS.two}
+              focus="50% 70%"
             />
           ),
           one: () => (
@@ -557,6 +561,7 @@ export const RewardsTop3Countdown: React.FC = () => {
               image={shot("live-admin-rewards-full.png")}
               caption={CAPTIONS.one}
               crop={{ objectPosition: "60% 70%" }}
+              focus="40% 62%"
             />
           ),
           end: (s) => (

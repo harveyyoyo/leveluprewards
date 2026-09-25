@@ -24,6 +24,8 @@ import { jakarta, outfit } from "../promo/shared";
 import sceneSpecsJson from "./sceneSpecs.json";
 // @ts-expect-error: JSON import written by scripts/claude-2026-09-24/make-pillar-voices.mjs
 import voiceDurationsJson from "./voiceDurations.json";
+// @ts-expect-error: JSON import written by scripts/claude-2026-09-24/make-pillar-voices.mjs
+import voiceLinesJson from "./voiceLines.json";
 
 export { jakarta, outfit };
 
@@ -107,7 +109,8 @@ export type VideoId =
   | "story-badge-unlocked"
   | "story-lobby-tv"
   | "story-principal-morning"
-  | "story-office-billing";
+  | "story-office-billing"
+  | "story-library-tworeturns";
 
 type SceneSpec = {
   name: string;
@@ -130,7 +133,7 @@ export type SceneTiming = {
 export type Timeline = {
   id: VideoId;
   scenes: SceneTiming[];
-  voices: Array<{ src: string; start: number; dur: number }>;
+  voices: Array<{ src: string; start: number; dur: number; text: string }>;
   total: number;
   at: (name: string) => SceneTiming;
 };
@@ -142,6 +145,7 @@ const VOICE_PAD = 12;
 export function buildTimeline(id: VideoId): Timeline {
   const specs = (sceneSpecsJson as Record<string, SceneSpec[]>)[id];
   const secs = (voiceDurationsJson as Record<string, number[]>)[id];
+  const texts = (voiceLinesJson as Record<string, string[]>)[id] ?? [];
   const scenes: SceneTiming[] = [];
   const voices: Timeline["voices"] = [];
   let cursor = 0;
@@ -158,6 +162,7 @@ export function buildTimeline(id: VideoId): Timeline {
         src: staticFile(`voiceover/${DATE_TAG}/${id}/${v + 1}.mp3`),
         start: cursor + t,
         dur,
+        text: texts[v] ?? "",
       });
       t += dur + gap;
     }
@@ -251,7 +256,8 @@ export type SfxName =
   | "type"
   | "chime"
   | "buzzer"
-  | "crowd";
+  | "crowd"
+  | "wahwah";
 
 export const Sfx: React.FC<{ at: number; name: SfxName; volume?: number }> = ({
   at,

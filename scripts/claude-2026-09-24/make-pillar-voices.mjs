@@ -125,7 +125,8 @@ export const SCRIPTS = {
   'story-library-checkout': [
     { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Jordan finds the perfect book.' },
     { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'No line at the desk. Jordan just scans it at the LevelUp library station.' },
-    { voice: 'Sulafat', style: 'Say this warm and delighted', text: 'Checked out, with a due date, and reading points too.' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller, cozy', text: 'Then comes the best part. Actually reading it.' },
+    { voice: 'Sulafat', style: 'Say this warm and delighted', text: 'Back at the station, Jordan returns it, and rates it. Five stars. Plus five reading points.' },
     { voice: 'Zephyr', style: 'Say this like a thrilled kid, one word at a time', text: 'Best. Library. Ever!' },
     { voice: 'Sulafat', style: WARM, text: 'LevelUp Library. Made for readers.' },
   ],
@@ -230,6 +231,15 @@ export const SCRIPTS = {
     { voice: 'Sulafat', style: 'Say this warm and satisfied', text: 'The Riveras stop by to pay. Payment recorded. Balance, zero.' },
     { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: "And the billing report shows who's paid, at a glance." },
     { voice: 'Sulafat', style: WARM, text: 'LevelUp Office. Billing, done.' },
+  ],
+
+  // ── Library corrections round (added 2026-09-25) ──
+  'story-library-tworeturns': [
+    { voice: 'Achird', style: 'Say this like a playful storyteller', text: 'Meet Ava and Leo. Same book. Same due date.' },
+    { voice: 'Achird', style: 'Say this playful and upbeat', text: 'Ava returns hers right on time. Scan, and on-time bonus points!' },
+    { voice: 'Achird', style: 'Say this playful, with gentle teasing', text: "Leo? Four days late. That's two points a day, gone." },
+    { voice: 'Zephyr', style: 'Say this like a disappointed kid, sighing', text: 'Aw, man.' },
+    { voice: 'Achird', style: 'Say this warm and funny, like a punchline', text: 'Be more like Ava. LevelUp Library.' },
   ],
 };
 
@@ -343,7 +353,15 @@ async function makeSampler(apiKey) {
   console.log(`[sampler] ${out}`);
 }
 
+/** Line texts, used for on-screen captions. */
+function writeLines() {
+  const lines = Object.fromEntries(Object.entries(SCRIPTS).map(([video, ls]) => [video, ls.map((l) => l.text)]));
+  fs.writeFileSync(path.join(PROMO, 'src', 'claude-2026-09-24', 'voiceLines.json'), JSON.stringify(lines, null, 2) + '\n');
+}
+
 async function main() {
+  writeLines();
+  if (process.argv.includes('--lines')) return;
   const force = process.argv.includes('--force');
   const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
   const apiKey = process.env.GEMINI_API_KEY;
