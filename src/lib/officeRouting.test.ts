@@ -22,6 +22,7 @@ describe('office routing', () => {
     expect(isOfficeSchoolScopedPath('/yeshiva')).toBe(true);
     expect(isOfficeSchoolScopedPath('/yeshiva/grades')).toBe(true);
     expect(isOfficeSchoolScopedPath('/yeshiva/portal')).toBe(false);
+    expect(isOfficeSchoolScopedPath('/demo')).toBe(false);
   });
 
   it('hides global app chrome on office host or /office routes', () => {

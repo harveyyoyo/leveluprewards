@@ -75,6 +75,8 @@ import {
   type SchoolProfileType,
 } from '@/lib/schoolProfile';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
+import { DEMO_LINK_PAGES, demoLinkUrl } from '@/lib/demoSchoolLink';
+import { useDemoShareKeys } from '@/hooks/useDemoShareKeys';
 
 function schoolAccessPasscodeFrom(data: { schoolAccessPasscode?: string; passcode?: string }): string {
   return (data.schoolAccessPasscode || data.passcode || '').trim();
@@ -117,6 +119,7 @@ export default function DeveloperPage() {
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings, updateSettings } = useSettings();
+  const { keys: demoShareKeys, error: demoShareKeysError } = useDemoShareKeys();
 
   const allowedDeveloper = isAllowedDeveloperGoogleUser(firebaseUser);
 
@@ -802,6 +805,23 @@ export default function DeveloperPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleCopyDemoLink = async (id: string, page: string) => {
+    const key = demoShareKeys?.[id];
+    if (!key) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not make the demo link',
+        description: demoShareKeysError ?? 'Wait a moment and try again.',
+      });
+      return;
+    }
+    await navigator.clipboard.writeText(demoLinkUrl(window.location.origin, id, page, key));
+    setCopiedId(`${id}:demo:${page}`);
+    playSound('click');
+    toast({ title: 'Demo link copied!', description: 'It opens the demo school with no passcode.' });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleStartSupportSession = async (school: SchoolInfo) => {
     setSupportStartingSchool(school.id);
     playSound('click');
@@ -961,6 +981,26 @@ export default function DeveloperPage() {
                         {copiedId === school.id ? <Check className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
                         {copiedId === school.id ? 'Copied!' : 'Copy school link'}
                       </button>
+                      {isPublicSampleSchoolId(school.id) ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+                          <span className="font-medium text-muted-foreground">No-passcode demo link:</span>
+                          {DEMO_LINK_PAGES.map(({ page, label }) => (
+                            <button
+                              key={page || 'portal'}
+                              type="button"
+                              onClick={() => void handleCopyDemoLink(school.id, page)}
+                              className="flex items-center gap-1 font-medium text-primary hover:underline"
+                            >
+                              {copiedId === `${school.id}:demo:${page}` ? (
+                                <Check className="w-3 h-3" aria-hidden />
+                              ) : (
+                                <Link2 className="w-3 h-3" aria-hidden />
+                              )}
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => setScreensSchool(school)}

@@ -32,6 +32,7 @@ describe('portal routing', () => {
     expect(portalHostRedirectPath('/contact')).toBeNull();
     expect(portalHostRedirectPath('/office-bootstrap')).toBeNull();
     expect(portalHostRedirectPath('/api/health')).toBeNull();
+    expect(portalHostRedirectPath('/demo')).toBeNull();
   });
 
   it('maps bind-all dev hosts to localhost for browsers', () => {
@@ -99,6 +100,16 @@ describe('portal routing', () => {
       expect(
         canonicalPortalRedirectUrl('/login', '?school=yeshiva', 'leveluprewards.app', 'https:')?.toString(),
       ).toBe('https://portal.leveluprewards.app/login?school=yeshiva');
+
+      expect(
+        canonicalPortalRedirectUrl('/demo/library', '?tab=catalog', 'leveluprewards.app', 'https:')?.toString(),
+      ).toBe('https://portal.leveluprewards.app/demo/library?tab=catalog');
+      expect(
+        canonicalPortalRedirectUrl('/demo', '', 'leveluprewards.app', 'https:')?.toString(),
+      ).toBe('https://portal.leveluprewards.app/demo');
+      expect(
+        canonicalPortalRedirectUrl('/demo/library', '', 'portal.leveluprewards.app', 'https:'),
+      ).toBeNull();
 
       expect(
         canonicalPortalRedirectUrl('/yeshiva/admin', '', 'leveluprewards.app', 'https:'),

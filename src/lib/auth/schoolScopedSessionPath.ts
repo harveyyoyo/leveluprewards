@@ -5,6 +5,7 @@ const RESERVED_FIRST = new Set([
   'api',
   'developer',
   's',
+  'demo',
   'privacy',
   'terms',
   'level-up-arcade',
