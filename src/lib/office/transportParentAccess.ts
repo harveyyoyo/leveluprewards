@@ -21,6 +21,8 @@ export type OfficeTransportParentAccess = {
   updatedBy: string;
   consentVersion: number;
   arrivalPreferences: OfficeTransportArrivalPreferences;
+  /** Set when the access has a private share link. The link secret is never returned. */
+  linkEnabled?: boolean;
 };
 
 export const TRANSPORT_PARENT_ACCESS_DEFAULT_DAYS = 30;
@@ -48,6 +50,7 @@ export function transportParentAccessSafeSummary(
     lastUsedAt: access.lastUsedAt ?? null,
     revokedAt: access.revokedAt ?? null,
     consentVersion: access.consentVersion,
+    linkEnabled: access.linkEnabled === true,
     arrivalPreferences: access.arrivalPreferences ?? { email: false, sms: false, whatsapp: false, updatedAt: access.updatedAt },
   };
 }

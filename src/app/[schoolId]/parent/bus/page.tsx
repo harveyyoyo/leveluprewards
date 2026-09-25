@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  exchangeTransportParentLink,
   fetchTransportParentStatus,
   TransportParentClientError,
   signInTransportParent,
@@ -39,6 +40,7 @@ export default function TransportParentPage() {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<TransportParentStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [linkPending, setLinkPending] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +67,34 @@ export default function TransportParentPage() {
   }, [schoolId]);
 
   useEffect(() => {
-    void loadStatus();
-  }, [loadStatus]);
+    const linkToken = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('link');
+    if (!linkToken) {
+      void loadStatus();
+      return;
+    }
+    let active = true;
+    setLinkPending(true);
+    setError(null);
+    void exchangeTransportParentLink(schoolId, linkToken)
+      .then(() => {
+        if (!active) return;
+        window.history.replaceState(null, '', `/${schoolId}/parent/bus`);
+        return loadStatus();
+      })
+      .catch((cause) => {
+        if (!active) return;
+        setStatus(null);
+        setPreferencesDirty(false);
+        setError(cause instanceof Error ? cause.message : 'That private bus link is no longer active.');
+        setLoading(false);
+      })
+      .finally(() => {
+        if (active) setLinkPending(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadStatus, schoolId]);
 
   useEffect(() => {
     if (!status) return;
@@ -153,7 +181,7 @@ export default function TransportParentPage() {
         </div>
 
         {loading ? (
-          <Card><CardContent className="flex items-center gap-2 py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Loading bus status…</CardContent></Card>
+          <Card><CardContent className="flex items-center gap-2 py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> {linkPending ? 'Opening your private bus status…' : 'Loading bus status…'}</CardContent></Card>
         ) : status ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">

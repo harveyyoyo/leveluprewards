@@ -51,6 +51,16 @@ export async function signInTransportParent(schoolId: string, code: string) {
   return readJson<{ ok: boolean; expiresAt: number }>(response);
 }
 
+export async function exchangeTransportParentLink(schoolId: string, linkToken: string) {
+  const response = await fetch('/api/office/transport/parent-link-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ schoolId, linkToken }),
+  });
+  return readJson<{ ok: boolean; expiresAt: number }>(response);
+}
+
 export async function fetchTransportParentStatus(schoolId: string) {
   const response = await fetch(`/api/office/transport/parent-status?schoolId=${encodeURIComponent(schoolId)}`, {
     credentials: 'same-origin',
