@@ -58,6 +58,7 @@ export function AdminAttendanceTab(props: any) {
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <TabWalkthroughHeaderAction />
           <AttendanceHeadcountPrintDialog
+            schoolId={schoolId}
             schoolName={schoolName || 'School'}
             students={students || []}
             classes={classes || []}

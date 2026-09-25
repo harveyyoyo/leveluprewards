@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Check,
   CheckCircle2,
   ClipboardList,
   Clock,
   Printer,
+  RotateCcw,
   Search,
   UserX,
   Users,
   X,
 } from 'lucide-react';
+import { collection, limit, orderBy, query } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,24 +27,91 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Student, Class, AttendanceLogEntry } from '@/lib/types';
-import { getStudentNickname } from '@/lib/utils';
+import { getStudentNickname, cn } from '@/lib/utils';
+
+type ManualHeadcountStatus = 'on-time' | 'late' | 'absent';
 
 type AttendanceHeadcountPrintDialogProps = {
+  schoolId?: string;
   schoolName?: string;
   students: Student[];
   classes: Class[];
   attendanceLogs?: AttendanceLogEntry[];
 };
 
+function getTodayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function AttendanceHeadcountPrintDialog({
+  schoolId,
   schoolName = 'School',
   students = [],
   classes = [],
-  attendanceLogs = [],
+  attendanceLogs,
 }: AttendanceHeadcountPrintDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const firestore = useFirestore();
+
+  // Pull today's sign-ins live so the headcount starts accurate, the same
+  // way the "Today's Board" does. Callers can still pass attendanceLogs
+  // directly (e.g. in tests) to skip the live query.
+  const logQuery = useMemoFirebase(
+    () =>
+      schoolId && !attendanceLogs
+        ? query(
+            collection(firestore, 'schools', schoolId, 'attendanceLog'),
+            orderBy('signedInAt', 'desc'),
+            limit(500)
+          )
+        : null,
+    [firestore, schoolId, attendanceLogs]
+  );
+  const { data: liveLogs } = useCollection<AttendanceLogEntry>(logQuery);
+  const effectiveLogs = useMemo(() => attendanceLogs ?? liveLogs ?? [], [attendanceLogs, liveLogs]);
+
+  // A staff member doing a physical roll call (fire drill, assembly, etc.)
+  // can correct the auto-computed status by hand; those tweaks live only
+  // for the current day and are remembered per browser via localStorage.
+  const todayKey = useMemo(() => getTodayKey(), []);
+  const storageKey = useMemo(() => `headcountOverrides:${schoolId || 'school'}:${todayKey}`, [schoolId, todayKey]);
+  const [manualOverrides, setManualOverrides] = useState<Record<string, ManualHeadcountStatus>>({});
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      setManualOverrides(raw ? JSON.parse(raw) : {});
+    } catch {
+      setManualOverrides({});
+    }
+  }, [storageKey]);
+
+  const setStudentOverride = (studentId: string, status: ManualHeadcountStatus | null) => {
+    setManualOverrides((prev) => {
+      const next = { ...prev };
+      if (status === null) {
+        delete next[studentId];
+      } else {
+        next[studentId] = status;
+      }
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        // Best-effort only; the on-screen state still updates.
+      }
+      return next;
+    });
+  };
+
+  const cycleStudentOverride = (student: Student, currentStatus: ManualHeadcountStatus) => {
+    const order: ManualHeadcountStatus[] = ['on-time', 'late', 'absent'];
+    const nextIndex = (order.indexOf(currentStatus) + 1) % order.length;
+    setStudentOverride(student.id, order[nextIndex]);
+  };
 
   const todayStartMs = useMemo(() => {
     const d = new Date();
@@ -51,13 +121,13 @@ export function AttendanceHeadcountPrintDialog({
 
   const todayLogsByStudent = useMemo(() => {
     const map = new Map<string, AttendanceLogEntry>();
-    for (const log of attendanceLogs || []) {
+    for (const log of effectiveLogs || []) {
       if (!log.studentId || map.has(log.studentId)) continue;
       if (Number(log.signedInAt || 0) < todayStartMs) continue;
       map.set(log.studentId, log);
     }
     return map;
-  }, [attendanceLogs, todayStartMs]);
+  }, [effectiveLogs, todayStartMs]);
 
   const classMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -93,20 +163,24 @@ export function AttendanceHeadcountPrintDialog({
     });
   }, [students, selectedClassId, searchQuery, classMap]);
 
+  const getEffectiveStatus = (student: Student): ManualHeadcountStatus => {
+    const override = manualOverrides[student.id];
+    if (override) return override;
+    const log = todayLogsByStudent.get(student.id);
+    if (!log) return 'absent';
+    return log.onTime === false ? 'late' : 'on-time';
+  };
+
   const stats = useMemo(() => {
     let presentCount = 0;
     let lateCount = 0;
     let absentCount = 0;
 
     for (const s of filteredStudents) {
-      const log = todayLogsByStudent.get(s.id);
-      if (!log) {
-        absentCount++;
-      } else if (log.onTime === false) {
-        lateCount++;
-      } else {
-        presentCount++;
-      }
+      const status = getEffectiveStatus(s);
+      if (status === 'absent') absentCount++;
+      else if (status === 'late') lateCount++;
+      else presentCount++;
     }
 
     return {
@@ -115,7 +189,13 @@ export function AttendanceHeadcountPrintDialog({
       late: lateCount,
       absent: absentCount,
     };
-  }, [filteredStudents, todayLogsByStudent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredStudents, todayLogsByStudent, manualOverrides]);
+
+  const editedCount = useMemo(
+    () => filteredStudents.filter((s) => manualOverrides[s.id]).length,
+    [filteredStudents, manualOverrides]
+  );
 
   const handlePrint = () => {
     window.print();
@@ -162,6 +242,7 @@ export function AttendanceHeadcountPrintDialog({
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Print or view an official roster for morning roll call, fire drills, and assemblies.
+                  Click a student&apos;s status below to correct it by hand.
                 </DialogDescription>
               </div>
             </div>
@@ -210,6 +291,26 @@ export function AttendanceHeadcountPrintDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {editedCount > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 rounded-xl h-9 text-xs font-bold text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setManualOverrides({});
+                try {
+                  window.localStorage.removeItem(storageKey);
+                } catch {
+                  // ignore
+                }
+              }}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Undo {editedCount} hand-edit{editedCount === 1 ? '' : 's'}
+            </Button>
+          ) : null}
         </div>
 
         {/* Printable Sheet Area */}
@@ -287,14 +388,32 @@ export function AttendanceHeadcountPrintDialog({
                 <tbody className="divide-y">
                   {filteredStudents.map((student, idx) => {
                     const log = todayLogsByStudent.get(student.id);
-                    const isPresent = Boolean(log);
-                    const isLate = log?.onTime === false;
+                    const status = getEffectiveStatus(student);
+                    const isEdited = Boolean(manualOverrides[student.id]);
                     const signTime = log?.signedInAt
                       ? new Date(log.signedInAt).toLocaleTimeString([], {
                           hour: 'numeric',
                           minute: '2-digit',
                         })
                       : '—';
+
+                    const statusBadge =
+                      status === 'late' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                          <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                          Late
+                        </span>
+                      ) : status === 'on-time' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                          <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          On Time
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium text-muted-foreground bg-muted/40 border border-border/50">
+                          <UserX className="w-3 h-3" />
+                          Absent
+                        </span>
+                      );
 
                     return (
                       <tr key={student.id} className="hover:bg-muted/15 transition-colors">
@@ -308,24 +427,24 @@ export function AttendanceHeadcountPrintDialog({
                           {classMap.get(student.classId || '') || 'Unassigned'}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          {isPresent ? (
-                            isLate ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                                <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                Late
+                          {/* Screen-only: click to correct by hand. Printed paper shows plain text. */}
+                          <button
+                            type="button"
+                            onClick={() => cycleStudentOverride(student, status)}
+                            title="Click to change this student's status by hand"
+                            className={cn(
+                              'print:hidden inline-flex items-center gap-1.5 rounded-full transition-opacity hover:opacity-75',
+                              isEdited && 'ring-2 ring-primary/40 ring-offset-1 ring-offset-background rounded-full'
+                            )}
+                          >
+                            {statusBadge}
+                            {isEdited && (
+                              <span className="text-[9px] font-black uppercase tracking-wide text-primary">
+                                Edited
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                                <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                On Time
-                              </span>
-                            )
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium text-muted-foreground bg-muted/40 border border-border/50">
-                              <UserX className="w-3 h-3" />
-                              Absent
-                            </span>
-                          )}
+                            )}
+                          </button>
+                          <span className="hidden print:inline-flex">{statusBadge}</span>
                         </td>
                         <td className="py-2 px-3 text-right text-xs font-medium text-muted-foreground">
                           {signTime}
