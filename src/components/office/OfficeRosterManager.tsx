@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type MutableRefObject } from 'react';
-import { Plus } from 'lucide-react';
+import { useRef, useState, type MutableRefObject } from 'react';
+import { Plus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
-import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
+import { OfficeAiImportDialog } from '@/components/office/OfficeAiImportDialog';
 import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficeOpenFromLink } from '@/lib/office/useOfficeOpenFromLink';
@@ -41,6 +41,8 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
   const [teacherId, setTeacherId] = useState('');
   const [addAnother, setAddAnother] = useState(false);
   useOfficeOpenFromLink('add', open, () => setOpen(true));
+  const localImportRef = useRef<(() => void) | null>(null);
+  const aiImportRef = importRef ?? localImportRef;
   const { openStudent } = useOfficeEntityNav();
 
   const reset = () => {
@@ -92,14 +94,14 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
 
   return (
     <div className="flex flex-wrap gap-2">
-      <OfficeCsvImportDialog
-        schoolId={schoolId}
-        mode="students"
-        classes={classes}
-        teachers={teachers}
-        disabled={busy}
-        openRef={importRef}
-      />
+      {/* Import goes through the AI, which works out any spreadsheet or pasted list. */}
+      <OfficeAiImportDialog openRef={aiImportRef} />
+      {importRef ? null : (
+        <Button type="button" variant="outline" className="rounded-xl gap-2" onClick={() => aiImportRef.current?.()}>
+          <Upload className="h-4 w-4" />
+          Import from a spreadsheet
+        </Button>
+      )}
       <Button type="button" className="rounded-xl gap-2" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" />
         Add student

@@ -23,6 +23,7 @@ import {
   officeInvoicesByAccount,
   officeOwedByAccount,
   officeStudentsListReport,
+  officeTopGradeStudentIds,
 } from '@/lib/office/officeAssistantLists';
 import { getOfficeStudentFullName, officeLocalIsoDate, studentIdsWithGradesForTerm } from '@/lib/office/officeUtils';
 import type { OfficeStudent } from '@/lib/office/types';
@@ -78,6 +79,7 @@ function StudentsPreview({ view, askAt }: Props<'students'>) {
         teacherNameById: shared.teacherNameById,
         gradedForTerm: studentIdsWithGradesForTerm(gradeEntries, term),
         failingForTerm: officeFailingStudentIds(gradeEntries, term),
+        topGradesForTerm: officeTopGradeStudentIds(gradeEntries, term),
         billingAccounts,
         familyById,
       },

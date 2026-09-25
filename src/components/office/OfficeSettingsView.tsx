@@ -39,8 +39,10 @@ import { officeAbsoluteHref } from '@/lib/officePublicUrl';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import type { StaffAccount } from '@/lib/types';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { OfficeInterfacePreferences } from '@/components/office/OfficeInterfacePreferences';
+import { OfficeLevelUpSyncSettings } from '@/components/office/OfficeLevelUpSyncSettings';
 
-type SettingsTab = 'school' | 'fields' | 'staff' | 'import';
+type SettingsTab = 'school' | 'fields' | 'staff' | 'import' | 'sync' | 'customize';
 
 /** Short tabs so everyday choices aren't buried under one-time setup. */
 const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
@@ -48,6 +50,8 @@ const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: 'fields', label: 'Student fields' },
   { id: 'staff', label: 'Staff sign-ins' },
   { id: 'import', label: 'Import' },
+  { id: 'sync', label: 'levelUp sync' },
+  { id: 'customize', label: 'Customize' },
 ];
 
 function parseSettingsTab(value: string | null | undefined): SettingsTab {
@@ -310,6 +314,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
         onValueChange={(v) => setTab(v as SettingsTab)}
         aria-label="Settings section"
       />
+
+      {tab === 'customize' ? <OfficeInterfacePreferences /> : null}
+      {tab === 'sync' ? <OfficeLevelUpSyncSettings schoolId={schoolId} current={settings?.levelUpSync} /> : null}
 
       {tab === 'school' ? (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">

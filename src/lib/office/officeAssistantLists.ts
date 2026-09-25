@@ -10,7 +10,7 @@ import {
   isInvoiceOverdue,
   officeStudentHasTeacher,
 } from '@/lib/office/officeUtils';
-import type { OfficeAssistantAttendanceStatus } from '@/lib/office/officeAssistantView';
+import { officeTeacherNameMatches, type OfficeAssistantAttendanceStatus } from '@/lib/office/officeAssistantView';
 import { OFFICE_ASSISTANT_CHAT_ROWS, type OfficeAssistantReport } from '@/lib/office/officeAssistantResults';
 import type {
   OfficeAttendanceEntry,
@@ -37,6 +37,8 @@ export type OfficeRosterFilter =
   | 'all'
   | 'missing-grades'
   | 'failing'
+  | 'top-grades'
+  | 'bus'
   | 'no-billing'
   | 'unassigned'
   | 'no-teacher'
@@ -66,6 +68,8 @@ export type OfficeStudentListData = {
   gradedForTerm: Set<string>;
   /** Students with a failing grade this term (see officeFailingStudentIds). */
   failingForTerm: Set<string>;
+  /** Students averaging 90 or more this term (see officeTopGradeStudentIds). */
+  topGradesForTerm: Set<string>;
   billingAccounts: OfficeBillingAccount[];
   familyById: Map<string, OfficeFamily>;
 };
@@ -86,6 +90,55 @@ export function officeFailingStudentIds(entries: OfficeGradeEntry[], termLabel: 
   );
 }
 
+/** A student averaging this or more this term is a top student. */
+export const OFFICE_TOP_GRADES_FROM = 90;
+
+const LETTER_GRADE_SCORE: Record<string, number> = {
+  'A+': 98,
+  A: 95,
+  'A-': 91,
+  'B+': 88,
+  B: 85,
+  'B-': 81,
+  'C+': 78,
+  C: 75,
+  'C-': 71,
+  'D+': 68,
+  D: 65,
+  'D-': 61,
+  F: 50,
+};
+
+/** A grade as a number: the number when there is one, else the letter's usual score. */
+export function officeGradeScore(e: Pick<OfficeGradeEntry, 'letterGrade' | 'numericGrade'>): number | null {
+  if (typeof e.numericGrade === 'number' && Number.isFinite(e.numericGrade)) return e.numericGrade;
+  const letter = e.letterGrade?.trim().toUpperCase();
+  return letter ? (LETTER_GRADE_SCORE[letter] ?? null) : null;
+}
+
+/** Students whose grades this term average 90 or more. */
+export function officeTopGradeStudentIds(entries: OfficeGradeEntry[], termLabel: string): Set<string> {
+  const scores = new Map<string, number[]>();
+  for (const e of entries) {
+    if (e.archived || e.termLabel !== termLabel) continue;
+    const score = officeGradeScore(e);
+    if (score == null) continue;
+    scores.set(e.studentId, [...(scores.get(e.studentId) ?? []), score]);
+  }
+  return new Set(
+    [...scores.entries()]
+      .filter(([, list]) => list.reduce((sum, n) => sum + n, 0) / list.length >= OFFICE_TOP_GRADES_FROM)
+      .map(([id]) => id),
+  );
+}
+
+/** Rides a bus: marked as a bus rider on Transportation, or has a bus route (their own or their family's). */
+export function officeStudentRidesBus(s: OfficeStudent, family: OfficeFamily | undefined): boolean {
+  return (
+    s.transportMode === 'bus' || !!s.busRouteId || !!s.busRoute?.trim() || !!family?.busRoute?.trim()
+  );
+}
+
 /** The students matching the filters, in no particular order. */
 export function filterOfficeStudents(
   students: OfficeStudent[],
@@ -93,9 +146,9 @@ export function filterOfficeStudents(
   data: OfficeStudentListData,
 ): OfficeStudent[] {
   const q = f.query.trim().toLowerCase();
-  const teacherQ = f.teacherText.trim().toLowerCase();
+  const teacherQ = f.teacherText.trim();
   const teacherIds = teacherQ
-    ? new Set([...data.teacherNameById.entries()].filter(([, name]) => name.toLowerCase().includes(teacherQ)).map(([id]) => id))
+    ? new Set([...data.teacherNameById.entries()].filter(([, name]) => officeTeacherNameMatches(name, teacherQ)).map(([id]) => id))
     : null;
   // The default roster is active students; withdrawn and graduated have their own filters.
   const base =
@@ -110,6 +163,10 @@ export function filterOfficeStudents(
     if (f.rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
     if (f.rosterFilter === 'missing-grades' && data.gradedForTerm.has(s.id)) return false;
     if (f.rosterFilter === 'failing' && !data.failingForTerm.has(s.id)) return false;
+    if (f.rosterFilter === 'top-grades' && !data.topGradesForTerm.has(s.id)) return false;
+    if (f.rosterFilter === 'bus' && !officeStudentRidesBus(s, s.familyId ? data.familyById.get(s.familyId) : undefined)) {
+      return false;
+    }
     if (f.rosterFilter === 'no-billing' && billingAccountForStudent(data.billingAccounts, s.id)) return false;
     if (f.rosterFilter === 'no-family' && s.familyId) return false;
     if (f.rosterFilter === 'allergies' && !s.allergies?.trim()) return false;

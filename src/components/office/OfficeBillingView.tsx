@@ -75,6 +75,7 @@ import {
 } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeAddressInput } from '@/components/office/OfficeAddressInput';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
@@ -128,6 +129,7 @@ export function OfficeBillingView({
   const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
   const { confirm, confirmDialog } = useOfficeConfirm();
+  const { openFamily } = useOfficeEntityNav();
   const { settings: officeSettings } = useOfficeSettings(schoolId);
 
   const printFamilyStatement = (account: OfficeBillingAccount, studentLabels: string[]) => {
@@ -166,6 +168,8 @@ export function OfficeBillingView({
   const [accountAddress, setAccountAddress] = useState('');
   // Each family is one line; its bills show when it's opened.
   const [openAccounts, setOpenAccounts] = useState<Set<string>>(() => new Set());
+  // The page opens on the totals and a search; every family only on "Show all".
+  const [showAllAccounts, setShowAllAccounts] = useState(false);
   const toggleAccount = (id: string) =>
     setOpenAccounts((prev) => {
       const next = new Set(prev);
@@ -284,6 +288,7 @@ export function OfficeBillingView({
   useReportOfficeAssistantResults(reportAskAt, !isLoading, () => officeBillingListReport(filteredAccounts, owedByAccount));
 
   const clearAsk = () => {
+    setShowAllAccounts(false);
     setReportAskAt(null);
     setAskLabel('');
     setMinOwedCents(null);
@@ -1111,7 +1116,7 @@ export function OfficeBillingView({
               ? `${accounts.length} family ${accounts.length === 1 ? 'account' : 'accounts'}`
               : `${filteredAccounts.length} of ${accounts.length} family accounts`}
           </span>
-          {invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null ? (
+          {showAllAccounts || invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null ? (
             <button
               type="button"
               className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
@@ -1194,6 +1199,17 @@ export function OfficeBillingView({
             </Button>
           }
         />
+      ) : !(showAllAccounts || askLabel || invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null) ? (
+        <p className="text-sm text-muted-foreground">
+          Search for a family, or tap a number above to see those families.{' '}
+          <button
+            type="button"
+            onClick={() => setShowAllAccounts(true)}
+            className="font-medium text-teal-800 hover:underline dark:text-teal-300"
+          >
+            Show all {accounts.length} families
+          </button>
+        </p>
       ) : filteredAccounts.length === 0 ? (
         <OfficeEmptyState title="No accounts match" description="Try a different search or filter." />
       ) : (
@@ -1240,6 +1256,18 @@ export function OfficeBillingView({
                     </span>
                   </button>
                   <div className="flex items-center gap-3">
+                    {/* The family's own details: its profile when it has one, otherwise its billing details. */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        account.familyId && familyById.has(account.familyId)
+                          ? openFamily(account.familyId)
+                          : openEditAccount(account)
+                      }
+                      className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+                    >
+                      Family details
+                    </button>
                     <span
                       className={cn(
                         'text-right text-base font-semibold tabular-nums',
