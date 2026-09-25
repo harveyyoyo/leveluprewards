@@ -111,9 +111,9 @@ const OfficeUI: React.FC<{ w: number; h: number; question: string; answer: React
 
 const AbsentAnswer: React.FC<{ w: number; h: number; highlight?: boolean }> = ({ w, h, highlight }) => {
   const rows = ["Ava R. · Grade 5", "Sam T. · Grade 3", "Eli K. · Grade 7"];
-  const rh = h * 0.1;
+  const rh = h * 0.08;
   return (
-    <g transform={`translate(${w * 0.08} ${h * 0.49})`}>
+    <g transform={`translate(${w * 0.08} ${h * 0.47})`}>
       <rect width={w * 0.84} height={rh * 4.6} rx={12} fill="white" stroke="#e2e8f0" strokeWidth={2} />
       <text x={14} y={rh * 0.75} fontFamily={outfit} fontWeight={800} fontSize={rh * 0.55} fill={TEAL}>
         3 absent today
@@ -124,7 +124,7 @@ const AbsentAnswer: React.FC<{ w: number; h: number; highlight?: boolean }> = ({
         </text>
       ))}
       {highlight ? (
-        <g transform={`translate(0 ${rh * 4.8})`}>
+        <g transform={`translate(0 ${rh * 4.75})`}>
           <rect width={w * 0.84} height={rh * 1.1} rx={rh * 0.55} fill="#dcfce7" stroke="#16a34a" strokeWidth={2} />
           <text x={(w * 0.84) / 2} y={rh * 0.75} textAnchor="middle" fontFamily={outfit} fontWeight={800} fontSize={rh * 0.5} fill="#14532d">
             ✓ Leo M. — here since 7:52 AM
@@ -245,10 +245,13 @@ export const StoryOfficeAsk: React.FC = () => {
 
 export const officeRapidTimeline = buildTimeline("office-rapid");
 
+/** Answers land as the question finishes typing. */
+const answerAt = (s: SceneTiming) => Math.round(s.cues[0] + s.lens[0] * 0.6);
+
 const AskCard: React.FC<{ s: SceneTiming; q: string; children: React.ReactNode }> = ({ s, q, children }) => {
   const frame = useCurrentFrame();
   const inP = usePop(0, 14, 160);
-  const answer = usePop(Math.round(s.cues[0] + s.lens[0] + 2), 12, 180);
+  const answer = usePop(answerAt(s), 12, 180);
   return (
     <AbsoluteFill style={{ background: "linear-gradient(180deg, #042f2e, #0f766e)", alignItems: "center", paddingTop: 260 }}>
       <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: 64, color: "#99f6e4" }}>Hi Grace, how can I help?</div>
@@ -267,7 +270,7 @@ const AskCard: React.FC<{ s: SceneTiming; q: string; children: React.ReactNode }
           transform: `scale(${inP})`,
         }}
       >
-        🔎 {typed(q, frame, s.cues[0], 0.9)}
+        🔎 {typed(q, frame, s.cues[0], q.length / Math.max(1, s.lens[0] * 0.55))}
         <span style={{ opacity: frame % 16 < 8 ? 1 : 0 }}>|</span>
       </div>
       <div style={{ marginTop: 50, width: 940, transform: `translateY(${(1 - answer) * 200}px)`, opacity: answer }}>{children}</div>
@@ -347,18 +350,18 @@ export const OfficeRapidAnswers: React.FC = () => {
           absent: (s) => (
             <SceneFade dur={s.dur} inFrames={4}>
               <AskCard s={s} q="Who is absent today?">
-                <Row left="Ava R. · Grade 5" delay={Math.round(s.cues[0] + s.lens[0] + 6)} />
-                <Row left="Sam T. · Grade 3" delay={Math.round(s.cues[0] + s.lens[0] + 10)} />
-                <Row left="Eli K. · Grade 7" delay={Math.round(s.cues[0] + s.lens[0] + 14)} />
+                <Row left="Ava R. · Grade 5" delay={answerAt(s) + 4} />
+                <Row left="Sam T. · Grade 3" delay={answerAt(s) + 8} />
+                <Row left="Eli K. · Grade 7" delay={answerAt(s) + 12} />
               </AskCard>
             </SceneFade>
           ),
           owe: (s) => (
             <SceneFade dur={s.dur} inFrames={4}>
               <AskCard s={s} q="Families who owe more than $100">
-                <Row left="Rivera family" right="$240" tone="#b91c1c" delay={Math.round(s.cues[0] + s.lens[0] + 6)} />
-                <Row left="Nguyen family" right="$180" tone="#b91c1c" delay={Math.round(s.cues[0] + s.lens[0] + 10)} />
-                <Row left="Cohen family" right="$125" tone="#b91c1c" delay={Math.round(s.cues[0] + s.lens[0] + 14)} />
+                <Row left="Rivera family" right="$240" tone="#b91c1c" delay={answerAt(s) + 4} />
+                <Row left="Nguyen family" right="$180" tone="#b91c1c" delay={answerAt(s) + 8} />
+                <Row left="Cohen family" right="$125" tone="#b91c1c" delay={answerAt(s) + 12} />
               </AskCard>
             </SceneFade>
           ),
@@ -381,7 +384,7 @@ export const OfficeRapidAnswers: React.FC = () => {
           {Array.from({ length: 8 }).map((_, i) => (
             <Sfx key={i} at={s.start + s.cues[0] + i * 3} name="tick" volume={0.12} />
           ))}
-          <Sfx at={s.start + s.cues[0] + s.lens[0] + 2} name="pop" volume={0.5} />
+          <Sfx at={s.start + answerAt(s)} name="pop" volume={0.5} />
         </React.Fragment>
       ))}
       <Sfx at={tl.at("end").start} name="chime" volume={0.45} />

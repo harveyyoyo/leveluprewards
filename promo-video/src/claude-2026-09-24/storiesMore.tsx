@@ -385,14 +385,15 @@ export const StoryRewardsPrizeDay: React.FC = () => {
 
 export const assemblyTimeline = buildTimeline("story-houses-assembly");
 
-const BIG = { x: 610, y: 50, w: 700, h: 380 };
+/** Standings are laid out at 700x380 and scaled to fit BIG (narrow enough for tall videos). */
+const BIG = { x: 660, y: 60, w: 600, h: (380 * 600) / 700 };
 
 const Standings: React.FC<{ scores: number[]; banner?: string }> = ({ scores, banner }) => {
   const max = 1400;
   return (
     <g>
-      <rect width={BIG.w} height={BIG.h} fill="#0f172a" />
-      <text x={BIG.w / 2} y={52} textAnchor="middle" fontFamily={anton} fontSize={44} fill="#fbbf24">
+      <rect width={700} height={380} fill="#0f172a" />
+      <text x={350} y={52} textAnchor="middle" fontFamily={anton} fontSize={44} fill="#fbbf24">
         🏆 HOUSE CUP STANDINGS
       </text>
       {HOUSES.map((h, i) => (
@@ -412,8 +413,8 @@ const Standings: React.FC<{ scores: number[]; banner?: string }> = ({ scores, ba
       ))}
       {banner ? (
         <g>
-          <rect y={BIG.h - 50} width={BIG.w} height={50} fill={HOUSES[1].color} />
-          <text x={BIG.w / 2} y={BIG.h - 15} textAnchor="middle" fontFamily={anton} fontSize={36} fill="white">
+          <rect y={330} width={700} height={50} fill={HOUSES[1].color} />
+          <text x={350} y={365} textAnchor="middle" fontFamily={anton} fontSize={36} fill="white">
             {banner}
           </text>
         </g>
@@ -479,8 +480,8 @@ const AssemblyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
       tall={[
         { f: 0, s: 1, x: 350, y: 540 },
         { f: T.start - 10, s: 1, x: 1500, y: 540 },
-        { f: T.start + 20, s: 1.15, x: BIG.x + BIG.w / 2, y: 400 },
-        { f: W - 4, s: 1.15, x: BIG.x + BIG.w / 2, y: 400 },
+        { f: T.start + 20, s: 1, x: BIG.x + BIG.w / 2, y: 400 },
+        { f: W - 4, s: 1, x: BIG.x + BIG.w / 2, y: 400 },
         { f: W + 12, s: 1, x: 740, y: 540 },
       ]}
     >
@@ -494,7 +495,9 @@ const AssemblyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
           </g>
         ))}
         <Screen id="gymscreen" x={BIG.x} y={BIG.y} w={BIG.w} h={BIG.h}>
-          <Standings scores={scores} banner={frame >= W ? "🌊 TIDE LEADS!" : undefined} />
+          <g transform={`scale(${BIG.w / 700})`}>
+            <Standings scores={scores} banner={frame >= W ? "🌊 TIDE LEADS!" : undefined} />
+          </g>
         </Screen>
         <Crowd frame={frame} wild={wild} />
         <rect y={870} width={1920} height={210} fill="#e8c48a" />
@@ -505,7 +508,7 @@ const AssemblyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
         <rect x={250} y={820} width={150} height={190} rx={10} fill="#1e3a8a" />
         <image href={LOGO} x={285} y={860} width={80} height={80} />
         {chipT > 0 && chipT < 1 ? (
-          <g transform={`translate(${interpolate(chipT, [0, 1], [1700, BIG.x + 400])} ${interpolate(chipT, [0, 1], [700, BIG.y + 84 + 66 + 26])})`}>
+          <g transform={`translate(${interpolate(chipT, [0, 1], [1700, BIG.x + (400 * BIG.w) / 700])} ${interpolate(chipT, [0, 1], [700, BIG.y + ((84 + 66 + 26) * BIG.w) / 700])})`}>
             <rect x={-120} y={-30} width={240} height={60} rx={30} fill="white" stroke={HOUSES[1].color} strokeWidth={5} />
             <text textAnchor="middle" y={12} fontFamily={outfit} fontWeight={800} fontSize={30} fill={HOUSES[1].color}>
               +70 Reading 📚
@@ -605,7 +608,7 @@ const FamilyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
               );
             })
           : null}
-        <Bubble x={DAD_X + 250} y={240} text="That's my kid! 😊" pop={interpolate(frame, [Pr + 2, Pr + 10], [0, 1], clamp)} w={400} />
+        <Bubble x={DAD_X + 140} y={240} text="That's my kid! 😊" pop={interpolate(frame, [Pr + 2, Pr + 10], [0, 1], clamp)} w={360} />
     </Stage>
   );
 };
