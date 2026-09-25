@@ -2820,6 +2820,7 @@ function AdminDashboardInner() {
             onRemoveTheme={async () => {
               try {
                 await updateStudent({ ...themeStudent, theme: undefined });
+                setThemeStudent((prev) => (prev && prev.id === themeStudent.id ? { ...prev, theme: undefined } : prev));
                 playSound('success');
                 toast({
                   title: 'Theme removed',
