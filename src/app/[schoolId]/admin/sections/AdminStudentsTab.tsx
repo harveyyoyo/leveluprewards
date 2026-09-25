@@ -380,7 +380,7 @@ export function AdminStudentsTab({
     Pts: "Total points balance",
     Face: "Face login enrollment",
     "Sign in": "Sign this student into the kiosk",
-    Theme: "Generate an AI theme for this student's ID card",
+    Theme: "Design this student's ID card (card studio, Canva upload, or AI theme)",
     Act: "Activity history",
     Badges: "View badges for this student",
     Purge: "Reset this student's points and badges",
@@ -881,7 +881,8 @@ export function AdminStudentsTab({
                         size="icon"
                         className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => setThemeStudent?.(s)}
-                        title="Generate AI Theme"
+                        title="Design ID card"
+                        aria-label="Design ID card"
                       >
                         <Wand2 className="w-4 h-4 text-purple-500" />
                       </Button>
