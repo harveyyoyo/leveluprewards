@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
+import { ClassroomSignInPrompt } from '@/components/classroom/ClassroomSignInPrompt';
 import {
   ClassroomLiveTeachChrome,
   type ClassroomLiveHeaderControls,
@@ -153,13 +154,6 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     return () => document.documentElement.removeAttribute('data-classroom-realm');
   }, []);
 
-  useEffect(() => {
-    if (!isInitialized) return;
-    if (!canAccessHallOfFameRoute(loginState)) {
-      router.replace(schoolId ? `/${schoolId}/portal` : '/');
-    }
-  }, [isInitialized, loginState, router, schoolId]);
-
   const monitorClassId = useMemo(() => {
     if (classIdFromUrl === CLASSROOM_ALL_STUDENTS_FILTER_ID) {
       return CLASSROOM_ALL_STUDENTS_FILTER_ID;
@@ -183,7 +177,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     initialClassId: monitorClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID ? undefined : monitorClassId,
   });
 
-  if (!isInitialized || !canAccessHallOfFameRoute(loginState)) {
+  if (!isInitialized) {
     return (
       <div
         className="fixed inset-0 flex items-center justify-center"
@@ -197,16 +191,7 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   if (!canReadRoster) {
     return (
       <ClassroomRealmShell schoolId={schoolId} hideChrome={hideRealmChrome}>
-        <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-          <p className="text-lg font-black tracking-tight text-white">Sign in as teacher or admin</p>
-          <p className="max-w-md text-sm text-white/60">
-            This sign-in can’t open the class list. Use the teacher or admin passcode, then open
-            Classroom again.
-          </p>
-          <Button type="button" variant="outline" asChild className="border-white/20 text-white hover:bg-white/10">
-            <Link href={schoolId ? `/${schoolId}/portal` : '/'}>Back to portal</Link>
-          </Button>
-        </div>
+        <ClassroomSignInPrompt schoolId={schoolId} />
       </ClassroomRealmShell>
     );
   }
