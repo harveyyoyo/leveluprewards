@@ -1,0 +1,604 @@
+{
+  "rewards-neon": [
+    {
+      "name": "slam",
+      "voices": [
+        0
+      ],
+      "min": 72
+    },
+    {
+      "name": "earn",
+      "voices": [
+        1
+      ],
+      "min": 50
+    },
+    {
+      "name": "counter",
+      "voices": [
+        2
+      ],
+      "min": 100
+    },
+    {
+      "name": "spend",
+      "voices": [
+        3
+      ],
+      "min": 90
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "attendance-clean": [
+    {
+      "name": "clock",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "twist",
+      "voices": [
+        1
+      ],
+      "min": 80
+    },
+    {
+      "name": "product",
+      "voices": [
+        2
+      ],
+      "min": 150
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 90,
+      "tail": 30
+    }
+  ],
+  "library-storybook": [
+    {
+      "name": "title",
+      "voices": [
+        0
+      ],
+      "min": 95
+    },
+    {
+      "name": "reveal",
+      "voices": [
+        1
+      ],
+      "min": 120
+    },
+    {
+      "name": "steps",
+      "voices": [
+        2
+      ],
+      "min": 90
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 90,
+      "tail": 30
+    }
+  ],
+  "classroom-arcade": [
+    {
+      "name": "title",
+      "voices": [
+        0
+      ],
+      "min": 70
+    },
+    {
+      "name": "play",
+      "voices": [
+        1,
+        2
+      ],
+      "min": 190
+    },
+    {
+      "name": "levelup",
+      "voices": [
+        3
+      ],
+      "min": 60
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "rewards-countdown": [
+    {
+      "name": "hook",
+      "voices": [
+        0
+      ],
+      "min": 75
+    },
+    {
+      "name": "three",
+      "voices": [
+        1
+      ],
+      "min": 110
+    },
+    {
+      "name": "two",
+      "voices": [
+        2
+      ],
+      "min": 110
+    },
+    {
+      "name": "one",
+      "voices": [
+        3
+      ],
+      "min": 110
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 90,
+      "tail": 30
+    }
+  ],
+  "attendance-news": [
+    {
+      "name": "open",
+      "voices": [
+        0
+      ],
+      "min": 120
+    },
+    {
+      "name": "reason",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "glance",
+      "voices": [
+        2
+      ],
+      "min": 120
+    },
+    {
+      "name": "signoff",
+      "voices": [
+        3
+      ],
+      "min": 90,
+      "tail": 30
+    }
+  ],
+  "library-texts": [
+    {
+      "name": "chat",
+      "voices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "min": 300,
+      "gap": 10
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 90,
+      "tail": 30
+    }
+  ],
+  "classroom-before-after": [
+    {
+      "name": "before",
+      "voices": [
+        0
+      ],
+      "min": 120
+    },
+    {
+      "name": "reveal",
+      "voices": [
+        1
+      ],
+      "min": 70
+    },
+    {
+      "name": "features",
+      "voices": [
+        2
+      ],
+      "min": 150
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 90,
+      "tail": 30
+    }
+  ],
+  "attendance-scan-in": [
+    {
+      "name": "walk",
+      "voices": [
+        0
+      ],
+      "min": 170
+    },
+    {
+      "name": "tap",
+      "voices": [
+        1
+      ],
+      "min": 80
+    },
+    {
+      "name": "points",
+      "voices": [
+        2
+      ],
+      "min": 130
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 110,
+      "tail": 30
+    }
+  ],
+  "houses-sorting": [
+    {
+      "name": "question",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "ceremony",
+      "voices": [
+        1
+      ],
+      "min": 130
+    },
+    {
+      "name": "reveal",
+      "voices": [
+        2
+      ],
+      "min": 120
+    },
+    {
+      "name": "rollup",
+      "voices": [
+        3
+      ],
+      "min": 130
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "houses-race": [
+    {
+      "name": "intro",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "race",
+      "voices": [
+        1,
+        2
+      ],
+      "min": 300,
+      "gap": 6
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 150,
+      "tail": 30
+    }
+  ],
+  "raffle-gameshow": [
+    {
+      "name": "intro",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "tickets",
+      "voices": [
+        1
+      ],
+      "min": 130
+    },
+    {
+      "name": "spin",
+      "voices": [
+        2,
+        3
+      ],
+      "min": 200,
+      "gap": 4
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-classroom-onetap": [
+    {
+      "name": "ask",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "answer",
+      "voices": [
+        1
+      ],
+      "min": 60
+    },
+    {
+      "name": "tap",
+      "voices": [
+        2
+      ],
+      "min": 150
+    },
+    {
+      "name": "cheer",
+      "voices": [
+        3
+      ],
+      "min": 110
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-library-checkout": [
+    {
+      "name": "find",
+      "voices": [
+        0
+      ],
+      "min": 150
+    },
+    {
+      "name": "scan",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "done",
+      "voices": [
+        2
+      ],
+      "min": 110
+    },
+    {
+      "name": "happy",
+      "voices": [
+        3
+      ],
+      "min": 70
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-rewards-prizeday": [
+    {
+      "name": "saving",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "cashin",
+      "voices": [
+        1
+      ],
+      "min": 90
+    },
+    {
+      "name": "redeem",
+      "voices": [
+        2
+      ],
+      "min": 140
+    },
+    {
+      "name": "pizza",
+      "voices": [
+        3
+      ],
+      "min": 90
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-houses-assembly": [
+    {
+      "name": "intro",
+      "voices": [
+        0
+      ],
+      "min": 120
+    },
+    {
+      "name": "tied",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "win",
+      "voices": [
+        2
+      ],
+      "min": 130
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 110,
+      "tail": 30
+    }
+  ],
+  "story-family-portal": [
+    {
+      "name": "office",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "open",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "proud",
+      "voices": [
+        2
+      ],
+      "min": 70
+    },
+    {
+      "name": "explain",
+      "voices": [
+        3
+      ],
+      "min": 130
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-classroom-hallpass": [
+    {
+      "name": "ask",
+      "voices": [
+        0
+      ],
+      "min": 100
+    },
+    {
+      "name": "start",
+      "voices": [
+        1
+      ],
+      "min": 140
+    },
+    {
+      "name": "screen",
+      "voices": [
+        2
+      ],
+      "min": 140
+    },
+    {
+      "name": "back",
+      "voices": [
+        3
+      ],
+      "min": 140
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ]
+}

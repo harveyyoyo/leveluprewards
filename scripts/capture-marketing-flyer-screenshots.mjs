@@ -106,8 +106,13 @@ async function waitNoAppLoading(page) {
 async function schoolLogin(page) {
   await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.locator('#schoolId').waitFor({ state: 'visible', timeout: 20000 });
-  await page.locator('summary:has-text("Try a demo school")').click();
-  await page.locator('button:has-text("School ABC")').click();
+  // Match by the button's aria-label so login copy changes don't break capture.
+  // Older builds tuck the demo buttons inside a <details>; newer ones show them directly.
+  const demoButton = page.locator('button[aria-label="Sign in to demo school: School ABC"]:visible').first();
+  if (!(await demoButton.isVisible().catch(() => false))) {
+    await page.locator('details:has(button[aria-label^="Sign in to demo school"]) > summary').click();
+  }
+  await demoButton.click();
   await sleep(300);
   await page.locator('#passcode').fill(SCHOOL_PASSCODE);
   await page.getByRole('button', { name: /Sign in to school/i }).click();

@@ -1,5 +1,5 @@
 import "./index.css";
-import { Composition } from "remotion";
+import { Composition, Folder } from "remotion";
 import { CinematicPromo } from "./CinematicPromo";
 import { LongFeaturePromo, LONG_PROMO_DURATION } from "./LongFeaturePromo";
 import { RetroGamingVerticalPromo } from "./RetroGamingVerticalPromo";
@@ -7,6 +7,7 @@ import {
   PillarsShortPromo,
   PILLARS_PROMO_TOTAL_FRAMES,
 } from "./PillarsShortPromo";
+import { CLAUDE_2026_09_24_VIDEOS, CLAUDE_2026_09_25_VIDEOS } from "./claude-2026-09-24";
 import {
   WidescreenPromo,
   WidescreenPromoSchema,
@@ -116,6 +117,35 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1080}
       />
+
+      {/* Made by Claude on 2026-09-24: one short narrated video per pillar, each in its own style */}
+      <Folder name="Claude-made-2026-09-24-Pillar-Spotlights">
+        {CLAUDE_2026_09_24_VIDEOS.map((v) => (
+          <Composition
+            key={v.id}
+            id={v.id}
+            component={v.component}
+            durationInFrames={v.durationInFrames}
+            fps={30}
+            width={v.width}
+            height={v.height}
+          />
+        ))}
+      </Folder>
+
+      <Folder name="Claude-made-2026-09-25-Cartoon-Stories">
+        {CLAUDE_2026_09_25_VIDEOS.map((v) => (
+          <Composition
+            key={v.id}
+            id={v.id}
+            component={v.component}
+            durationInFrames={v.durationInFrames}
+            fps={30}
+            width={v.width}
+            height={v.height}
+          />
+        ))}
+      </Folder>
 
       {/* Long Feature Showcase Promo */}
       <Composition

@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "Remotion Studio (pillar spotlights)",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd promo-video && npx remotion studio src/index.ts --port=3334 --no-open"],
+      "port": 3334
     }
   ]
 }
