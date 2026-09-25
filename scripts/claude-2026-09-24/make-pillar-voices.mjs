@@ -195,6 +195,42 @@ export const SCRIPTS = {
     { voice: 'Zephyr', style: 'Say this like an amazed, thrilled kid', text: 'No way!' },
     { voice: 'Laomedeia', style: HYPE, text: 'The LevelUp rewards vending machine. Points you can hold.' },
   ],
+
+  // ── More cartoon stories (added 2026-09-25, batch 3) ──
+  'story-maya-firstweek': [
+    { voice: 'Achird', style: 'Say this like a warm storyteller starting a story', text: "Monday. Maya's first day at a new school. The office hands her a student ID card." },
+    { voice: 'Achird', style: 'Say this like a warm storyteller', text: "Wednesday. One tap at the kiosk, and she's checked in." },
+    { voice: 'Achird', style: 'Say this like a warm storyteller', text: 'Her teacher notices the little things. Helping out. Great answers. The points add up.' },
+    { voice: 'Achird', style: 'Say this building to a joyful reveal', text: 'Friday. Two hundred fifty points. Rising Star badge, unlocked!' },
+    { voice: 'Achird', style: WARM, text: 'Her first week. Her first badge. LevelUp EDU.' },
+  ],
+  'story-badge-unlocked': [
+    { voice: 'Puck', style: 'Say this like an excited video game announcer, building suspense', text: "Leo's two points away from something big." },
+    { voice: 'Puck', style: 'Say this punchy and excited', text: 'Tap. Two fifty-two.' },
+    { voice: 'Puck', style: 'Shout this like a video game achievement announcer', text: 'Rising Star unlocked! Plus fifteen bonus points!' },
+    { voice: 'Puck', style: 'Say this upbeat and confident', text: 'Badges turn every milestone into a moment. LevelUp Rewards.' },
+  ],
+  'story-lobby-tv': [
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Every school has a lobby. Now yours has a stage.' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'LevelUp displays put the Hall of Fame, house standings, and school news on any screen.' },
+    { voice: 'Leda', style: 'Say this like a thrilled kid pulling on a parent sleeve', text: "Mom, look! That's me!" },
+    { voice: 'Sulafat', style: WARM, text: 'Recognition everyone sees, every single day. LevelUp EDU.' },
+  ],
+  'story-principal-morning': [
+    { voice: 'Gacrux', style: 'Say this like a warm, wise narrator', text: 'Seven forty-five. Principal Adams takes her morning walk.' },
+    { voice: 'Gacrux', style: 'Say this like a warm, wise narrator', text: 'Kids scanning in, right on time.' },
+    { voice: 'Gacrux', style: 'Say this like a warm, wise narrator', text: 'Points flying in every classroom.' },
+    { voice: 'Gacrux', style: 'Say this like a warm, wise narrator', text: 'Books checked out, no line.' },
+    { voice: 'Gacrux', style: 'Say this like a warm, wise narrator', text: 'And the office? Every answer, one question away.' },
+    { voice: 'Gacrux', style: 'Say this like a proud, inspiring narrator', text: 'One platform. Every part of school. LevelUp EDU.' },
+  ],
+  'story-office-billing': [
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'End of the month. Time for billing.' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: "In LevelUp Office, every family's balance is right there. Print a statement in one click." },
+    { voice: 'Sulafat', style: 'Say this warm and satisfied', text: 'The Riveras stop by to pay. Payment recorded. Balance, zero.' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: "And the billing report shows who's paid, at a glance." },
+    { voice: 'Sulafat', style: WARM, text: 'LevelUp Office. Billing, done.' },
+  ],
 };
 
 /** Voices in the sampler (the owner picks favorites from this). */
@@ -206,7 +242,9 @@ const SAMPLER_VOICES = [
 async function synthesizeGemini({ apiKey, voice, style, text, outPath }) {
   const prompt = style ? `${style}: ${text}` : text;
   for (let attempt = 1; ; attempt++) {
+    // A stuck request would freeze the whole run, so give each one 90 seconds.
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS[modelIdx]}:generateContent`, {
+      signal: AbortSignal.timeout(90_000),
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
@@ -216,7 +254,7 @@ async function synthesizeGemini({ apiKey, voice, style, text, outPath }) {
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
         },
       }),
-    });
+    }).catch((e) => ({ ok: false, status: 0, json: async () => ({ error: String(e) }) }));
     const json = await res.json().catch(() => ({}));
     const data = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (res.ok && data) {

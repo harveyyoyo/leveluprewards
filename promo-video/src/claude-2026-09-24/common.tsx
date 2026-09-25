@@ -61,7 +61,7 @@ export const usePop = (delay: number, damping = 12, stiffness = 180) => {
 
 /* ── Pillars ─────────────────────────────────────────────────────────── */
 
-export type Pillar = "Rewards" | "Attendance" | "Library" | "Classroom" | "Houses" | "Raffle" | "Family" | "Office";
+export type Pillar = "Rewards" | "Attendance" | "Library" | "Classroom" | "Houses" | "Raffle" | "Family" | "Office" | "Displays" | "Badges";
 /** The four core pillars; add-ons (Houses, Raffle) are appended to the strip when featured. */
 export const PILLARS: Pillar[] = ["Rewards", "Attendance", "Library", "Classroom"];
 export const PILLAR_COLOR: Record<Pillar, string> = {
@@ -73,6 +73,8 @@ export const PILLAR_COLOR: Record<Pillar, string> = {
   Raffle: "#0891b2",
   Family: "#0ea5e9",
   Office: "#0f766e",
+  Displays: "#4f46e5",
+  Badges: "#eab308",
 };
 
 /* ── Voice-driven timeline ───────────────────────────────────────────── */
@@ -100,7 +102,12 @@ export type VideoId =
   | "office-rapid"
   | "story-office-bus"
   | "story-office-pickup"
-  | "story-rewards-vending";
+  | "story-rewards-vending"
+  | "story-maya-firstweek"
+  | "story-badge-unlocked"
+  | "story-lobby-tv"
+  | "story-principal-morning"
+  | "story-office-billing";
 
 type SceneSpec = {
   name: string;
@@ -277,7 +284,8 @@ export const SceneFade: React.FC<{
 
 /** Small "LevelUp EDU · <Pillar>" badge kept in a corner of every video. */
 export const BrandBug: React.FC<{
-  pillar: Pillar;
+  /** Omit to show just the LevelUp EDU logo (e.g. whole-platform videos). */
+  pillar?: Pillar;
   dark?: boolean;
   scale?: number;
   style?: React.CSSProperties;
@@ -316,7 +324,7 @@ export const BrandBug: React.FC<{
       >
         LevelUp EDU
       </span>
-      <span
+      {pillar ? <span
         style={{
           fontFamily: outfit,
           fontWeight: 800,
@@ -328,7 +336,7 @@ export const BrandBug: React.FC<{
         }}
       >
         {pillar}
-      </span>
+      </span> : null}
     </div>
   );
 };

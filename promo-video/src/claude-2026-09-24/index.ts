@@ -17,6 +17,20 @@ import { RaffleGameShow, raffleGameshowTimeline } from "./raffle";
 import { StoryFamilyPortal, StoryHousesAssembly, StoryLibraryCheckout, StoryRewardsPrizeDay, assemblyTimeline, familyTimeline, libraryCheckoutTimeline, prizedayTimeline } from "./storiesMore";
 import { OfficeRapidAnswers, StoryOfficeAsk, StoryOfficeBus, StoryOfficePickup, officeAskTimeline, officeBusTimeline, officePickupTimeline, officeRapidTimeline } from "./storiesOffice";
 import { StoryRewardsVending, vendingTimeline } from "./storiesVending";
+import {
+  StoryBadgeUnlocked,
+  StoryLobbyTV,
+  StoryMayaFirstWeek,
+  StoryOfficeBilling,
+  StoryPrincipalMorning,
+  TEASER_FRAMES,
+  badgeTimeline,
+  billingTimeline,
+  firstWeekTimeline,
+  lobbyTimeline,
+  makeTeaser,
+  principalTimeline,
+} from "./storiesBatch3";
 import { StoryClassroomHallPass, StoryClassroomOneTap, hallpassTimeline, onetapTimeline } from "./storiesClassroom";
 
 const TALL = { width: 1080, height: 1920 };
@@ -70,4 +84,26 @@ export const CLAUDE_2026_09_25_VIDEOS: ClaudeVideo[] = [
   { id: "Claude-2026-09-25-Tall-Family-ProudParent", component: StoryFamilyPortal, durationInFrames: familyTimeline.total, ...TALL },
   { id: "Claude-2026-09-25-Tall-Office-AskTheOffice", component: StoryOfficeAsk, durationInFrames: officeAskTimeline.total, ...TALL },
   { id: "Claude-2026-09-25-Tall-Office-EarlyPickup", component: StoryOfficePickup, durationInFrames: officePickupTimeline.total, ...TALL },
+  // Batch 3
+  { id: "Claude-2026-09-25-Story-Maya-FirstWeek", component: StoryMayaFirstWeek, durationInFrames: firstWeekTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Story-Displays-LobbyTV", component: StoryLobbyTV, durationInFrames: lobbyTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Story-AllPillars-PrincipalsMorning", component: StoryPrincipalMorning, durationInFrames: principalTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Office-Billing", component: StoryOfficeBilling, durationInFrames: billingTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Tall-Rewards-BadgeUnlocked", component: StoryBadgeUnlocked, durationInFrames: badgeTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Maya-FirstWeek", component: StoryMayaFirstWeek, durationInFrames: firstWeekTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Displays-LobbyTV", component: StoryLobbyTV, durationInFrames: lobbyTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-AllPillars-PrincipalsMorning", component: StoryPrincipalMorning, durationInFrames: principalTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Office-Billing", component: StoryOfficeBilling, durationInFrames: billingTimeline.total, ...TALL },
+];
+
+/** Made on 2026-09-25 — 6-second teasers cut from the stories above. */
+export const CLAUDE_2026_09_25_TEASERS: ClaudeVideo[] = [
+  { id: "Claude-2026-09-25-Teaser-MorningScanIn", component: makeTeaser(AttendanceMorningScanIn, scanInTimeline.at("points").start - 40, "Attendance", "CHECKED IN. +10!"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-VendingMachine", component: makeTeaser(StoryRewardsVending, vendingTimeline.at("drop").start - 40, "Rewards", "POINTS YOU CAN HOLD"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-PrizeDay", component: makeTeaser(StoryRewardsPrizeDay, prizedayTimeline.at("redeem").start, "Rewards", "REAL PRIZES"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-OneTap", component: makeTeaser(StoryClassroomOneTap, onetapTimeline.at("tap").start + 10, "Classroom", "ONE TAP = POINTS"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-BadgeUnlocked", component: makeTeaser(StoryBadgeUnlocked, badgeTimeline.at("unlock").start - 30, "Rewards", "LEVEL UP!"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-FirstWeek", component: makeTeaser(StoryMayaFirstWeek, firstWeekTimeline.at("fri").start, "Rewards", "FIRST BADGE!"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-CupRace", component: makeTeaser(HousesCupRace, housesRaceTimeline.at("race").start + housesRaceTimeline.at("race").cues[1], "Houses", "WHO WINS THE CUP?"), durationInFrames: TEASER_FRAMES, ...TALL },
+  { id: "Claude-2026-09-25-Teaser-SortingCeremony", component: makeTeaser(HousesSortingCeremony, housesSortingTimeline.at("reveal").start, "Houses", "WHICH HOUSE?"), durationInFrames: TEASER_FRAMES, ...WIDE },
 ];

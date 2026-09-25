@@ -7,7 +7,7 @@ import {
   PillarsShortPromo,
   PILLARS_PROMO_TOTAL_FRAMES,
 } from "./PillarsShortPromo";
-import { CLAUDE_2026_09_24_VIDEOS, CLAUDE_2026_09_25_VIDEOS } from "./claude-2026-09-24";
+import { CLAUDE_2026_09_24_VIDEOS, CLAUDE_2026_09_25_TEASERS, CLAUDE_2026_09_25_VIDEOS } from "./claude-2026-09-24";
 import {
   WidescreenPromo,
   WidescreenPromoSchema,
@@ -135,6 +135,20 @@ export const RemotionRoot: React.FC = () => {
 
       <Folder name="Claude-made-2026-09-25-Cartoon-Stories">
         {CLAUDE_2026_09_25_VIDEOS.map((v) => (
+          <Composition
+            key={v.id}
+            id={v.id}
+            component={v.component}
+            durationInFrames={v.durationInFrames}
+            fps={30}
+            width={v.width}
+            height={v.height}
+          />
+        ))}
+      </Folder>
+
+      <Folder name="Claude-made-2026-09-25-Teasers-6s">
+        {CLAUDE_2026_09_25_TEASERS.map((v) => (
           <Composition
             key={v.id}
             id={v.id}

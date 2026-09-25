@@ -786,6 +786,58 @@ TRACKS['vending-bounce'] = (m, len, tl) => {
   [[72, 76, 79], [76, 79, 84]].forEach((ch, i) => ch.forEach((n) => m.add(drop + 0.9 + i * 0.16, I.synth(n, i ? 0.8 : 0.14, { voices: 3, cutoff: 3500, g: 0.13, r: 0.2 }), { rev: 0.4 })));
 };
 
+/* ── Batch 3 tracks (added 2026-09-25) ── */
+
+TRACKS['firstweek-story'] = (m, len, tl) => {
+  // Gentle piano + glock that grows a little each "day", bursting on Friday.
+  const prog = [[60, 64, 67, 72], [55, 59, 62, 67], [57, 60, 64, 69], [53, 57, 60, 65]];
+  const fri = tl.scenes.fri;
+  const wed = tl.scenes.wed;
+  steps(104, len, (t, bar, s, st) => {
+    const ch = prog[bar % 4];
+    if (s % 2 === 0) m.add(t, I.epiano(ch[(s / 2) % 4] + 12, st * 2, 0.12), { pan: -0.15, rev: 0.35 });
+    if (s === 0) m.add(t, I.pluck(ch[0] - 12, st * 8, 0.45, 0.3), { rev: 0.1 });
+    if (t >= wed) {
+      if (s === 0 || s === 8) m.kick(t, 0.45);
+      if (s === 4 || s === 12) m.add(t, I.snap(0.25), { rev: 0.25 });
+      if (s % 2 === 1) m.add(t, I.shaker(0.06), { pan: 0.3 });
+    }
+    if (t >= fri && s % 4 === 0) m.add(t, I.bell(ch[(s / 4) % 4] + 24, 0.6, 0.07), { pan: 0.35, rev: 0.45 });
+    if (t >= fri && (s === 4 || s === 12)) m.add(t, I.clap(0.45), { rev: 0.3 });
+  });
+};
+
+TRACKS['lobby-lounge'] = (m, len) => {
+  // Smooth lounge: Rhodes 7ths, soft bass, brushed hats.
+  const prog = [[57, 60, 64, 67], [62, 65, 69, 72], [55, 59, 62, 65], [60, 64, 67, 71]];
+  const roots = [33, 38, 31, 36];
+  steps(92, len, (t, bar, s, st) => {
+    const ch = prog[bar % 4];
+    if (s === 0 || s === 10) ch.forEach((n, k) => m.add(t + k * 0.015, I.epiano(n, st * 6, 0.12), { rev: 0.4, pan: -0.1 + k * 0.07 }));
+    if (s === 0 || s === 6 || s === 8) m.add(t, I.synth(roots[bar % 4] + 12, st * 3, { type: 'sine', g: 0.4, a: 0.01, r: 0.08 }), { rev: 0 });
+    if (s % 2 === 0) m.add(t, I.hat(0.08), { pan: 0.3 });
+    if (s === 4 || s === 12) m.add(t, I.snare(0.1, 16), { rev: 0.3 });
+    if (s === 0 || s === 8) m.kick(t, 0.4, 0.9);
+  });
+};
+
+TRACKS['principal-march'] = (m, len, tl) => {
+  // Bright walking march that shifts key each new room.
+  const rooms = ['start', 'kiosk', 'classroom', 'library', 'office', 'end'].map((n) => tl.scenes[n] ?? 0);
+  const prog = [[60, 64, 67], [65, 69, 72], [67, 71, 74], [60, 64, 67]];
+  steps(112, len, (t, bar, s, st) => {
+    const room = rooms.filter((r) => t >= r).length - 1;
+    const up = [0, 2, 4, 5, 7, 7][Math.max(0, room)];
+    const ch = prog[bar % 4].map((n) => n + up);
+    if (s % 4 === 0) m.kick(t, 0.6);
+    if (s % 4 === 2) m.add(t, I.snare(0.2, 30), { rev: 0.2 });
+    if (s % 2 === 0) m.add(t, I.pluck(ch[0] - 24 + (s % 4 === 2 ? 7 : 0), st * 1.5, 0.45, 0.35), { rev: 0.05 });
+    if (s % 2 === 0) m.add(t, I.marimba(ch[(s / 2) % 3] + 12, st * 1.5, 0.18), { pan: -0.2, rev: 0.25 });
+    if (s === 0 || s === 8) for (const n of ch) m.add(t, I.synth(n, st * 4, { voices: 3, cutoff: 2600, env: 0.6, g: 0.07, r: 0.2 }), { rev: 0.4, pan: 0.2 });
+  });
+  for (const r of rooms.slice(1, 5)) m.add(r, I.bell(84, 0.8, 0.1), { rev: 0.5, pan: 0.3 });
+};
+
 const TRACK_VIDEO = {
   'neon-trap': 'rewards-neon',
   'bounce-house': 'rewards-countdown',
@@ -794,7 +846,7 @@ const TRACK_VIDEO = {
   'morning-ukulele': 'attendance-scan-in',
   'lofi-book': 'library-storybook',
   'marimba-morning': 'library-texts',
-  chiptune: 'classroom-arcade',
+  chiptune: ['classroom-arcade', 'story-badge-unlocked'],
   'before-after-funk': 'classroom-before-after',
   'ceremony-epic': 'houses-sorting',
   'stadium-stomp': 'houses-race',
@@ -805,10 +857,13 @@ const TRACK_VIDEO = {
   'pizza-funk': 'story-rewards-prizeday',
   'assembly-anthem': 'story-houses-assembly',
   'warm-acoustic': 'story-family-portal',
-  'office-bossa': ['story-office-ask', 'story-office-pickup'],
+  'office-bossa': ['story-office-ask', 'story-office-pickup', 'story-office-billing'],
   'office-electro': 'office-rapid',
   'bus-groove': 'story-office-bus',
   'vending-bounce': 'story-rewards-vending',
+  'firstweek-story': 'story-maya-firstweek',
+  'lobby-lounge': 'story-lobby-tv',
+  'principal-march': 'story-principal-morning',
 };
 
 /* ── sound effects ──────────────────────────────────────────────────── */

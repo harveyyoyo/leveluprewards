@@ -57,7 +57,7 @@ const READER_ARM = reachAngle({ x: READER_CENTER.x - 18 - STOP_X, y: READER_CENT
 
 export const libraryCheckoutTimeline = buildTimeline("story-library-checkout");
 
-const LibraryRoom: React.FC = () => (
+export const LibraryRoom: React.FC = () => (
   <g>
     <defs>
       <linearGradient id="libwall" x1="0" y1="0" x2="0" y2="1">
@@ -75,7 +75,7 @@ const LibraryRoom: React.FC = () => (
   </g>
 );
 
-const LibraryScreen: React.FC<{ done: boolean; t: number }> = ({ done, t }) => (
+export const LibraryScreen: React.FC<{ done: boolean; t: number }> = ({ done, t }) => (
   <g>
     <rect width={SCREEN.w} height={SCREEN.h} fill="#fffbeb" />
     <rect width={SCREEN.w} height={46} fill="#92400e" />
@@ -388,7 +388,7 @@ export const assemblyTimeline = buildTimeline("story-houses-assembly");
 /** Standings are laid out at 700x380 and scaled to fit BIG (narrow enough for tall videos). */
 const BIG = { x: 660, y: 60, w: 600, h: (380 * 600) / 700 };
 
-const Standings: React.FC<{ scores: number[]; banner?: string }> = ({ scores, banner }) => {
+export const Standings: React.FC<{ scores: number[]; banner?: string }> = ({ scores, banner }) => {
   const max = 1400;
   return (
     <g>

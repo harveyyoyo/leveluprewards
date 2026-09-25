@@ -21,13 +21,13 @@ import {
 } from "./common";
 import { Bubble, Character, Floor, LOOKS, Look, Placed, Plant, Poster, Screen, Stage, Window, walkTo } from "./cartoon";
 
-const TEAL = "#0f766e";
+export const TEAL = "#0f766e";
 const GROUND = 900;
 
-const MS_PARK: Look = { skin: "#e8b98a", hair: "#1c1917", hairStyle: "long", top: "#0f766e", pants: "#1f2937", shoes: "#111827", glasses: true, adult: true, accent: "#fde68a", lanyard: true };
-const MOM: Look = { skin: "#f1c7a5", hair: "#92400e", hairStyle: "ponytail", top: "#e11d48", pants: "#334155", shoes: "#111827", adult: true, accent: "#fecdd3" };
+export const MS_PARK: Look = { skin: "#e8b98a", hair: "#1c1917", hairStyle: "long", top: "#0f766e", pants: "#1f2937", shoes: "#111827", glasses: true, adult: true, accent: "#fde68a", lanyard: true };
+export const MOM: Look = { skin: "#f1c7a5", hair: "#92400e", hairStyle: "ponytail", top: "#e11d48", pants: "#334155", shoes: "#111827", adult: true, accent: "#fecdd3" };
 
-const typed = (text: string, frame: number, start: number, cps = 1.2) => text.slice(0, Math.max(0, Math.floor((frame - start) * cps)));
+export const typed = (text: string, frame: number, start: number, cps = 1.2) => text.slice(0, Math.max(0, Math.floor((frame - start) * cps)));
 
 const OfficeEnd: React.FC<{ tagline: string }> = ({ tagline }) => {
   const a = usePop(0, 12, 170);
@@ -50,9 +50,9 @@ const OfficeEnd: React.FC<{ tagline: string }> = ({ tagline }) => {
 
 /* ── Office set ──────────────────────────────────────────────────────── */
 
-const MON = { x: 700, y: 330, w: 420, h: 260 };
+export const MON = { x: 700, y: 330, w: 420, h: 260 };
 
-const OfficeRoom: React.FC<{ monitor: React.ReactNode }> = ({ monitor }) => (
+export const OfficeRoom: React.FC<{ monitor: React.ReactNode }> = ({ monitor }) => (
   <g>
     <rect width={1920} height={720} fill="#f0fdfa" />
     <rect y={0} width={1920} height={60} fill="#ccfbf1" />
@@ -79,7 +79,7 @@ const OfficeRoom: React.FC<{ monitor: React.ReactNode }> = ({ monitor }) => (
 );
 
 /** Front counter drawn over the lower bodies. */
-const Counter: React.FC = () => (
+export const Counter: React.FC = () => (
   <g>
     <rect x={380} y={GROUND - 250} width={1000} height={34} rx={8} fill="#115e59" />
     <rect x={400} y={GROUND - 216} width={960} height={216} fill="#14b8a6" />
@@ -91,7 +91,7 @@ const Counter: React.FC = () => (
 
 /* ── Office UI drawn on screens ──────────────────────────────────────── */
 
-const OfficeUI: React.FC<{ w: number; h: number; question: string; answer: React.ReactNode; answerIn: number }> = ({ w, h, question, answer, answerIn }) => (
+export const OfficeUI: React.FC<{ w: number; h: number; question: string; answer: React.ReactNode; answerIn: number }> = ({ w, h, question, answer, answerIn }) => (
   <g>
     <rect width={w} height={h} fill="#f8fafc" />
     <rect width={w} height={h * 0.12} fill={TEAL} />
@@ -109,7 +109,7 @@ const OfficeUI: React.FC<{ w: number; h: number; question: string; answer: React
   </g>
 );
 
-const AbsentAnswer: React.FC<{ w: number; h: number; highlight?: boolean }> = ({ w, h, highlight }) => {
+export const AbsentAnswer: React.FC<{ w: number; h: number; highlight?: boolean }> = ({ w, h, highlight }) => {
   const rows = ["Ava R. · Grade 5", "Sam T. · Grade 3", "Eli K. · Grade 7"];
   const rh = h * 0.08;
   return (
@@ -140,7 +140,7 @@ const AbsentAnswer: React.FC<{ w: number; h: number; highlight?: boolean }> = ({
  * ════════════════════════════════════════════════════════════════════ */
 
 export const officeAskTimeline = buildTimeline("story-office-ask");
-const PARK_X = 560;
+export const PARK_X = 560;
 const PARENT_X = 1560;
 
 const AskWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
