@@ -4,6 +4,7 @@ import {
   canonicalPortalRedirectUrl,
   isPortalHostname,
   portalHostRedirectPath,
+  portalHostToCanonicalRedirectUrl,
 } from '@/lib/portalRouting';
 import {
   canonicalOfficeRedirectUrl,
@@ -65,6 +66,22 @@ export async function middleware(request: NextRequest) {
   );
   if (officeToPortalUrl) {
     const redirect = NextResponse.redirect(officeToPortalUrl);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
+
+  // Full page loads only. Next.js hides its RSC headers from middleware, so use the browser's
+  // Sec-Fetch-Dest: in-app fetches (`empty`), frames, and form actions on a page already open on
+  // the old portal host keep working there until it reloads. Older browsers omit the header.
+  const fetchDest = request.headers.get('sec-fetch-dest');
+  const isPageLoad =
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    (!fetchDest || fetchDest === 'document');
+  const portalHostUrl = isPageLoad
+    ? portalHostToCanonicalRedirectUrl(pathname, search, forwardedHost, request.nextUrl.protocol)
+    : null;
+  if (portalHostUrl) {
+    const redirect = NextResponse.redirect(portalHostUrl);
     applySecurityHeaders(redirect);
     return redirect;
   }

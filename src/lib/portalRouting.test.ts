@@ -5,6 +5,7 @@ import {
   isLocalDevHost,
   isPortalHostname,
   portalHostRedirectPath,
+  portalHostToCanonicalRedirectUrl,
 } from './portalRouting';
 
 describe('portal routing', () => {
@@ -28,6 +29,8 @@ describe('portal routing', () => {
     expect(portalHostRedirectPath('/schoolabc/portal')).toBeNull();
     expect(portalHostRedirectPath('/portal')).toBeNull();
     expect(portalHostRedirectPath('/login')).toBeNull();
+    expect(portalHostRedirectPath('/contact')).toBeNull();
+    expect(portalHostRedirectPath('/office-bootstrap')).toBeNull();
     expect(portalHostRedirectPath('/api/health')).toBeNull();
   });
 
@@ -102,6 +105,59 @@ describe('portal routing', () => {
       ).toBeNull();
       expect(
         canonicalPortalRedirectUrl('/yeshiva/portal', '', 'portal.leveluprewards.app', 'https:'),
+      ).toBeNull();
+      expect(
+        portalHostToCanonicalRedirectUrl('/yeshiva', '', 'portal.leveluprewards.app', 'https:'),
+      ).toBeNull();
+    } finally {
+      if (previous === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previous;
+      }
+    }
+  });
+
+  it('sends old portal-host links to the same page on the main site', () => {
+    const previous = process.env.PORTAL_CANONICAL_HOST;
+    process.env.PORTAL_CANONICAL_HOST = 'leveluprewards.app';
+    try {
+      const fromPortalHost = (pathname: string, search = '') =>
+        portalHostToCanonicalRedirectUrl(
+          pathname,
+          search,
+          'portal.leveluprewards.app',
+          'https:',
+        )?.toString();
+
+      expect(fromPortalHost('/')).toBe('https://leveluprewards.app/portal');
+      expect(fromPortalHost('/yeshiva')).toBe('https://leveluprewards.app/yeshiva/portal');
+      expect(fromPortalHost('/yeshiva/portal', '?tab=print')).toBe(
+        'https://leveluprewards.app/yeshiva/portal?tab=print',
+      );
+      expect(fromPortalHost('/yeshiva/office/teachers')).toBe(
+        'https://leveluprewards.app/yeshiva/office/teachers',
+      );
+      expect(fromPortalHost('/login', '?school=yeshiva')).toBe(
+        'https://leveluprewards.app/login?school=yeshiva',
+      );
+      expect(fromPortalHost('/contact')).toBe('https://leveluprewards.app/contact');
+
+      expect(fromPortalHost('/api/health')).toBeUndefined();
+      expect(fromPortalHost('/sw.js')).toBeUndefined();
+      expect(
+        portalHostToCanonicalRedirectUrl('/yeshiva/portal', '', 'leveluprewards.app', 'https:'),
+      ).toBeNull();
+      expect(
+        portalHostToCanonicalRedirectUrl('/yeshiva', '', 'portal.localhost:3000', 'http:'),
+      ).toBeNull();
+
+      // The main site itself no longer bounces sign-in and school pages elsewhere.
+      expect(
+        canonicalPortalRedirectUrl('/login', '', 'leveluprewards.app', 'https:'),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl('/yeshiva/portal', '', 'leveluprewards.app', 'https:'),
       ).toBeNull();
     } finally {
       if (previous === undefined) {

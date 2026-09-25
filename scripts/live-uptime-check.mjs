@@ -14,6 +14,7 @@ const schoolId = (process.env.LIVE_UPTIME_SCHOOL_ID || process.env.LIVE_AUTH_SCH
 const { passcode, firebaseApiKey } = liveAuthConfig();
 const timeoutMs = Number(process.env.LIVE_UPTIME_TIMEOUT_MS || 15000);
 const portalMode = (process.env.LIVE_UPTIME_PORTAL_MODE || 'any').trim().toLowerCase();
+const oldPortalUrl = (process.env.LIVE_UPTIME_OLD_PORTAL_URL || '').trim().replace(/\/+$/, '');
 
 function fail(message, detail = '') {
   console.error(`[live-uptime] ${message}`);
@@ -127,6 +128,25 @@ async function checkPortal() {
   console.log(`[live-uptime] /${schoolId}/portal returned ${response.status}.`);
 }
 
+/** Old portal-subdomain links (bookmarks, QR codes) should open the school's page on the main site. */
+async function checkOldPortalLink() {
+  if (!oldPortalUrl) return;
+  const oldLink = `${oldPortalUrl}/${schoolId}`;
+  const response = await fetchWithTimeout(oldLink, { redirect: 'manual' });
+  const location = response.headers.get('location') || '';
+  const target = location ? new URL(location, oldLink) : null;
+  const expected = new URL(`${baseUrl}/${schoolId}/portal`);
+  if (
+    !(response.status >= 300 && response.status < 400) ||
+    !target ||
+    target.host !== expected.host ||
+    target.pathname !== expected.pathname
+  ) {
+    fail(`${oldLink} should forward to ${expected}. HTTP ${response.status}`, location);
+  }
+  console.log(`[live-uptime] ${oldLink} forwards to ${target}.`);
+}
+
 async function checkSchoolAccessApi() {
   const idToken = await createAnonymousIdToken(firebaseApiKey);
   const { response, body } = await verifySchoolAccessApiRoute({
@@ -146,4 +166,5 @@ await checkHealth();
 await checkSchoolAccessApi();
 await checkLogin();
 await checkPortal();
+await checkOldPortalLink();
 console.log('[live-uptime] Uptime checks passed.');

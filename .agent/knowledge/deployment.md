@@ -8,6 +8,19 @@ Production and PR preview workflows share the `firebase-frameworks-studio-127307
 
 Firebase CLI 14.27.0 has returned exit code 0 after `unable to queue the operation` / `failed to update function`, without publishing a Hosting release. Both workflows now run `scripts/assert-firebase-release.cjs` against the CLI log: a completed upload is insufficient, and a confirmed Hosting release is required. Check the actual served page after deployment before reporting a UI update as live.
 
+## Main site address (no `portal.` prefix)
+
+Owner preference (2026-09-25): the live site is `https://leveluprewards.app`; links must not start
+with `portal.`. `deploy.yml` sets `PORTAL_CANONICAL_HOST` / `NEXT_PUBLIC_PORTAL_CANONICAL_HOST` to
+`leveluprewards.app`, so links the app builds (school portal, sign-in, office hand-off) use it.
+
+`portal.leveluprewards.app` stays attached in Firebase Hosting only so old bookmarks, QR codes and
+flyers keep working: middleware forwards page loads there to the same page on the main site
+(`/` → `/portal`, `/{school}` → `/{school}/portal`). API calls and in-app navigation from pages
+already open on the old address are not forwarded, so open kiosks keep working until they reload.
+Moving hosts changes the browser origin, so each device signs in to the school once more after the
+switch. The post-deploy uptime check (`LIVE_UPTIME_OLD_PORTAL_URL`) verifies the forward.
+
 ## Pre-Deployment Checklist
 - [ ] **Login Functionality**: Especially ensure that accounts can log in successfully (School, Teacher, Student, Admin).
 - [ ] **Core Portals**: Verify that the Student Kiosk, Teacher Portal, and Admin Portal are accessible.

@@ -72,8 +72,10 @@ jobs:
               printf 'AUTH_GATE_SIGNING_SECRET=%s\n' "$AUTH_GATE_SIGNING_SECRET"
             fi
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
-            printf 'PORTAL_CANONICAL_HOST=portal.leveluprewards.app\n'
-            printf 'NEXT_PUBLIC_PORTAL_CANONICAL_HOST=portal.leveluprewards.app\n'
+            # Main site address (owner preference: no `portal.` prefix). Old
+            # portal.leveluprewards.app links forward to the same page here.
+            printf 'PORTAL_CANONICAL_HOST=leveluprewards.app\n'
+            printf 'NEXT_PUBLIC_PORTAL_CANONICAL_HOST=leveluprewards.app\n'
           } > .env
           if [ -z "$AUTH_GATE_SIGNING_SECRET" ]; then
             echo '::warning::AUTH_GATE_SIGNING_SECRET not set — school gate cookies will not mint in production.'
@@ -116,6 +118,7 @@ jobs:
         run: npm run test:live-uptime
         env:
           LIVE_UPTIME_BASE_URL: https://leveluprewards.app
+          LIVE_UPTIME_OLD_PORTAL_URL: https://portal.leveluprewards.app
           LIVE_UPTIME_SCHOOL_ID: yeshiva
           LIVE_UPTIME_PORTAL_MODE: any
 
@@ -129,7 +132,7 @@ jobs:
       - name: Run live School Office smoke against production
         run: npm run test:live-office
         env:
-          OFFICE_BASE_URL: https://portal.leveluprewards.app
+          OFFICE_BASE_URL: https://leveluprewards.app
           OFFICE_SCHOOL_ID: yeshiva
           OFFICE_MAIN_SITE_PATH: '1'
 

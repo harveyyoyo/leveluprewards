@@ -209,7 +209,7 @@ export function canonicalOfficeRedirectUrl(
 
 /**
  * When the legacy office subdomain hits the rewards/portal app, send users to the
- * canonical portal host with `/{school}/office/…` paths (owner preference).
+ * canonical portal host (the main site) with `/{school}/office/…` paths (owner preference).
  */
 export function officeHostToPortalRedirectUrl(
   pathname: string,
@@ -224,7 +224,7 @@ export function officeHostToPortalRedirectUrl(
   if (!portalHost) {
     const officeHost = normalizeHost(rawCurrentHost);
     if (officeHost.startsWith('office.')) {
-      portalHost = `portal.${officeHost.slice('office.'.length)}`;
+      portalHost = officeHost.slice('office.'.length);
     }
   }
   if (!portalHost) return null;

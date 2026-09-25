@@ -277,7 +277,7 @@ export const MyComposition = () => {
                   border: "1px solid rgba(255, 255, 255, 0.06)"
                 }}
               >
-                portal.leveluprewards.app
+                leveluprewards.app
               </div>
               <div style={{ width: "62px" }} />
             </div>

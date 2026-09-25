@@ -1,10 +1,10 @@
 # School Office subdomain (`office.leveluprewards.app`) — legacy redirect only
 
-**Owner preference:** School Office lives on the main portal site at `https://portal.leveluprewards.app/{school}/office`. No separate subdomain is required.
+**Owner preference:** School Office lives on the main site at `https://leveluprewards.app/{school}/office`. No separate subdomain is required, and no `portal.` prefix either (see "Main site address" in `deployment.md`).
 
-**Live bookmark:** `https://portal.leveluprewards.app/{school}/office` (example: `https://portal.leveluprewards.app/yeshiva/office/teachers`).
+**Live bookmark:** `https://leveluprewards.app/{school}/office` (example: `https://leveluprewards.app/yeshiva/office/teachers`).
 
-If someone opens the old `office.leveluprewards.app` address (or a short path like `/yeshiva/teachers`), the rewards app middleware **301/302 redirects** to the matching portal URL with `/office` in the path.
+If someone opens the old `office.leveluprewards.app` address (or a short path like `/yeshiva/teachers`), the rewards app middleware **redirects** to the matching main-site URL with `/office` in the path. Old `portal.leveluprewards.app` links forward the same way.
 
 Use the rest of this doc only if you later want a dedicated office hostname again.
 
@@ -29,5 +29,5 @@ Use the rest of this doc only if you later want a dedicated office hostname agai
 
 ## Default (main site, no subdomain env)
 
-- Live bookmark: `https://portal.leveluprewards.app/{school}/office`
-- No redirect away from portal host; office links stay on the same site.
+- Live bookmark: `https://leveluprewards.app/{school}/office`
+- No redirect to an office host; office links stay on the main site.

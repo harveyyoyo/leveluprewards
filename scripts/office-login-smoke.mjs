@@ -2,11 +2,11 @@
  * Smoke test: School Office entry URL (main site or optional office subdomain).
  * Usage:
  *   node scripts/office-login-smoke.mjs
- *   OFFICE_BASE_URL=https://portal.leveluprewards.app OFFICE_SCHOOL_ID=yeshiva node scripts/office-login-smoke.mjs
+ *   OFFICE_BASE_URL=https://leveluprewards.app OFFICE_SCHOOL_ID=yeshiva node scripts/office-login-smoke.mjs
  */
-const officeBase = (process.env.OFFICE_BASE_URL || 'https://portal.leveluprewards.app').replace(/\/+$/, '');
+const officeBase = (process.env.OFFICE_BASE_URL || 'https://leveluprewards.app').replace(/\/+$/, '');
 const schoolId = (process.env.OFFICE_SCHOOL_ID || 'yeshiva').trim().toLowerCase();
-const portalBase = (process.env.PORTAL_BASE_URL || 'https://portal.leveluprewards.app').replace(/\/+$/, '');
+const portalBase = (process.env.PORTAL_BASE_URL || 'https://leveluprewards.app').replace(/\/+$/, '');
 const useMainSiteOfficePath = process.env.OFFICE_MAIN_SITE_PATH !== '0';
 
 function officeSchoolUrl() {
@@ -41,8 +41,8 @@ async function main() {
     const loginUrl = new URL(location, officeBase);
     ok(`Redirect → ${loginUrl.toString()}`);
 
-    if (!loginUrl.hostname.includes('portal.') && !loginUrl.pathname.includes('/login')) {
-      fail('Expected portal login redirect', location);
+    if (!loginUrl.pathname.includes('/login')) {
+      fail('Expected login redirect', location);
     }
 
     const next = loginUrl.searchParams.get('next') || '';

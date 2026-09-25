@@ -143,7 +143,7 @@ describe('office routing', () => {
     }
   });
 
-  it('derives portal host from office host when PORTAL_CANONICAL_HOST is unset', () => {
+  it('derives the main site from office host when PORTAL_CANONICAL_HOST is unset', () => {
     const previousPortal = process.env.PORTAL_CANONICAL_HOST;
     const previousPublic = process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
     delete process.env.PORTAL_CANONICAL_HOST;
@@ -156,7 +156,7 @@ describe('office routing', () => {
           'office.leveluprewards.app',
           'https:',
         )?.toString(),
-      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+      ).toBe('https://leveluprewards.app/yeshiva/office/teachers');
     } finally {
       if (previousPortal === undefined) {
         delete process.env.PORTAL_CANONICAL_HOST;

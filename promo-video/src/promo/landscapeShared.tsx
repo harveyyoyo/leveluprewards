@@ -516,7 +516,7 @@ export const LandscapeBrowser: React.FC<{
           padding: "5px 0",
         }}
       >
-        portal.leveluprewards.app
+        leveluprewards.app
       </div>
     </div>
     <div
