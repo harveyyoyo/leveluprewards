@@ -17,6 +17,7 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { AutoCircularToggles } from '@/components/admin/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
+import { pickReadableOn } from '@/lib/themeContrast';
 
 export function AdminBadgesTab(props: any) {
   const {
@@ -112,10 +113,21 @@ export function AdminBadgesTab(props: any) {
                   </div>
                   <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 bg-background"
-                      style={{ borderColor: b.accentColor || undefined }}
+                      className={cn('w-8 h-8 rounded-lg flex items-center justify-center border shrink-0', !b.accentColor && 'bg-background')}
+                      style={
+                        b.accentColor
+                          ? // Admins pick this accent from a free-form color picker, so it
+                            // can land anywhere from near-white to near-black. Rendering the
+                            // icon in that same color against the fixed `bg-background` (which
+                            // itself is near-white in light mode / near-black in dark mode)
+                            // could make the icon disappear. Using the accent as the swatch's
+                            // own background and picking black/white for the icon keeps it
+                            // readable regardless of theme or the chosen color.
+                            { backgroundColor: b.accentColor, borderColor: b.accentColor }
+                          : undefined
+                      }
                     >
-                      <DynamicIcon name={b.icon} className="w-4 h-4" style={b.accentColor ? { color: b.accentColor } : undefined} />
+                      <DynamicIcon name={b.icon} className="w-4 h-4" style={b.accentColor ? { color: pickReadableOn(b.accentColor) } : undefined} />
                     </div>
                     <span className="truncate text-sm font-bold">{b.name}</span>
                   </div>

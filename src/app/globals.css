@@ -1590,6 +1590,12 @@ html[data-color-scheme="sapphire"] body {
 /* Dark mode variations for themes */
 .dark[data-color-scheme="default"] {
   --background: 220 45% 7%;
+  /* Without this override, --foreground falls back to the light-mode
+     scheme's dark-navy value (222 47% 11%) because [data-color-scheme="default"]
+     and .dark carry equal selector specificity and the light block appears
+     later in this file — leaving body text at ~1:1 contrast against the
+     near-black background above. */
+  --foreground: 210 40% 98%;
   --card: 222 47% 11%;
   --card-foreground: 210 40% 98%;
   --border: 217 38% 22%;

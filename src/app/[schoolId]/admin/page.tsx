@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/dialog";
 import { StudentActivityModal } from '@/components/student/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
+import { pickReadableOn } from '@/lib/themeContrast';
 import { Switch } from '@/components/ui/switch';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
@@ -2966,7 +2967,20 @@ function AdminDashboardInner() {
               <DialogTitle className="flex items-center gap-2">
                 {badgeEarnersFor && (
                   <>
-                    <Award className="h-5 w-5" style={badgeEarnersFor.accentColor ? { color: badgeEarnersFor.accentColor } : undefined} />
+                    {badgeEarnersFor.accentColor ? (
+                      // Free-form admin color picker: rendering the icon directly in that
+                      // color against the dialog's theme background could make it disappear
+                      // (pale accent in light mode, near-black accent in dark mode). A small
+                      // solid swatch with pickReadableOn keeps it visible either way.
+                      <span
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: badgeEarnersFor.accentColor }}
+                      >
+                        <Award className="h-4 w-4" style={{ color: pickReadableOn(badgeEarnersFor.accentColor) }} />
+                      </span>
+                    ) : (
+                      <Award className="h-5 w-5" />
+                    )}
                     Who earned &quot;{badgeEarnersFor.name}&quot;
                   </>
                 )}

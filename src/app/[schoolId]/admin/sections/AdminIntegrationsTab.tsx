@@ -45,7 +45,10 @@ export function AdminIntegrationsTab() {
     <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 px-4 py-3">
       <span className="font-semibold text-sm">{label}</span>
       {configured ? (
-        <Badge className="bg-emerald-600 hover:bg-emerald-600">Credentials present</Badge>
+        // Explicit text-white: Badge's default text is `text-primary-foreground`,
+        // which is dark in several color schemes — against this fixed emerald
+        // background that mismatch reads as low as ~3.6:1.
+        <Badge className="bg-emerald-700 text-white hover:bg-emerald-700">Credentials present</Badge>
       ) : (
         <Badge variant="secondary">Not configured</Badge>
       )}

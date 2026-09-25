@@ -118,7 +118,10 @@ const HERO_SHOWCASE_ITEMS = [
     width: 640,
     height: 400,
     caption: 'Define custom rewards & privileges',
-    captionClassName: 'text-[#c9a227]',
+    // #c9a227 (brand gold) at full text weight reads ~2.3:1 against the white/
+    // cream card behind this caption — darkened while keeping the same hue/
+    // saturation so it stays recognizably gold at a readable ~5.2:1.
+    captionClassName: 'text-[#806819]',
     withPulse: false,
   },
   {
@@ -136,7 +139,10 @@ const HERO_SHOWCASE_ITEMS = [
     width: 640,
     height: 400,
     caption: 'Celebrate wins on the Hall of Fame',
-    captionClassName: 'text-[#c9a227]',
+    // #c9a227 (brand gold) at full text weight reads ~2.3:1 against the white/
+    // cream card behind this caption — darkened while keeping the same hue/
+    // saturation so it stays recognizably gold at a readable ~5.2:1.
+    captionClassName: 'text-[#806819]',
     withPulse: false,
   },
   {
@@ -154,7 +160,10 @@ const HERO_SHOWCASE_ITEMS = [
     width: 640,
     height: 400,
     caption: 'Rewards Shop: Set prizes, points & stock in seconds',
-    captionClassName: 'text-[#c9a227]',
+    // #c9a227 (brand gold) at full text weight reads ~2.3:1 against the white/
+    // cream card behind this caption — darkened while keeping the same hue/
+    // saturation so it stays recognizably gold at a readable ~5.2:1.
+    captionClassName: 'text-[#806819]',
     withPulse: false,
   },
 ] as const;
@@ -380,7 +389,7 @@ export function ShowcaseLanding() {
             </motion.div>
             <div className="leading-tight">
               <span className="block font-bold tracking-tight text-[#102a45] text-base md:text-lg">
-                levelUp <span className="text-[#c9a227] font-semibold text-xs uppercase ml-1 px-1.5 py-0.5 bg-[#c9a227]/10 rounded">EDU</span>
+                levelUp <span className="text-[#806819] font-semibold text-xs uppercase ml-1 px-1.5 py-0.5 bg-[#c9a227]/10 rounded">EDU</span>
               </span>
               <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-[#1a2e42]/50">
                 {APP_NAME} Rewards
@@ -656,7 +665,7 @@ export function ShowcaseLanding() {
           
           <div className="mx-auto max-w-6xl px-6 relative z-10">
             <div className="text-center max-w-3xl mx-auto mb-16">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#c9a227]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#c9a227]">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#c9a227]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#806819]">
                 <Sparkles className="h-3.5 w-3.5 fill-current animate-spin" style={{ animationDuration: '6s' }} />
                 Interactive Sandbox
               </div>
@@ -777,7 +786,7 @@ export function ShowcaseLanding() {
                     >
                       <span className="absolute -top-1 -right-1 text-slate-200 group-hover:text-[#c9a227]/20 transition-colors font-serif font-black text-3xl">50</span>
                       <span className="block text-xs font-bold text-[#102a45]">School Store Coupon</span>
-                      <span className="block text-[11px] text-[#c9a227] font-extrabold mt-1">50 credits</span>
+                      <span className="block text-[11px] text-[#806819] font-extrabold mt-1">50 credits</span>
                     </button>
 
                     <button
@@ -854,7 +863,7 @@ export function ShowcaseLanding() {
                       onClick={() => handleAwardPoints(15, 'Integrity')}
                       className="group flex flex-col items-center justify-center p-3 rounded-2xl border border-amber-500/20 bg-amber-50/40 hover:bg-amber-50 hover:border-amber-500 text-center transition-all duration-300 hover:scale-[1.03]"
                     >
-                      <span className="text-lg font-black text-[#c9a227]">+15 Credits</span>
+                      <span className="text-lg font-black text-[#806819]">+15 Credits</span>
                       <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#1a2e42]/60 mt-0.5">Integrity</span>
                     </button>
 
@@ -1443,7 +1452,10 @@ export function ShowcaseLanding() {
                 <span className="text-xl font-bold text-[#102a45]">{role}</span>
                 <span className="text-sm font-medium text-[#1a2e42]/80 leading-relaxed">{detail}</span>
                 <span className="inline-flex sm:justify-end">
-                  <span className="rounded-full bg-[#c9a227]/10 border border-[#c9a227]/20 px-3 py-1 text-xs font-bold text-[#102a45] group-hover:bg-[#c9a227] group-hover:text-white transition-colors">
+                  {/* group-hover:text-white read ~2.4:1 against the solid gold hover
+                      background — nearly unreadable. Navy stays readable on both the
+                      pale default tint and the solid gold hover state (~6:1). */}
+                  <span className="rounded-full bg-[#c9a227]/10 border border-[#c9a227]/20 px-3 py-1 text-xs font-bold text-[#102a45] group-hover:bg-[#c9a227] transition-colors">
                     {highlight}
                   </span>
                 </span>

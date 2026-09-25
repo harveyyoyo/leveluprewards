@@ -131,8 +131,14 @@ function statusBadge(headlineStatus: 'blocked' | 'limited' | 'active') {
         </Badge>
       );
     default:
+      // Explicit text-white: Badge's default variant text color is
+      // `text-primary-foreground`, which is dark in several color schemes
+      // (sky/mint/peach/sunset/coral) — dark text over this fixed emerald
+      // background read as low as ~3.6:1 (below AA for this small
+      // uppercase label) once bg-emerald-600 overrode the scheme's own
+      // primary color. Pinning both ends avoids the scheme-dependent mismatch.
       return (
-        <Badge className="uppercase tracking-wider text-[10px] bg-emerald-600 hover:bg-emerald-600">
+        <Badge className="uppercase tracking-wider text-[10px] bg-emerald-700 text-white hover:bg-emerald-700">
           Gates open
         </Badge>
       );

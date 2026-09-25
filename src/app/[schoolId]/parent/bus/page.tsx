@@ -278,7 +278,11 @@ export default function TransportParentPage() {
                 {status.buses.map((bus) => {
                   const progress = bus.routeProgress;
                   const progressPercent = bus.state === 'arrived' || bus.state === 'ended' ? 100 : progress?.percent ?? 0;
-                  const statusTone = bus.stale ? 'bg-amber-100 text-amber-900' : bus.state === 'delayed' ? 'bg-amber-100 text-amber-900' : bus.state === 'on_way' ? 'bg-white/20 text-white' : 'bg-white/20 text-white';
+                  // 'on_way'/default previously used bg-white/20 text-white — a
+                  // translucent white pill read as low as ~2.3:1 against the
+                  // teal/cyan/sky gradient header behind it. A near-solid white
+                  // pill with dark teal text keeps ~8:1+ on every gradient stop.
+                  const statusTone = bus.stale ? 'bg-amber-100 text-amber-900' : bus.state === 'delayed' ? 'bg-amber-100 text-amber-900' : bus.state === 'on_way' ? 'bg-white/90 text-teal-900' : 'bg-white/90 text-teal-900';
                   return (
                     <article key={bus.routeId} className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 shadow-2xl shadow-teal-950/10 backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/85">
                       <div className="relative overflow-hidden bg-gradient-to-br from-teal-700 via-cyan-600 to-sky-500 p-5 text-white sm:p-6">
@@ -286,9 +290,12 @@ export default function TransportParentPage() {
                         <div className="absolute -bottom-20 left-20 h-36 w-36 rounded-full bg-sky-300/10" aria-hidden />
                         <div className="relative flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/75">{runLabel(bus.run)}</p>
+                            {/* Header gradient runs teal-700 -> cyan-600 -> sky-500; near
+                                the sky-500 end, white text below full opacity drops under
+                                3:1, so these two labels stay close to full white. */}
+                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/90">{runLabel(bus.run)}</p>
                             <h2 className="mt-1 truncate text-3xl font-black tracking-tight">{bus.busLabel}</h2>
-                            <p className="mt-1 text-sm text-white/80">Here is the latest from your school.</p>
+                            <p className="mt-1 text-sm text-white/90">Here is the latest from your school.</p>
                           </div>
                           <span className={cn('flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black shadow-sm', statusTone)}>
                             <span className={cn('h-2 w-2 rounded-full', bus.stale || bus.state === 'delayed' ? 'bg-amber-500' : 'bg-emerald-300 motion-safe:animate-pulse')} />

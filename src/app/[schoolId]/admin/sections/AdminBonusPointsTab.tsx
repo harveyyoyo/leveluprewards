@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import DynamicIcon from '@/components/DynamicIcon';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
+import { pickReadableOn } from '@/lib/themeContrast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
@@ -215,13 +216,23 @@ export function AdminBonusPointsTab(props: any) {
                       {/* Milestone Name & Icon */}
                       <div className="flex min-w-0 items-center gap-2.5">
                         <div
-                          className="size-8 rounded-lg flex items-center justify-center border shrink-0 bg-background"
-                          style={{ borderColor: ach.accentColor || undefined }}
+                          className={`size-8 rounded-lg flex items-center justify-center border shrink-0${ach.accentColor ? '' : ' bg-background'}`}
+                          style={
+                            ach.accentColor
+                              ? // Free-form admin color picker: rendering the icon in that
+                                // same color against the fixed bg-background could make it
+                                // disappear (e.g. a pale accent in light mode, a near-black
+                                // one in dark mode). Using the accent as the swatch's own
+                                // background and picking black/white for the icon keeps it
+                                // readable regardless of theme.
+                                { backgroundColor: ach.accentColor, borderColor: ach.accentColor }
+                              : undefined
+                          }
                         >
                           <DynamicIcon
                             name={ach.icon}
                             className="w-4 h-4"
-                            style={ach.accentColor ? { color: ach.accentColor } : undefined}
+                            style={ach.accentColor ? { color: pickReadableOn(ach.accentColor) } : undefined}
                           />
                         </div>
                         <div className="min-w-0">
