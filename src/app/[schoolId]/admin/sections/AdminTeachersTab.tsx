@@ -321,7 +321,7 @@ export function AdminTeachersTab({
               ariaLabel="About classroom teachers"
             />
           </div>
-          <AdminRecordListScroll className="[&>ul]:min-w-[820px]">
+          <AdminRecordListScroll className={classroomTeachers.length ? '[&>ul]:min-w-[820px]' : undefined}>
           <ul className="space-y-2">
             {classroomTeachers.length > 0 ? (
               <AdminRecordListHeader
@@ -695,7 +695,7 @@ export function AdminTeachersTab({
               ariaLabel="About principals and division heads"
             />
           </div>
-          <AdminRecordListScroll className="[&>ul]:min-w-[820px]">
+          <AdminRecordListScroll className={leadershipStaff.length ? '[&>ul]:min-w-[820px]' : undefined}>
           <ul className="space-y-2">
             {leadershipStaff.length > 0 ? (
               <AdminRecordListHeader
@@ -811,7 +811,7 @@ export function AdminTeachersTab({
               ariaLabel="About desk staff"
             />
           </div>
-          <AdminRecordListScroll className="[&>ul]:min-w-[820px]">
+          <AdminRecordListScroll className={staffAccounts?.length ? '[&>ul]:min-w-[820px]' : undefined}>
           <ul className="space-y-2">
             {staffAccounts && staffAccounts.length > 0 ? (
               <AdminRecordListHeader

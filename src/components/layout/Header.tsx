@@ -564,7 +564,7 @@ export default function Header() {
               </DropdownMenu>
             )}
 
-            {schoolId && !mobileDisplay ? (
+            {schoolId && !mobileDisplay && !isSchoolGateSession ? (
               <Link
                 href={webHomeHref}
                 data-home-button="true"
@@ -577,9 +577,9 @@ export default function Header() {
               </Link>
             ) : null}
 
-            {schoolId ? <RewardsInteractiveGuide /> : null}
+            {schoolId ? <span className="hidden min-[360px]:contents"><RewardsInteractiveGuide /></span> : null}
 
-            <StaffPortalLayoutToggle variant="ghost" />
+            <span className="hidden min-[360px]:contents"><StaffPortalLayoutToggle variant="ghost" /></span>
 
             <SettingsModal />
           </div>
@@ -615,7 +615,7 @@ export default function Header() {
         >
       <div
         className={cn(
-          'grid min-h-20 min-w-0 w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]',
+          'grid min-h-20 min-w-0 w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:gap-x-3 sm:px-5 sm:py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]',
           adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(),
         )}
       >
@@ -706,7 +706,7 @@ export default function Header() {
               href={webHomeHref}
               data-home-button="true"
               data-intro-tour="header-portal-home"
-              className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center shrink-0"
+              className="flex shrink-0 items-center rounded-xl p-2 text-slate-500 transition-all hover:bg-primary/10 hover:text-primary active:scale-90 max-[359px]:hidden"
               aria-label="Home"
               title="Home"
             >
@@ -714,9 +714,9 @@ export default function Header() {
             </Link>
           ) : null}
 
-          {schoolId ? <RewardsInteractiveGuide /> : null}
+          {schoolId ? <span className="max-[359px]:hidden"><RewardsInteractiveGuide /></span> : null}
 
-          <StaffPortalLayoutToggle variant="ghost" />
+          <span className="max-[359px]:hidden"><StaffPortalLayoutToggle variant="ghost" /></span>
 
           <SettingsModal />
         </div>
