@@ -718,6 +718,74 @@ TRACKS['warm-acoustic'] = (m, len) => {
   });
 };
 
+/* ── Office + vending tracks (added 2026-09-25) ── */
+
+TRACKS['office-bossa'] = (m, len) => {
+  // Relaxed bossa nova: nylon-ish plucks, rim clicks, soft shaker.
+  const prog = [[62, 65, 69, 72], [55, 59, 62, 65], [60, 64, 67, 71], [57, 61, 64, 67]];
+  const roots = [38, 43, 36, 45];
+  const comp = [0, 3, 6, 10, 13];
+  steps(100, len, (t, bar, s, st) => {
+    const ch = prog[bar % 4];
+    if (s === 0 || s === 6 || s === 8 || s === 14) m.add(t, I.pluck(roots[bar % 4] + (s === 6 || s === 14 ? 7 : 0), st * 3, 0.5, 0.35), { rev: 0.08 });
+    if (comp.includes(s)) ch.forEach((n, k) => m.add(t + k * 0.008, I.pluck(n, st * 1.6, 0.14, 0.7), { pan: -0.2 + k * 0.1, rev: 0.3 }));
+    if ([3, 6, 10, 13].includes(s)) m.add(t, I.snap(0.18), { rev: 0.2 });
+    m.add(t, I.shaker(0.06), { pan: 0.3 });
+    const mel = [76, 0, 74, 72, 0, 71, 72, 0];
+    if (bar % 2 === 1 && s % 2 === 0 && mel[s / 2]) m.add(t, I.synth(mel[s / 2], st * 1.8, { type: 'sine', a: 0.02, g: 0.1, vib: 0.006, r: 0.12 }), { pan: 0.3, rev: 0.45 });
+  });
+};
+
+TRACKS['office-electro'] = (m, len) => {
+  // Clean modern tech pulse: plucky arps, sub, tight claps.
+  const prog = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 65]];
+  steps(118, len, (t, bar, s, st) => {
+    const ch = prog[bar % 4];
+    if (s % 4 === 0) m.kick(t, 0.85);
+    if (s === 4 || s === 12) m.add(t, I.clap(0.55), { rev: 0.3 });
+    if (s % 2 === 1) m.add(t, I.hat(0.12), { pan: 0.3 });
+    m.add(t, I.synth(ch[s % 4] + 12, st * 0.8, { type: 'square', duty: 0.3, cutoff: 2600, env: 1, g: 0.08, a: 0.002, d: 0.08, s: 0.3, r: 0.03 }), { sc: true, pan: -0.25, rev: 0.25 });
+    if (s % 4 === 2) m.add(t, I.synth(ch[0] - 12, st * 1.6, { type: 'sine', g: 0.45, a: 0.005, r: 0.05 }), { rev: 0 });
+  });
+};
+
+TRACKS['bus-groove'] = (m, len) => {
+  // Rolling, cheerful road-trip groove.
+  const prog = [[60, 64, 67], [65, 69, 72], [67, 71, 74], [65, 69, 72]];
+  const roots = [36, 41, 43, 41];
+  steps(124, len, (t, bar, s, st) => {
+    const ch = prog[bar % 4];
+    if (s === 0 || s === 8 || s === 11) m.kick(t, 0.7);
+    if (s === 4 || s === 12) m.add(t, I.snare(0.35), { rev: 0.2 });
+    if (s % 2 === 0) m.add(t, I.hat(0.14, s % 8 === 6), { pan: 0.3 });
+    if (s % 2 === 0) m.add(t, I.pluck(roots[bar % 4] + (s % 4 === 2 ? 12 : 0), st * 1.5, 0.5, 0.35), { rev: 0.05 });
+    if ([2, 6, 10, 14].includes(s)) ch.forEach((n) => m.add(t, I.epiano(n + 12, st * 1.2, 0.1), { sc: true, rev: 0.25 }));
+    const honk = [72, 76, 79, 76];
+    if (bar % 4 === 3 && s % 4 === 0) m.add(t, I.synth(honk[s / 4], st * 3, { type: 'square', duty: 0.4, cutoff: 2200, g: 0.1, r: 0.05 }), { rev: 0.3, pan: 0.2 });
+  });
+};
+
+TRACKS['vending-bounce'] = (m, len, tl) => {
+  // Toy-box bounce with a mechanical whirr and a drop fanfare.
+  const prog = [[67, 71, 74], [64, 67, 71], [60, 64, 67], [62, 66, 69]];
+  const drop = tl.scenes.drop;
+  steps(128, len, (t, bar, s, st) => {
+    const ch = prog[bar % 4];
+    if (s % 4 === 0) m.kick(t, 0.7);
+    if (s === 4 || s === 12) m.add(t, I.clap(0.5), { rev: 0.25 });
+    if (s % 2 === 1) m.add(t, I.shaker(0.08), { pan: 0.3 });
+    if (s % 2 === 0) m.add(t, I.marimba(ch[(s / 2) % 3] + 12, st * 1.4, 0.22), { pan: -0.2, rev: 0.25 });
+    if (s % 4 === 0) m.add(t, I.pluck(ch[0] - 24, st * 3, 0.45, 0.35), { rev: 0.05 });
+  });
+  const wh = buf(0.8);
+  for (let i = 0; i < wh.length; i++) {
+    const tt = i / SR;
+    wh[i] = Math.sin(TAU * (180 + 40 * Math.sin(TAU * 12 * tt)) * tt) * 0.25 * Math.sin(Math.PI * (i / wh.length));
+  }
+  m.add(drop, wh, { rev: 0.1 });
+  [[72, 76, 79], [76, 79, 84]].forEach((ch, i) => ch.forEach((n) => m.add(drop + 0.9 + i * 0.16, I.synth(n, i ? 0.8 : 0.14, { voices: 3, cutoff: 3500, g: 0.13, r: 0.2 }), { rev: 0.4 })));
+};
+
 const TRACK_VIDEO = {
   'neon-trap': 'rewards-neon',
   'bounce-house': 'rewards-countdown',
@@ -737,6 +805,10 @@ const TRACK_VIDEO = {
   'pizza-funk': 'story-rewards-prizeday',
   'assembly-anthem': 'story-houses-assembly',
   'warm-acoustic': 'story-family-portal',
+  'office-bossa': ['story-office-ask', 'story-office-pickup'],
+  'office-electro': 'office-rapid',
+  'bus-groove': 'story-office-bus',
+  'vending-bounce': 'story-rewards-vending',
 };
 
 /* ── sound effects ──────────────────────────────────────────────────── */
@@ -826,8 +898,10 @@ function sfx() {
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
 for (const [track, video] of Object.entries(TRACK_VIDEO)) {
   if (only && only !== track) continue;
-  const tl = timeline(video);
-  const len = tl.total + 2;
+  // A track shared by several videos is made long enough for the longest one.
+  const videos = [].concat(video);
+  const tl = timeline(videos[0]);
+  const len = Math.max(...videos.map((v) => timeline(v).total)) + 2;
   seed = 1234567;
   const m = new Mix(len);
   TRACKS[track](m, len, tl);

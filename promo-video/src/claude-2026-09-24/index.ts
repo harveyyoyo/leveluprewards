@@ -15,6 +15,8 @@ import { AttendanceMorningScanIn, scanInTimeline } from "./scanIn";
 import { HousesCupRace, HousesSortingCeremony, housesRaceTimeline, housesSortingTimeline } from "./houses";
 import { RaffleGameShow, raffleGameshowTimeline } from "./raffle";
 import { StoryFamilyPortal, StoryHousesAssembly, StoryLibraryCheckout, StoryRewardsPrizeDay, assemblyTimeline, familyTimeline, libraryCheckoutTimeline, prizedayTimeline } from "./storiesMore";
+import { OfficeRapidAnswers, StoryOfficeAsk, StoryOfficeBus, StoryOfficePickup, officeAskTimeline, officeBusTimeline, officePickupTimeline, officeRapidTimeline } from "./storiesOffice";
+import { StoryRewardsVending, vendingTimeline } from "./storiesVending";
 import { StoryClassroomHallPass, StoryClassroomOneTap, hallpassTimeline, onetapTimeline } from "./storiesClassroom";
 
 const TALL = { width: 1080, height: 1920 };
@@ -53,4 +55,19 @@ export const CLAUDE_2026_09_25_VIDEOS: ClaudeVideo[] = [
   { id: "Claude-2026-09-25-Story-Rewards-PrizeDay", component: StoryRewardsPrizeDay, durationInFrames: prizedayTimeline.total, ...WIDE },
   { id: "Claude-2026-09-25-Story-Houses-FridayAssembly", component: StoryHousesAssembly, durationInFrames: assemblyTimeline.total, ...WIDE },
   { id: "Claude-2026-09-25-Story-Family-ProudParent", component: StoryFamilyPortal, durationInFrames: familyTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Office-AskTheOffice", component: StoryOfficeAsk, durationInFrames: officeAskTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Office-EarlyPickup", component: StoryOfficePickup, durationInFrames: officePickupTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Tall-Office-RapidAnswers", component: OfficeRapidAnswers, durationInFrames: officeRapidTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Office-BusRadar", component: StoryOfficeBus, durationInFrames: officeBusTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Rewards-VendingMachine", component: StoryRewardsVending, durationInFrames: vendingTimeline.total, ...TALL },
+  // Tall (phone) versions of the cartoon stories — same scenes, camera follows the action.
+  { id: "Claude-2026-09-25-Tall-Attendance-MorningScanIn", component: AttendanceMorningScanIn, durationInFrames: scanInTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Rewards-PrizeDay", component: StoryRewardsPrizeDay, durationInFrames: prizedayTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Library-SelfCheckout", component: StoryLibraryCheckout, durationInFrames: libraryCheckoutTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Classroom-OneTap", component: StoryClassroomOneTap, durationInFrames: onetapTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Classroom-HallPass", component: StoryClassroomHallPass, durationInFrames: hallpassTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Houses-FridayAssembly", component: StoryHousesAssembly, durationInFrames: assemblyTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Family-ProudParent", component: StoryFamilyPortal, durationInFrames: familyTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Office-AskTheOffice", component: StoryOfficeAsk, durationInFrames: officeAskTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Tall-Office-EarlyPickup", component: StoryOfficePickup, durationInFrames: officePickupTimeline.total, ...TALL },
 ];
