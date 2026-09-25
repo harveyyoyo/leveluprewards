@@ -10,5 +10,11 @@ export function isPublicSampleSchoolId(id: string | null | undefined): boolean {
   return (PUBLIC_SAMPLE_SCHOOL_IDS as readonly string[]).includes(s);
 }
 
+/** Names on the "Try a demo school" buttons at /login. */
+export const PUBLIC_SAMPLE_SCHOOL_NAMES: Record<PublicSampleSchoolId, string> = {
+  schoolabc: 'School ABC',
+  yeshiva: 'Yeshiva Demo',
+};
+
 /** Demo schools should log in like any other school (matches seeded access passcode). */
 export const SAMPLE_SCHOOL_ACCESS_PASSCODE = '1234';

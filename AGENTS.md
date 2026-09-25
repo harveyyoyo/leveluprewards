@@ -14,6 +14,7 @@ The owner is a beginner. They asked every helper to **assume they are new** and 
 - The demo school access passcode is **`1234`** (provided by the app owner).
 - At `/login`, select a school under **Try a demo school**, then enter `1234` in **Access passcode** and continue. Selecting a demo school only fills the School ID; it does not sign in automatically.
 - Use this passcode when reviewing or testing the demo school. It is the demo school access passcode, not a developer or production-school credential.
+- **No-passcode demo links:** `/demo` signs a visitor into a demo school and opens a page, e.g. `/demo/library`, `/demo/yeshiva/office`. Owner copies them in Developer → Schools. Details: `.agent/knowledge/demo-links.md`.
 
 ## Permanent Student Kiosk web address (Hardwired)
 

@@ -135,7 +135,9 @@ function LayoutClientWrapperInner({
       pathname === '/office-bootstrap' ||
       pathname === '/developer' ||
       (typeof pathname === 'string' && pathname.includes('/student/welcome')) ||
-      pathname.startsWith('/s/');
+      pathname.startsWith('/s/') ||
+      pathname === '/demo' ||
+      pathname.startsWith('/demo/');
 
     const isSignInPage = typeof pathname === 'string' && /\/sign-in\/?$/.test(pathname);
     const isAdminSignInPage =
@@ -231,7 +233,8 @@ function LayoutClientWrapperInner({
     const schoolPathMatch =
       typeof pathname === 'string'
         ? pathname.match(
-            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|displays-realm|displays|classroom-realm|classroom|office)(?:\/|$)/i,
+            // `/demo/…` share links are not a school named "demo".
+            /^\/(?!demo\/)([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|displays-realm|displays|classroom-realm|classroom|office)(?:\/|$)/i,
           )
         : null;
     const routeSchoolId = schoolPathMatch?.[1];

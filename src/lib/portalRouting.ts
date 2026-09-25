@@ -7,6 +7,7 @@ const RESERVED_PORTAL_SEGMENTS = new Set([
   'privacy',
   'terms',
   's',
+  'demo',
   'level-up-arcade',
   'flyers',
   'promotions',
@@ -169,7 +170,9 @@ export function canonicalPortalRedirectUrl(
   const first = parts[0] || '';
   const second = parts[1] || '';
   const firstIsSchool = isSchoolIdSegment(first);
-  const isPortalEntry = pathname === '/portal' || pathname === '/login';
+  // Demo links sign in on the portal host so the session is there when the demo page opens.
+  const isDemoLink = first.toLowerCase() === 'demo';
+  const isPortalEntry = pathname === '/portal' || pathname === '/login' || isDemoLink;
   const isSchoolPortal = firstIsSchool && second?.toLowerCase() === 'portal';
 
   if (!isPortalEntry && !isSchoolPortal) return null;

@@ -6,6 +6,7 @@ const RESERVED_SSS_SEGMENTS = new Set([
   'privacy',
   'terms',
   'portal',
+  'demo',
   'office-bootstrap',
   'sss-bootstrap',
   'favicon.ico',

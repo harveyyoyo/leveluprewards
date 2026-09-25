@@ -6,6 +6,7 @@ const RESERVED_OFFICE_SEGMENTS = new Set([
   'privacy',
   'terms',
   'portal',
+  'demo',
   'office-bootstrap',
   'favicon.ico',
   'icon.png',
