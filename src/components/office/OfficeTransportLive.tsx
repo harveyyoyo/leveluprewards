@@ -46,6 +46,7 @@ import {
   ridersForRoute,
   routeForTrip,
   routeLabel,
+  routeReadiness,
   stopTime,
   tripWarnings,
   transportFamilyEmails,
@@ -161,6 +162,22 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
     return r ? (minutesLate(r, t, now) ?? 0) >= LATE_THRESHOLD_MIN : false;
   }).length;
   const ridersOn = activeTrips.reduce((n, t) => n + Object.values(t.riders ?? {}).filter((r) => r.status === 'on').length, 0);
+  const launchRows = routes.map((route) => {
+    const routeCheck = routeReadiness(route);
+    const assigned = ridersForRoute(students, route.id);
+    const validStopIds = new Set((route.stops ?? []).filter((stop) => !stop.isSchool).map((stop) => stop.id));
+    const missingStops = assigned.filter((student) => !student.busStopId || !validStopIds.has(student.busStopId));
+    const trip = latestTripForRoute(runTrips, route.id, run);
+    const locationReady = !trip || trip.status !== 'active' || isFreshLocation(trip.location, now);
+    const checks = [
+      { label: 'Route shape', ready: routeCheck.ready, detail: routeCheck.missing[0] ?? 'Stops are in a safe order.' },
+      { label: 'Rider stops', ready: missingStops.length === 0, detail: missingStops.length ? `${missingStops.length} rider${missingStops.length === 1 ? '' : 's'} need a stop.` : `${assigned.length} rider${assigned.length === 1 ? '' : 's'} assigned.` },
+      { label: 'Location source', ready: locationReady, detail: trip ? trackerSourceLabel(trip) : 'Chosen when the run starts.' },
+      { label: 'Release rule', ready: true, detail: route.requireReleaseConfirmations ? 'Required for drop-off.' : 'Not required.' },
+      { label: 'Arrival messages', ready: true, detail: route.notifyFamiliesOnArrival ? 'On for opted-in families.' : 'Off for this route.' },
+    ];
+    return { route, trip, assignedCount: assigned.length, missingStops: missingStops.length, checks, ready: routeCheck.ready && missingStops.length === 0 && locationReady };
+  });
 
   // ---- Practice run: a pretend bus drives the selected route so staff can see how it works. ----
   const practiceStart = useRef(0);
@@ -298,6 +315,39 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
         <Stat label="Running late" value={lateCount} tone={lateCount ? 'warn' : 'plain'} />
         <Stat label="Riders on buses" value={ridersOn} />
       </div>
+
+      <section className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900" aria-label="Ready to leave board">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold">Ready-to-leave board</h2>
+            <p className="mt-1 text-xs text-muted-foreground">A quick private check for each route. It does not show family contact details or a child’s location.</p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{launchRows.filter((row) => row.ready).length}/{launchRows.length} ready</span>
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {launchRows.map((row) => (
+            <button key={row.route.id} type="button" onClick={() => setSelectedId(row.route.id)} className={cn('rounded-xl border p-3 text-left transition hover:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500', row.ready ? 'border-teal-200 bg-teal-50/40 dark:border-teal-900 dark:bg-teal-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20')}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{routeLabel(row.route)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{row.assignedCount} rider{row.assignedCount === 1 ? '' : 's'} · {row.trip ? statusOf(row.route, row.trip, now).text : 'Not started'}</p>
+                </div>
+                <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', row.ready ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-200' : 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200')}>
+                  {row.ready ? 'Ready' : 'Needs setup'}
+                </span>
+              </div>
+              <ul className="mt-2 space-y-1">
+                {row.checks.map((check) => (
+                  <li key={check.label} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                    {check.ready ? <Check className="mt-0.5 h-3 w-3 shrink-0 text-teal-700 dark:text-teal-300" /> : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-700 dark:text-amber-300" />}
+                    <span><span className="font-medium text-foreground">{check.label}:</span> {check.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {warnings.length > 0 ? (
         <ul className="space-y-1.5" aria-label="Needs attention">
