@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
@@ -38,7 +38,13 @@ const MAX_RUN_EXCEPTIONS = 20;
 const MAX_RUN_EXCEPTION_RECORDS = 50;
 const RESERVED_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor', 'toString']);
 const RELEASE_METHODS = new Set<OfficeBusReleaseMethod>(['authorized_contact', 'id_checked', 'office_override']);
+const HANDOFF_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const HANDOFF_CODE_LENGTH = 8;
+const HANDOFF_TTL_MS = 15 * 60_000;
+const MAX_HANDOFF_ATTEMPTS = 5;
+const HANDOFF_ATTEMPT_WINDOW_MS = 10 * 60_000;
 const locationAttempts = new Map<string, { startedAt: number; count: number }>();
+const handoffAttempts = new Map<string, { startedAt: number; count: number }>();
 const MAX_FAMILY_UPDATES_PER_TRIP = 20;
 
 type AuthContext = {
@@ -50,6 +56,18 @@ type AuthContext = {
 };
 
 type Body = Record<string, unknown>;
+
+type ReliefHandoffRecord = {
+  tripId: string;
+  routeId: string;
+  codeHash: string;
+  createdAt: number;
+  expiresAt: number;
+  createdBy: string;
+  expectedDriverId?: string | null;
+  consumedAt?: number | null;
+  claimedBy?: string | null;
+};
 
 function schoolIdFrom(body: Body): string {
   const value = typeof body.schoolId === 'string' ? body.schoolId.trim().toLowerCase() : '';
@@ -220,6 +238,62 @@ function tripRef(db: Firestore, schoolId: string, tripId: string) {
 
 function routeRef(db: Firestore, schoolId: string, routeId: string) {
   return db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(routeId);
+}
+
+function handoffRef(db: Firestore, schoolId: string, tripId: string) {
+  return db.collection('schools').doc(schoolId).collection('officeBusReliefHandoffs').doc(tripId);
+}
+
+function handoffSecret(): string {
+  const secret = process.env.AUTH_GATE_SIGNING_SECRET;
+  if (process.env.NODE_ENV === 'production' && (!secret || secret.length < 32)) {
+    throw new Error('Relief handoff is not configured safely.');
+  }
+  return secret && secret.length >= 16 ? secret : 'local-relief-handoff-secret-change-me';
+}
+
+function generateHandoffCode(): string {
+  let code = '';
+  while (code.length < HANDOFF_CODE_LENGTH) {
+    for (const byte of randomBytes(12)) {
+      if (byte < 256 - (256 % HANDOFF_CODE_ALPHABET.length)) {
+        code += HANDOFF_CODE_ALPHABET[byte % HANDOFF_CODE_ALPHABET.length];
+        if (code.length === HANDOFF_CODE_LENGTH) break;
+      }
+    }
+  }
+  return code;
+}
+
+function normalizeHandoffCode(value: unknown): string {
+  if (typeof value !== 'string') throw new Error('Enter the handoff code.');
+  const code = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== HANDOFF_CODE_LENGTH) throw new Error('Enter the 8-character handoff code.');
+  return code;
+}
+
+function hashHandoffCode(tripId: string, code: string, expiresAt: number): string {
+  return createHmac('sha256', handoffSecret()).update(`${tripId}|${expiresAt}|${code}`).digest('hex');
+}
+
+function handoffCodeMatches(expectedHash: unknown, actualHash: string): boolean {
+  if (typeof expectedHash !== 'string' || !/^[a-f0-9]{64}$/i.test(expectedHash)) return false;
+  const expected = Buffer.from(expectedHash, 'hex');
+  const actual = Buffer.from(actualHash, 'hex');
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+function checkHandoffAttempt(key: string): void {
+  const now = Date.now();
+  const previous = handoffAttempts.get(key);
+  if (!previous || now - previous.startedAt > HANDOFF_ATTEMPT_WINDOW_MS) {
+    handoffAttempts.set(key, { startedAt: now, count: 1 });
+    return;
+  }
+  if (previous.count >= MAX_HANDOFF_ATTEMPTS) {
+    throw new AuthError('Too many handoff attempts. Ask the School Office for a new code.', 429);
+  }
+  previous.count += 1;
 }
 
 async function audit(db: Firestore, schoolId: string, entry: Record<string, unknown>): Promise<void> {
@@ -957,6 +1031,115 @@ function alertFamilyMessage(kind: OfficeBusTripAlert['kind'], minutes: number | 
     .join('\n\n');
 }
 
+async function createReliefHandoff(auth: AuthContext, schoolId: string, body: Body): Promise<{ code: string; expiresAt: number }> {
+  if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) throw new AuthError('Only School Office staff can create a relief handoff code.', 403);
+  const tripId = safeId(body.tripId, 'Trip');
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(trip);
+  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? ({ id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute) : undefined;
+  const effectiveRoute = routeForTrip(currentRoute, trip);
+  if (!effectiveRoute?.reliefDriverName?.trim()) throw new Error('Add a relief driver to this route before creating a handoff code.');
+  const now = Date.now();
+  const expiresAt = now + HANDOFF_TTL_MS;
+  const code = generateHandoffCode();
+  const codeHash = hashHandoffCode(tripId, code, expiresAt);
+  const ref = tripRef(auth.db, schoolId, tripId);
+  const handoff = handoffRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run is no longer active.', 409);
+    if (current.routeId !== trip.routeId || current.date !== trip.date || current.run !== trip.run) {
+      throw new AuthError('This bus run changed while the handoff code was being created. Refresh and try again.', 409);
+    }
+    transaction.set(handoff, {
+      tripId,
+      routeId: trip.routeId,
+      codeHash,
+      createdAt: now,
+      expiresAt,
+      createdBy: auth.uid,
+      expectedDriverId: current.driverId ?? null,
+      consumedAt: null,
+      claimedBy: null,
+    } satisfies ReliefHandoffRecord, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-relief-handoff-create-${tripId}-${expiresAt}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: 'School Office created a short-lived relief handoff code',
+        after: { expiresAt },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+  });
+  return { code, expiresAt };
+}
+
+async function claimReliefHandoff(auth: AuthContext, schoolId: string, body: Body): Promise<{ tripId: string; driverName: string }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const code = normalizeHandoffCode(body.code);
+  const attemptKey = `${schoolId}:${tripId}:${auth.uid}`;
+  checkHandoffAttempt(attemptKey);
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(trip);
+  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? ({ id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute) : undefined;
+  const effectiveRoute = routeForTrip(currentRoute, trip);
+  if (!effectiveRoute?.reliefDriverName?.trim()) throw new Error('This route does not have a relief driver yet.');
+  if (trip.driverId === auth.uid && trip.driverRole !== 'relief') throw new AuthError('This run is already assigned to you.', 409);
+  const ref = tripRef(auth.db, schoolId, tripId);
+  const handoff = handoffRef(auth.db, schoolId, tripId);
+  let result: { tripId: string; driverName: string } | null = null;
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run is no longer active.', 409);
+    if (current.driverId === auth.uid && current.driverRole === 'relief') {
+      result = { tripId, driverName: current.driverName ?? effectiveRoute.reliefDriverName ?? 'Relief driver' };
+      return;
+    }
+    const handoffSnap = await transaction.get(handoff);
+    const record = handoffSnap.data() as Partial<ReliefHandoffRecord> | undefined;
+    const now = Date.now();
+    if (!record || record.tripId !== tripId || record.routeId !== current.routeId || (record.expectedDriverId ?? null) !== (current.driverId ?? null) || typeof record.expiresAt !== 'number' || record.expiresAt <= now || record.consumedAt != null) {
+      throw new AuthError('That handoff code is not valid or has expired.', 403);
+    }
+    const actualHash = hashHandoffCode(tripId, code, record.expiresAt);
+    if (!handoffCodeMatches(record.codeHash, actualHash)) throw new AuthError('That handoff code is not valid or has expired.', 403);
+    const driverName = effectiveRoute.reliefDriverName?.trim() || auth.uid;
+    transaction.update(ref, {
+      driverId: auth.uid,
+      driverName,
+      driverPhone: effectiveRoute.reliefDriverPhone?.trim() || null,
+      driverRole: 'relief',
+      driverRoleChangedAt: now,
+      updatedAt: now,
+    });
+    transaction.set(handoff, { consumedAt: now, claimedBy: auth.uid, codeHash: FieldValue.delete() }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-relief-handoff-claim-${tripId}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: 'Relief driver took over the active bus run',
+        after: { driverId: auth.uid, driverRole: 'relief', claimedAt: now },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+    result = { tripId, driverName };
+  });
+  if (!result) throw new Error('The handoff could not be completed.');
+  handoffAttempts.delete(attemptKey);
+  return result;
+}
+
 async function createRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -1293,6 +1476,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await acknowledgeRunException(auth, schoolId, body));
       case 'exception-resolve':
         return NextResponse.json(await resolveRunException(auth, schoolId, body));
+      case 'handoff-create':
+        return NextResponse.json(await createReliefHandoff(auth, schoolId, body));
+      case 'handoff-claim':
+        return NextResponse.json(await claimReliefHandoff(auth, schoolId, body));
       case 'end':
         return NextResponse.json(await endTrip(auth, schoolId, body));
       case 'close-stale':

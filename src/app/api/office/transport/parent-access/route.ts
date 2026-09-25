@@ -106,8 +106,9 @@ async function createAccess(auth: AuthContext, schoolId: string, body: Body) {
   const label = body.label == null || body.label === '' ? `${family.displayName} bus access` : textFrom(body.label, 'Access label');
   const id = `pta_${randomBytes(12).toString('base64url')}`;
   const code = randomBytes(18).toString('base64url');
+  const linkToken = randomBytes(32).toString('base64url');
   const now = Date.now();
-  const access: OfficeTransportParentAccess & { codeHash: string; codeHint: string } = {
+  const access: OfficeTransportParentAccess & { codeHash: string; codeHint: string; linkTokenHash: string } = {
     id,
     familyId,
     label,
@@ -120,9 +121,11 @@ async function createAccess(auth: AuthContext, schoolId: string, body: Body) {
     updatedAt: now,
     updatedBy: auth.uid,
     consentVersion: 1,
+    linkEnabled: true,
     arrivalPreferences: { email: false, sms: false, whatsapp: false, updatedAt: now },
     codeHash: codeHash(code),
     codeHint: code.slice(-4),
+    linkTokenHash: codeHash(linkToken),
   };
   await auth.db.collection('schools').doc(schoolId).collection('officeTransportParentAccess').doc(id).set(access);
   await audit(auth.db, schoolId, {
@@ -132,7 +135,7 @@ async function createAccess(auth: AuthContext, schoolId: string, body: Body) {
     summary: `Created private bus access for ${family.displayName}`,
     changedBy: auth.uid,
   });
-  return { access: transportParentAccessSafeSummary(access, family.displayName), code, expiresAt: access.expiresAt };
+  return { access: transportParentAccessSafeSummary(access, family.displayName), code, linkToken, expiresAt: access.expiresAt };
 }
 
 async function revokeAccess(auth: AuthContext, schoolId: string, body: Body) {

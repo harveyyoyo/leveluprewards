@@ -14,6 +14,7 @@ export type TransportParentBus = {
   nextStopName: string | null;
   etaMinutes: number | null;
   familyStops: Array<{ name: string; morningTime: string | null; afternoonTime: string | null }>;
+  routeProgress: { completed: number; total: number; percent: number } | null;
   lastUpdateAt: number | null;
   stale: boolean;
 };
@@ -47,6 +48,16 @@ export async function signInTransportParent(schoolId: string, code: string) {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
     body: JSON.stringify({ schoolId, code: code.trim() }),
+  });
+  return readJson<{ ok: boolean; expiresAt: number }>(response);
+}
+
+export async function exchangeTransportParentLink(schoolId: string, linkToken: string) {
+  const response = await fetch('/api/office/transport/parent-link-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ schoolId, linkToken }),
   });
   return readJson<{ ok: boolean; expiresAt: number }>(response);
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { Copy, Link2, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,10 +27,11 @@ type AccessSummary = {
   lastUsedAt: number | null;
   revokedAt: number | null;
   consentVersion: number;
+  linkEnabled?: boolean;
   arrivalPreferences: { email: boolean; sms: boolean; whatsapp: boolean; updatedAt: number };
 };
 
-type AccessResponse = { accesses?: AccessSummary[]; access?: AccessSummary; code?: string; error?: string };
+type AccessResponse = { accesses?: AccessSummary[]; access?: AccessSummary; code?: string; linkToken?: string; error?: string };
 
 function familyHasBusStudent(familyId: string, students: OfficeStudent[]): boolean {
   return students.some((student) => student.familyId === familyId && student.archived !== true && (student.status == null || student.status === 'active') && (student.transportMode == null || student.transportMode === 'bus') && Boolean(student.busRouteId));
@@ -59,7 +60,7 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newCode, setNewCode] = useState<{ familyName: string; code: string; expiresAt: number } | null>(null);
+  const [newCode, setNewCode] = useState<{ familyName: string; code: string; linkToken: string; expiresAt: number } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,11 +101,11 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
     setBusy(true);
     try {
       const result = await post({ action: 'create', familyId, days: Number(days) });
-      if (!result.code || !result.access) throw new Error('The access code was not created.');
+      if (!result.code || !result.linkToken || !result.access) throw new Error('The private bus access was not created.');
       const familyName = result.access.familyName || familyById.get(familyId)?.displayName || 'Family';
-      setNewCode({ familyName, code: result.code, expiresAt: result.access.expiresAt });
+      setNewCode({ familyName, code: result.code, linkToken: result.linkToken, expiresAt: result.access.expiresAt });
       await load();
-      toast({ title: 'Private bus access created', description: 'Share the code privately with the family.' });
+      toast({ title: 'Private bus access created', description: 'Share the code or the private link with the family.' });
     } catch (cause) {
       toast({ variant: 'destructive', title: 'Could not create bus access', description: cause instanceof Error ? cause.message : undefined });
     } finally {
@@ -136,6 +137,17 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
     }
   };
 
+  const copyLink = async () => {
+    if (!newCode) return;
+    const link = `${window.location.origin}/${schoolId}/parent/bus#link=${encodeURIComponent(newCode.linkToken)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'Private bus link copied' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not copy the link' });
+    }
+  };
+
   return (
     <section className="space-y-3 rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="parent-bus-access-title">
       <div className="flex items-start gap-3">
@@ -144,7 +156,7 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
         </div>
         <div className="min-w-0 flex-1">
           <h2 id="parent-bus-access-title" className="font-semibold">Private family bus access</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Give a family a private code for the bus-status page. The code expires automatically and never shows a child or home address. Families can use it at <span className="font-mono text-xs">/{schoolId}/parent/bus</span>.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Give a family a private code or link for the bus-status page. It expires automatically and never shows a child, a live map, or a home address. The link opens the page directly on the family&apos;s phone.</p>
         </div>
       </div>
 
@@ -171,11 +183,18 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
       )}
 
       {newCode ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/40">
-          <p className="font-semibold">Copy this private code for {newCode.familyName}</p>
-          <p className="mt-1 break-all font-mono text-xs">{newCode.code}</p>
-          <div className="mt-2 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" className="gap-1.5 rounded-lg" onClick={() => void copyCode()}><Copy className="h-3.5 w-3.5" /> Copy code</Button><Button type="button" size="sm" variant="ghost" className="rounded-lg" onClick={() => setNewCode(null)}>Hide code</Button></div>
-          <p className="mt-2 text-xs">It expires {dateLabel(newCode.expiresAt)}. The app will not show it again.</p>
+        <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+          <div>
+            <p className="font-semibold">Copy this private code for {newCode.familyName}</p>
+            <p className="mt-1 break-all font-mono text-xs">{newCode.code}</p>
+            <div className="mt-2 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" className="gap-1.5 rounded-lg" onClick={() => void copyCode()}><Copy className="h-3.5 w-3.5" /> Copy code</Button></div>
+          </div>
+          <div className="border-t border-amber-300/70 pt-3 dark:border-amber-900/70">
+            <p className="font-semibold">Or send the private family link</p>
+            <p className="mt-1 break-all font-mono text-xs">/{schoolId}/parent/bus#link={newCode.linkToken}</p>
+            <div className="mt-2 flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" className="gap-1.5 rounded-lg" onClick={() => void copyLink()}><Link2 className="h-3.5 w-3.5" /> Copy link</Button><Button type="button" size="sm" variant="ghost" className="rounded-lg" onClick={() => setNewCode(null)}>Hide details</Button></div>
+          </div>
+          <p className="text-xs">It expires {dateLabel(newCode.expiresAt)}. The app will not show the code or link again. Anyone with the link can view bus status, so share it only with the family.</p>
         </div>
       ) : null}
 
@@ -186,7 +205,7 @@ export function OfficeTransportParentAccessPanel({ schoolId, familyById, student
         <ul className="space-y-2">
           {accesses.map((access) => (
             <li key={access.id} className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5 text-sm dark:border-slate-800">
-              <div className="min-w-[180px] flex-1"><p className="font-medium">{access.familyName || access.label}</p><p className="text-xs text-muted-foreground">{access.status === 'revoked' ? `Revoked ${dateLabel(access.revokedAt)}` : `Expires ${dateLabel(access.expiresAt)} · Last used ${dateLabel(access.lastUsedAt)}`}</p><p className="text-xs text-muted-foreground">{preferenceLabel(access.arrivalPreferences)}</p></div>
+              <div className="min-w-[180px] flex-1"><p className="font-medium">{access.familyName || access.label}</p><p className="text-xs text-muted-foreground">{access.status === 'revoked' ? `Revoked ${dateLabel(access.revokedAt)}` : `Expires ${dateLabel(access.expiresAt)} · Last used ${dateLabel(access.lastUsedAt)}`}</p><p className="text-xs text-muted-foreground">{access.linkEnabled && access.status === 'active' ? 'Private link included · ' : ''}{preferenceLabel(access.arrivalPreferences)}</p></div>
               {access.status === 'active' ? <Button type="button" variant="ghost" size="sm" className="gap-1.5 rounded-lg text-red-700 disabled:opacity-50 dark:text-red-400" disabled={busy} onClick={() => void revoke(access)}><Trash2 className="h-3.5 w-3.5" /> Revoke</Button> : <span className="text-xs text-muted-foreground">No longer active</span>}
             </li>
           ))}
