@@ -33,6 +33,7 @@ import type { House, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useHousesSound } from '@/hooks/useHousesSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { pickReadableOn } from '@/lib/themeContrast';
 
 export interface HousesTeamCenterStageProps {
   houses: House[];
@@ -466,8 +467,13 @@ export function HousesTeamCenterStage({
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {showValue && house.value ? (
                             <span
-                              className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider hr-fg"
-                              style={{ backgroundColor: `${house.color}60` }}
+                              className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider"
+                              style={{
+                                backgroundColor: `${house.color}60`,
+                                // hr-fg is tuned to contrast the realm panel, not this
+                                // house-color-tinted pill — pick against the actual color.
+                                color: pickReadableOn(house.color),
+                              }}
                             >
                               {house.value}
                             </span>
@@ -553,7 +559,9 @@ export function HousesTeamCenterStage({
                         className="flex-1 rounded-xl text-xs font-bold shadow-md transition-transform hover:-translate-y-0.5"
                         style={{
                           backgroundColor: house.color,
-                          color: '#ffffff',
+                          // House color is free-form, so fixed white text
+                          // was unreadable on pale house colors.
+                          color: pickReadableOn(house.color),
                         }}
                       >
                         <Sparkles className="mr-1.5 h-3.5 w-3.5" />
@@ -580,8 +588,14 @@ export function HousesTeamCenterStage({
           </motion.div>
         )
       ) : (
-        /* Standings Chart View */
-        <div className="rounded-3xl border hr-panel backdrop-blur-xl p-4 sm:p-6 shadow-xl">
+        /* Standings Chart View.
+           HouseStandingsChartBlock is shared with the standalone (non-realm)
+           admin dashboard, so it uses plain text-foreground/text-muted-foreground/
+           bg-muted tokens rather than hr-fg/hr-muted. Wrapping it in
+           .houses-realm-manage activates the existing globals.css overrides
+           that redirect those tokens to the active --hr-* theme here, the
+           same way the Rosters and Hall of Fame tabs already do. */
+        <div className="houses-realm-manage rounded-3xl border hr-panel backdrop-blur-xl p-4 sm:p-6 shadow-xl">
           <h3 className="font-serif text-xl font-bold hr-fg mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-amber-400" />
             <span>House Standings Leaderboard</span>

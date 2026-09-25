@@ -17,6 +17,7 @@ import { HouseBadge } from './HouseBadge';
 import type { House } from '@/lib/types';
 import { useHousesSound } from '@/hooks/useHousesSound';
 import { classroomPointSoundEffect } from '@/lib/classroom/classroomPointSounds';
+import { pickReadableOn } from '@/lib/themeContrast';
 
 export interface HouseQuickAwardDialogProps {
   open: boolean;
@@ -207,7 +208,10 @@ export function HouseQuickAwardDialog({
               backgroundImage: isDeduction
                 ? 'linear-gradient(135deg, #e11d48, #be123c)'
                 : `linear-gradient(135deg, ${house.color}, var(--hr-accent-to, #7c3aed))`,
-              color: '#ffffff',
+              // Deduction side is a fixed rose gradient (white always reads).
+              // The award side starts from the free-form house color, which
+              // can be pale enough that fixed white text goes unreadable.
+              color: isDeduction ? '#ffffff' : pickReadableOn(house.color),
             }}
           >
             <Sparkles className="mr-1.5 h-4 w-4" />

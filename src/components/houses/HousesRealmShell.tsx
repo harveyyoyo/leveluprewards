@@ -194,8 +194,8 @@ export function HousesRealmHero({
       >
         Houses
       </p>
-      <h1 className="houses-realm-display mb-4 text-4xl font-bold text-white sm:text-6xl">{title}</h1>
-      {subtitle ? <p className="max-w-xl text-base text-white/60 sm:text-lg">{subtitle}</p> : null}
+      <h1 className="houses-realm-display mb-4 text-4xl font-bold hr-fg sm:text-6xl">{title}</h1>
+      {subtitle ? <p className="max-w-xl text-base hr-muted sm:text-lg">{subtitle}</p> : null}
       {children ? <div className="mt-10 flex flex-wrap justify-center gap-4">{children}</div> : null}
     </motion.div>
   );

@@ -81,7 +81,7 @@ export function HousesInteractiveGuide({
       summary:
         'See every house team, standings, and totals in one full screen. Award points quickly from a house card.',
       icon: Castle,
-      color: 'bg-amber-500/15 text-amber-300 border-amber-400/40',
+      color: 'bg-amber-500/15 hr-fg border-amber-400/40',
       steps: [
         'Compare house standings in cards or chart view.',
         'Tap a house to award or deduct points with an optional reason.',
@@ -95,7 +95,7 @@ export function HousesInteractiveGuide({
       title: 'House Rosters',
       summary: 'Assign students and teachers to houses, balance teams, and manage who belongs where.',
       icon: Users,
-      color: 'bg-sky-500/15 text-sky-300 border-sky-400/40',
+      color: 'bg-sky-500/15 hr-fg border-sky-400/40',
       steps: [
         'Browse members by house and move students who need a new team.',
         'Auto-sort unassigned students with balanced or random placement.',
@@ -109,7 +109,7 @@ export function HousesInteractiveGuide({
       title: 'Sorting Ceremony',
       summary: 'Run a live sorting show with music and celebration — great for assemblies or kickoff day.',
       icon: Sparkles,
-      color: 'bg-violet-500/15 text-violet-300 border-violet-400/40',
+      color: 'bg-violet-500/15 hr-fg border-violet-400/40',
       steps: [
         'Open the Ceremony tab to practice or run sorting in the Houses workspace.',
         'Use Fullscreen when projecting for the whole school.',
@@ -123,7 +123,7 @@ export function HousesInteractiveGuide({
       title: 'Hall of Fame',
       summary: 'Celebrate top students and house spirit on a display ready for TVs and kiosks.',
       icon: Trophy,
-      color: 'bg-rose-500/15 text-rose-300 border-rose-400/40',
+      color: 'bg-rose-500/15 hr-fg border-rose-400/40',
       steps: [
         'Tune sort order, podium size, and grid layout for your screen.',
         'Preview settings here, then launch the public display in a new tab.',
@@ -137,7 +137,7 @@ export function HousesInteractiveGuide({
       title: 'Awarding Points',
       summary: 'Give or take house points from the Teams board without leaving the competition view.',
       icon: Plus,
-      color: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/40',
+      color: 'bg-emerald-500/15 hr-fg border-emerald-400/40',
       steps: [
         'On Teams, open a house card and choose how many points to add or remove.',
         'Add a short reason so staff can see why the score changed.',
@@ -151,7 +151,7 @@ export function HousesInteractiveGuide({
       title: 'AI Setup & Themes',
       summary: 'Spin up house names, colors, mottos, and a realm look with AI — or pick a ready-made pack.',
       icon: Wand2,
-      color: 'bg-amber-500/15 text-amber-200 border-amber-400/40',
+      color: 'bg-amber-500/15 hr-fg border-amber-400/40',
       steps: [
         'Tap AI Setup in the header to generate a themed house set.',
         'Optionally assign unassigned students right after creating houses.',
@@ -166,7 +166,7 @@ export function HousesInteractiveGuide({
       title: 'Add or Edit a House',
       summary: 'Create a new house team or tweak an existing name, color, emoji, and motto.',
       icon: Castle,
-      color: 'bg-indigo-500/15 text-indigo-300 border-indigo-400/40',
+      color: 'bg-indigo-500/15 hr-fg border-indigo-400/40',
       steps: [
         'Use Add House in the header for a brand-new team.',
         'From Teams, edit a house card to update colors or mottos.',
@@ -181,7 +181,7 @@ export function HousesInteractiveGuide({
       title: 'Theme & Settings',
       summary: 'Pick a Houses look, ceremony effects, and point rollup options for your school.',
       icon: Settings,
-      color: 'bg-slate-400/15 text-slate-200 border-slate-400/40',
+      color: 'bg-slate-400/15 hr-fg border-slate-400/40',
       steps: [
         'Open the gear icon for theme packs and display tone.',
         'Turn student-to-house point rollup on when house totals should follow kids.',

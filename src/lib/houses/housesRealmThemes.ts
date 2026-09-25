@@ -113,7 +113,10 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#fbbf24',
       accentTo: '#7c3aed',
       accentText: '#fde68a',
-      onAccent: '#1a0f2e',
+      // Near-black onAccent read ~3.2:1 against accentTo — under the button
+      // text's own gradient. Pure black clears the accentTo end (~3.7:1)
+      // while staying ~12.6:1 on the gold accentFrom end.
+      onAccent: '#000000',
       ...DARK_INK,
     },
   },
@@ -135,7 +138,9 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#fcd34d',
       accentTo: '#1d4ed8',
       accentText: '#fde68a',
-      onAccent: '#0a1228',
+      // Was reading ~2.8:1 against accentTo (royal blue) — pure black clears
+      // ~3.1:1 there while keeping ~14.6:1 on the gold accentFrom end.
+      onAccent: '#000000',
       ...DARK_INK,
     },
   },
@@ -157,7 +162,9 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#f87171',
       accentTo: '#1e3a8a',
       accentText: '#fecaca',
-      onAccent: '#0a0f1f',
+      // Was ~1.8:1 against accentTo (dark navy) — nearly invisible. White
+      // clears ~2.8:1 on accentFrom and ~10.4:1 on accentTo.
+      onAccent: '#ffffff',
       ...DARK_INK,
     },
   },
@@ -201,7 +208,10 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#fcd34d',
       accentTo: '#1e3a8a',
       accentText: '#fde9b8',
-      onAccent: '#15110a',
+      // Gold-to-navy gradient can't hit AA with either black or white on
+      // both ends — mid-gray gives the best achievable worst-case (~2.7:1
+      // vs ~1.8:1 for near-black).
+      onAccent: '#808080',
       ...DARK_INK,
     },
   },
@@ -222,7 +232,8 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#38bdf8',
       accentTo: '#0e7490',
       accentText: '#bae6fd',
-      onAccent: '#06131c',
+      // Was ~3.5:1 against accentTo — pure black clears ~3.9:1 there.
+      onAccent: '#000000',
       ...DARK_INK,
     },
   },
@@ -264,7 +275,8 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#4ade80',
       accentTo: '#15803d',
       accentText: '#bbf7d0',
-      onAccent: '#08140d',
+      // Was ~3.75:1 against accentTo — pure black clears ~4.2:1 there.
+      onAccent: '#000000',
       ...DARK_INK,
     },
   },
@@ -285,7 +297,9 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#0ea5e9',
       accentTo: '#2563eb',
       accentText: '#1d4ed8',
-      onAccent: '#ffffff',
+      // White onAccent read only ~2.8:1 against accentFrom (sky blue is too
+      // light for white text). Black clears ~7.6:1 there and ~4.1:1 on accentTo.
+      onAccent: '#000000',
       fg: '#0f1b2d',
       muted: 'rgba(15, 27, 45, 0.72)',
       panel: 'rgba(255, 255, 255, 0.86)',
@@ -339,7 +353,9 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#14b8a6',
       accentTo: '#0284c7',
       accentText: '#0f766e',
-      onAccent: '#ffffff',
+      // White onAccent read only ~2.5:1 against accentFrom (teal). Black
+      // clears ~8.4:1 there and ~5.1:1 on accentTo.
+      onAccent: '#000000',
       fg: '#0b2a28',
       muted: 'rgba(11, 42, 40, 0.72)',
       panel: 'rgba(255, 255, 255, 0.86)',
@@ -365,7 +381,9 @@ export const HOUSES_REALM_THEMES: HousesRealmTheme[] = [
       accentFrom: '#ec4899',
       accentTo: '#f97316',
       accentText: '#be185d',
-      onAccent: '#ffffff',
+      // White onAccent read only ~2.8:1 against accentFrom / ~2.8:1 against
+      // accentTo. Black clears ~6:1 and ~7.5:1 respectively.
+      onAccent: '#000000',
       fg: '#2a1020',
       muted: 'rgba(42, 16, 32, 0.72)',
       panel: 'rgba(255, 255, 255, 0.88)',

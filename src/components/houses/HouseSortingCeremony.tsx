@@ -172,7 +172,7 @@ export function HouseSortingCeremony() {
   if (!settings.enableHouses) {
     return (
       <div className="absolute inset-0 flex min-h-dvh items-center justify-center p-8 text-center text-white/70"
-        style={{ background: 'var(--hr-grad-from, #0f0720)' }}>
+        style={{ background: '#0f0720' }}>
         <p>Houses are not enabled for this school.</p>
       </div>
     );
@@ -181,7 +181,7 @@ export function HouseSortingCeremony() {
   if (!staffOk) {
     return (
       <div className="absolute inset-0 flex min-h-dvh items-center justify-center p-8 text-center text-white/70"
-        style={{ background: 'var(--hr-grad-from, #0f0720)' }}>
+        style={{ background: '#0f0720' }}>
         <p>Staff sign-in is required to run this presentation.</p>
       </div>
     );
@@ -190,7 +190,7 @@ export function HouseSortingCeremony() {
   if (housesLoading || studentsLoading) {
     return (
       <div className="absolute inset-0 flex min-h-dvh items-center justify-center"
-        style={{ background: 'var(--hr-grad-from, #0f0720)' }}>
+        style={{ background: '#0f0720' }}>
         <Loader2 className="h-10 w-10 animate-spin text-violet-400" />
       </div>
     );
@@ -199,7 +199,7 @@ export function HouseSortingCeremony() {
   if (sortedHouses.length === 0 || queue.length === 0) {
     return (
       <div className="absolute inset-0 flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center text-white"
-        style={{ background: 'var(--hr-grad-from, #0f0720)' }}>
+        style={{ background: '#0f0720' }}>
         <p className="text-lg font-bold">Nothing to present yet</p>
         <p className="text-white/60 max-w-md text-sm">
           Add houses and assign students in Manage before launching the ceremony.
@@ -217,7 +217,7 @@ export function HouseSortingCeremony() {
   if (!warningDismissed && unassignedStudents.length > 0) {
     return (
       <div className="absolute inset-0 flex min-h-dvh flex-col items-center justify-center gap-6 p-8 text-center text-white"
-        style={{ background: 'var(--hr-grad-from, #0f0720)' }}>
+        style={{ background: '#0f0720' }}>
         <Link
           href={housesRealmHref(schoolId, '')}
           className="fixed top-4 right-4 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
@@ -268,7 +268,10 @@ export function HouseSortingCeremony() {
       <div
         className="absolute inset-0 flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center text-white"
         style={{
-          background: `linear-gradient(to bottom, color-mix(in srgb, var(--hr-grad-from, #3b0764) 60%, #0f0720), var(--hr-grad-to, #0f0720))`,
+          // Fixed dark stage background (not theme-driven): light Houses
+          // realm themes' --hr-grad-to is a pale color, which would leave
+          // this white text unreadable at the bottom of the gradient.
+          background: 'linear-gradient(to bottom, #3b0764, #0f0720)',
         }}
       >
         <motion.div

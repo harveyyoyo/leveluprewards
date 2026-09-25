@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { House, Student } from '@/lib/types';
 import { useHousesSound } from '@/hooks/useHousesSound';
+import { pickReadableOn } from '@/lib/themeContrast';
 
 export interface HouseEditorDialogProps {
   open: boolean;
@@ -300,7 +301,11 @@ export function HouseEditorDialog({
               className="rounded-xl font-bold px-5"
               style={{
                 backgroundColor: color,
-                color: '#ffffff',
+                // House color is free-form (swatches or the native color
+                // picker), so it can land anywhere from near-black to
+                // near-white — fixed white text was unreadable on pale
+                // house colors. Pick whichever of black/white contrasts.
+                color: pickReadableOn(color),
               }}
             >
               {isEditing ? 'Save Changes' : 'Create House'}
