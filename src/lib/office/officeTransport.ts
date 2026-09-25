@@ -470,6 +470,9 @@ export function routeSnapshotForRun(route: OfficeBusRoute): OfficeBusRouteSnapsh
     capacity: route.capacity ?? null,
     driverName: route.driverName ?? null,
     driverPhone: route.driverPhone ?? null,
+    ...(route.reliefDriverName != null || route.reliefDriverPhone != null
+      ? { reliefDriverName: route.reliefDriverName ?? null, reliefDriverPhone: route.reliefDriverPhone ?? null }
+      : {}),
     notifyFamiliesOnAlert: route.notifyFamiliesOnAlert === true,
     notifyFamiliesOnArrival: route.notifyFamiliesOnArrival === true,
     requireReleaseConfirmations: route.requireReleaseConfirmations === true,
@@ -487,6 +490,9 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     color: snapshot.color,
     driverName: snapshot.driverName ?? route?.driverName ?? null,
     driverPhone: snapshot.driverPhone ?? route?.driverPhone ?? null,
+    ...(snapshot.reliefDriverName != null || snapshot.reliefDriverPhone != null || route?.reliefDriverName != null || route?.reliefDriverPhone != null
+      ? { reliefDriverName: snapshot.reliefDriverName ?? route?.reliefDriverName ?? null, reliefDriverPhone: snapshot.reliefDriverPhone ?? route?.reliefDriverPhone ?? null }
+      : {}),
     capacity: snapshot.capacity ?? route?.capacity ?? null,
     vehicle: snapshot.vehicle ?? route?.vehicle ?? null,
     notifyFamiliesOnAlert: snapshot.notifyFamiliesOnAlert ?? route?.notifyFamiliesOnAlert === true,

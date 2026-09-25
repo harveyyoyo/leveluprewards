@@ -277,7 +277,8 @@ function TripRow({
               `${clockLabel(trip.startedAt)}${trip.endedAt ? ` – ${clockLabel(trip.endedAt)}` : ''}`,
               minutes !== null ? `${minutes} min` : null,
               `${rode} rode`,
-              trip.driverName ? `Driver ${trip.driverName}` : null,
+              trip.driverName ? `${trip.driverRole === 'relief' ? 'Relief driver' : 'Driver'} ${trip.driverName}` : null,
+              trip.driverRole === 'relief' && trip.driverRoleChangedAt ? `Relief since ${clockLabel(trip.driverRoleChangedAt)}` : null,
               vehicle,
             ]
               .filter(Boolean)

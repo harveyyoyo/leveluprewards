@@ -146,6 +146,8 @@ function assertRoute(route: OfficeBusRoute): void {
   if (route.notifyFamiliesOnAlert != null && typeof route.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
   if (route.notifyFamiliesOnArrival != null && typeof route.notifyFamiliesOnArrival !== 'boolean') throw new Error('Arrival notification choice is invalid.');
   if (route.requireReleaseConfirmations != null && typeof route.requireReleaseConfirmations !== 'boolean') throw new Error('Release confirmation choice is invalid.');
+  optionalString(route.reliefDriverName, 'Relief driver name', 120);
+  optionalString(route.reliefDriverPhone, 'Relief driver phone', 50);
   assertVehicle(route.vehicle);
   if (!Array.isArray(route.stops) || route.stops.length > MAX_STOPS) throw new Error('This route has too many stops.');
   const ids = new Set<string>();
@@ -304,6 +306,11 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
   const route = { id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute;
   if (route.archived) throw new Error('That bus route has been removed.');
   assertRoute(route);
+  if (body.driverRole != null && body.driverRole !== 'primary' && body.driverRole !== 'relief') throw new Error('Driver role is invalid.');
+  const driverRole = body.driverRole === 'relief' ? 'relief' : 'primary';
+  const selectedDriverName = driverRole === 'relief' ? route.reliefDriverName : route.driverName;
+  const selectedDriverPhone = driverRole === 'relief' ? route.reliefDriverPhone : route.driverPhone;
+  if (driverRole === 'relief' && !selectedDriverName?.trim()) throw new Error('Add a relief driver before starting this run.');
   const baseId = tripDocId(date, routeId, run);
   if (requestedId !== baseId && !requestedId.startsWith(`${baseId}_retry-`)) {
     throw new AuthError('That trip id does not belong to this bus run.', 409);
@@ -409,7 +416,10 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
         run,
         status: 'active',
         driverId: auth.uid,
-        driverName: route.driverName ?? auth.uid,
+        driverName: selectedDriverName?.trim() || auth.uid,
+        driverPhone: selectedDriverPhone?.trim() || null,
+        driverRole,
+        driverRoleChangedAt: now,
         startedAt: now,
         endedAt: null,
         location: null,
@@ -439,6 +449,10 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
         ...(existing.riderSnapshot ? {} : { riderSnapshot }),
         ...(existing.gpsDeviceId ? {} : { gpsDeviceId: assignedGpsDevice?.id ?? null, gpsAssignmentVersion: assignedGpsDevice?.assignmentVersion ?? null, locationSource: existing.locationSource ?? null }),
         driverId: auth.uid,
+        driverName: selectedDriverName?.trim() || auth.uid,
+        driverPhone: selectedDriverPhone?.trim() || null,
+        driverRole,
+        driverRoleChangedAt: existing.driverRole !== driverRole ? now : existing.driverRoleChangedAt ?? now,
       });
       resumed = true;
     }

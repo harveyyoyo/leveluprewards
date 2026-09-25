@@ -68,6 +68,12 @@ function trip(p: Partial<OfficeBusTrip> = {}): OfficeBusTrip {
 }
 
 describe('officeTransport', () => {
+  it('keeps relief-driver details in the saved Office route snapshot', () => {
+    const snapshot = routeSnapshotForRun({ ...route, reliefDriverName: 'Jordan Lee', reliefDriverPhone: '+15550000010' });
+    expect(snapshot.reliefDriverName).toBe('Jordan Lee');
+    expect(snapshot.reliefDriverPhone).toBe('+15550000010');
+  });
+
   it('runs the afternoon in reverse', () => {
     expect(orderedStops(route, 'am').map((s) => s.id)).toEqual(['a', 'b', 's']);
     expect(orderedStops(route, 'pm').map((s) => s.id)).toEqual(['s', 'b', 'a']);

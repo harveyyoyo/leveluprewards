@@ -67,6 +67,7 @@ export function OfficeBusDriverMode({
   const { toast } = useToast();
   const [routeId, setRouteId] = useState(routes[0]?.id ?? '');
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
+  const [driverRole, setDriverRole] = useState<'primary' | 'relief'>('primary');
   const [tripId, setTripId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [offlinePacket, setOfflinePacket] = useState<OfficeDriverOfflinePacket | null>(() => readDriverOfflinePacket(schoolId));
@@ -79,8 +80,12 @@ export function OfficeBusDriverMode({
     ? trips.find((t) => t.routeId === route.id && t.run === run && t.status === 'active')
     : undefined;
   const hasPriorTrip = route ? trips.some((t) => t.routeId === route.id && t.run === run) : false;
+  useEffect(() => {
+    if (existing?.driverRole) setDriverRole(existing.driverRole);
+  }, [existing?.id, existing?.driverRole]);
   const readiness = route ? routeReadiness(route) : { ready: false, missing: ['a route'] };
-  const canDrive = readiness.ready;
+  const reliefMissing = driverRole === 'relief' && !route?.reliefDriverName?.trim();
+  const canDrive = readiness.ready && !reliefMissing;
 
   // Keep the screen on while driving.
   const driving = trip?.status === 'active';
@@ -98,7 +103,7 @@ export function OfficeBusDriverMode({
     try {
       const date = localIsoDate();
       const id = existing?.id ?? tripDocId(date, route.id, run);
-      const { tripId: startedId } = await transport.startOfficeBusTrip(route, { tripId: id, date, run });
+      const { tripId: startedId } = await transport.startOfficeBusTrip(route, { tripId: id, date, run, driverRole });
       setOfflineOpen(false);
       setTripId(startedId);
     } catch (e) {
@@ -200,9 +205,21 @@ export function OfficeBusDriverMode({
               ))}
             </div>
           </div>
-          {route && !canDrive ? (
+                     <div>
+             <p className="text-sm font-semibold">Who is driving?</p>
+             <div className="mt-2 grid grid-cols-2 gap-2">
+               <button type="button" aria-pressed={driverRole === 'primary'} onClick={() => setDriverRole('primary')} className={cn('rounded-2xl border-2 bg-white py-3 font-semibold dark:bg-slate-900', driverRole === 'primary' ? 'border-teal-700' : 'border-transparent')}>
+                 Primary driver
+               </button>
+               <button type="button" aria-pressed={driverRole === 'relief'} onClick={() => setDriverRole('relief')} disabled={!route?.reliefDriverName} className={cn('rounded-2xl border-2 bg-white py-3 font-semibold dark:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50', driverRole === 'relief' ? 'border-teal-700' : 'border-transparent')}>
+                 Relief driver
+               </button>
+             </div>
+             {driverRole === 'relief' && route?.reliefDriverName ? <p className="mt-2 text-xs text-muted-foreground">This run will be recorded for {route.reliefDriverName}.</p> : null}
+           </div>
+           {route && !canDrive ? (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              Add at least one student stop and the school before driving.
+              {reliefMissing ? 'Add a relief driver before starting this run.' : 'Add at least one student stop and the school before driving.'}
             </p>
           ) : null}
           <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !canDrive} onClick={() => void start()}>
@@ -425,7 +442,16 @@ function DrivingScreen({
 
   const saveOfflineCopy = () => {
     if (readOnly) return;
-    const saved = saveDriverOfflinePacket(schoolId, trip, activeRoute);
+    const safeRoute = {
+      ...activeRoute,
+      driverName: null,
+      driverPhone: null,
+      reliefDriverName: null,
+      reliefDriverPhone: null,
+      notes: null,
+      vehicle: activeRoute.vehicle ? { ...activeRoute.vehicle, notes: null } : activeRoute.vehicle,
+    };
+    const saved = saveDriverOfflinePacket(schoolId, trip, safeRoute);
     if (!saved) {
       toast({ variant: 'destructive', title: 'Could not save the trip copy', description: 'This browser may be full or may not allow saved information.' });
       return;

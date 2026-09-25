@@ -239,6 +239,8 @@ export type OfficeBusRoute = {
   color: string;
   driverName?: string | null;
   driverPhone?: string | null;
+  reliefDriverName?: string | null;
+  reliefDriverPhone?: string | null;
   /** Seats on the bus; used for the "full" warning only. */
   capacity?: number | null;
   /** Optional vehicle identity and maintenance dates. */
@@ -262,7 +264,7 @@ export type OfficeBusRoute = {
 /** The route details needed to read a past trip after the route is edited or removed. */
 export type OfficeBusRouteSnapshot = Pick<
   OfficeBusRoute,
-  'name' | 'busNumber' | 'color' | 'vehicle' | 'stops' | 'capacity' | 'driverName' | 'driverPhone' |
+  'name' | 'busNumber' | 'color' | 'vehicle' | 'stops' | 'capacity' | 'driverName' | 'driverPhone' | 'reliefDriverName' | 'reliefDriverPhone' |
     'notifyFamiliesOnAlert' | 'notifyFamiliesOnArrival' | 'requireReleaseConfirmations'
 >;
 
@@ -341,6 +343,9 @@ export type OfficeBusTrip = {
   status: 'active' | 'done';
   driverId?: string | null;
   driverName?: string | null;
+  driverPhone?: string | null;
+  driverRole?: 'primary' | 'relief';
+  driverRoleChangedAt?: number;
   startedAt: number;
   endedAt?: number | null;
   location?: OfficeBusLocation | null;

@@ -71,7 +71,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
   const visibleRoutes = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return routes;
-    return routes.filter((route) => [route.name, route.busNumber, route.driverName, vehicleLabel(route.vehicle)].filter(Boolean).join(' ').toLowerCase().includes(query));
+    return routes.filter((route) => [route.name, route.busNumber, route.driverName, route.reliefDriverName, vehicleLabel(route.vehicle)].filter(Boolean).join(' ').toLowerCase().includes(query));
   }, [routes, search]);
 
   const saveSchool = async (place: LatLng & { label: string }) => {
@@ -209,7 +209,8 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
                         Add {readiness.missing.join(' and ')}
                       </span>
                     ) : null}
-                    {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
+                    {route.reliefDriverName ? <span className="mt-1 block text-xs text-muted-foreground">Relief driver: {route.reliefDriverName}</span> : null}
+                     {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
                     {lastService ? <span className="mt-1 block text-xs text-muted-foreground">Last service: {lastService}</span> : null}
                     {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
@@ -298,6 +299,8 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     color: BUS_ROUTE_COLORS.find((c) => !used.includes(c)) ?? BUS_ROUTE_COLORS[0],
     driverName: '',
     driverPhone: '',
+    reliefDriverName: '',
+    reliefDriverPhone: '',
     capacity: null,
     vehicle: {},
     notifyFamiliesOnAlert: false,
@@ -448,6 +451,8 @@ function OfficeBusRouteSheet({
         busNumber: draft.busNumber?.trim() || null,
         driverName: draft.driverName?.trim() || null,
         driverPhone: draft.driverPhone?.trim() || null,
+        reliefDriverName: draft.reliefDriverName?.trim() || null,
+        reliefDriverPhone: draft.reliefDriverPhone?.trim() || null,
         notes: draft.notes?.trim() || null,
         capacity: draft.capacity && draft.capacity > 0 ? Math.round(draft.capacity) : null,
         vehicle: cleanVehicle(draft.vehicle),
@@ -686,6 +691,14 @@ function OfficeBusRouteSheet({
             <div className="space-y-1.5">
               <Label htmlFor="route-phone">Driver phone</Label>
               <Input id="route-phone" type="tel" value={draft.driverPhone ?? ''} onChange={(e) => patch({ driverPhone: e.target.value })} className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="route-relief-driver">Relief driver</Label>
+              <Input id="route-relief-driver" value={draft.reliefDriverName ?? ''} onChange={(e) => patch({ reliefDriverName: e.target.value })} placeholder="Optional" className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="route-relief-phone">Relief driver phone</Label>
+              <Input id="route-relief-phone" type="tel" value={draft.reliefDriverPhone ?? ''} onChange={(e) => patch({ reliefDriverPhone: e.target.value })} placeholder="Optional" className="rounded-xl" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="route-seats">Seats</Label>

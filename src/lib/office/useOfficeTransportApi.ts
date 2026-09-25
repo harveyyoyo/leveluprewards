@@ -37,7 +37,7 @@ export function useOfficeTransportApi(schoolId: string | null) {
 
   return useMemo(
     () => ({
-      startOfficeBusTrip: (route: OfficeBusRoute, params: { tripId: string; date: string; run: OfficeBusRun }) =>
+      startOfficeBusTrip: (route: OfficeBusRoute, params: { tripId: string; date: string; run: OfficeBusRun; driverRole: 'primary' | 'relief' }) =>
         call<{ tripId: string }>({ action: 'start', routeId: route.id, ...params }),
       updateOfficeBusTripLocation: (tripId: string, location: OfficeBusLocation, reachedStopId?: string | null) =>
         call<{ ok: true; ignored?: boolean }>({ action: 'location', tripId, location, reachedStopId: reachedStopId ?? null }),
