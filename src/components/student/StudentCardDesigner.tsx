@@ -99,22 +99,25 @@ export function StudentCardDesigner({ value, onChange, name, currentTheme, curre
     </div>
     {currentCard && <details className="rounded-xl border bg-white p-3"><summary className="cursor-pointer text-sm font-bold">See my current card</summary><div className="mt-3 flex justify-center">{currentCard}</div></details>}
     <div className="flex flex-wrap gap-2 rounded-xl border bg-white p-3"><span className="w-full text-sm font-bold">Ready-made starting designs · uses your theme colors</span>{(['theme', 'stripe', 'spotlight'] as const).map(style => <Button key={style} variant="outline" onClick={() => { commit(themeCardStarter(currentTheme, name, assets.school, style)); select(undefined); }}>{style === 'theme' ? 'My theme' : style === 'stripe' ? 'Color stripe' : 'Spotlight'}</Button>)}</div>
-    <details className="rounded-xl border bg-white p-3">
-      <summary className="cursor-pointer text-sm font-bold">Design it in Canva instead</summary>
-      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
-        <li>Download a template below.</li>
-        <li>In Canva, choose <b>Create a design → Custom size</b> and type <b>{CANVA_TEMPLATE_WIDTH} × {CANVA_TEMPLATE_HEIGHT}</b> pixels. Drop the guide picture in as the bottom layer if you want to see the safe area.</li>
-        <li>Make your art. The student&apos;s name, school, and scan code are added underneath automatically, so leave them out.</li>
-        <li>Hide or delete the guide, then <b>Share → Download</b> as PNG or JPG.</li>
-        <li>Come back here and press <b>Upload finished art</b>.</li>
-      </ol>
+    <div className="rounded-xl border-2 border-violet-300 bg-violet-50 p-3">
+      <p className="text-sm font-bold text-violet-900">🎨 Or design it in Canva</p>
+      <p className="text-xs text-slate-600">Download a template, make your art in Canva, then upload it here. Your art fills the top of the card; name, school, and scan code are added underneath automatically.</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => downloadCanvaTemplate(true)}>Download template with guides</Button>
-        <Button variant="outline" onClick={() => downloadCanvaTemplate(false)}>Download blank template</Button>
-        <label className="cursor-pointer rounded-md border bg-slate-900 px-3 py-2 text-sm font-medium text-white">{uploading ? 'Adding your art…' : 'Upload finished art'}<input disabled={uploading} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e => { void uploadArt(e.target.files?.[0]); e.target.value = ''; }} /></label>
+        <Button variant="outline" className="bg-white" onClick={() => downloadCanvaTemplate(true)}>⬇ Download template with guides</Button>
+        <Button variant="outline" className="bg-white" onClick={() => downloadCanvaTemplate(false)}>⬇ Download blank template</Button>
+        <label className="cursor-pointer rounded-md border bg-violet-700 px-3 py-2 text-sm font-medium text-white hover:bg-violet-800">{uploading ? 'Adding your art…' : '⬆ Upload finished art'}<input disabled={uploading} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e => { void uploadArt(e.target.files?.[0]); e.target.value = ''; }} /></label>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Your art fills the whole top of the card and sits behind everything else. You can still add text and stickers on top. Uploading again replaces it.</p>
-    </details>
+      <details className="mt-3">
+        <summary className="cursor-pointer text-xs font-bold text-violet-900">How to do it in Canva, step by step</summary>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
+          <li>Download a template above.</li>
+          <li>In Canva, choose <b>Create a design → Custom size</b> and type <b>{CANVA_TEMPLATE_WIDTH} × {CANVA_TEMPLATE_HEIGHT}</b> pixels. Drop the guide picture in as the bottom layer if you want to see the safe area.</li>
+          <li>Make your art. Leave out the student&apos;s name, school, and scan code; they are added automatically.</li>
+          <li>Hide or delete the guide, then <b>Share → Download</b> as PNG or JPG.</li>
+          <li>Come back here and press <b>Upload finished art</b>. Uploading again replaces it, and you can still add stickers and text on top.</li>
+        </ol>
+      </details>
+    </div>
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" onClick={() => add('text', 'Make it yours!')}>+ Text</Button>
       <Button variant="outline" onClick={() => add('rectangle')}>+ Rectangle</Button>
