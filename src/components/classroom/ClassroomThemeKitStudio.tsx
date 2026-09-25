@@ -254,10 +254,10 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
   const standaloneHref = `/classroom-themes/${activeDesign.slug}.html${settings.darkMode ? '?dark=1' : ''}`;
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1280px)')?.matches) {
-      setSidebarOpen(true);
-      setControlsOpen(true);
-    }
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const isWide = window.matchMedia('(min-width: 1280px)').matches;
+    setSidebarOpen(isWide);
+    setControlsOpen(isWide);
   }, []);
 
   const [applied, setApplied] = useState(false);
