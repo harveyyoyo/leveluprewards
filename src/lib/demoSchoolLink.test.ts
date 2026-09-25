@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { demoLinkUrl, resolveDemoLinkTarget } from './demoSchoolLink';
+import { demoLinkForSchoolPage, demoLinkUrl, resolveDemoLinkTarget } from './demoSchoolLink';
 
 describe('resolveDemoLinkTarget', () => {
   it('opens the School ABC portal for a bare /demo link', () => {
@@ -30,9 +30,12 @@ describe('resolveDemoLinkTarget', () => {
     expect(resolveDemoLinkTarget('/demo/yeshiva')?.href).toBe('/yeshiva/portal');
   });
 
-  it('keeps the link query string', () => {
+  it('keeps the link query string but never the key', () => {
     expect(resolveDemoLinkTarget('/demo/library', '?tab=catalog&library=main')?.href).toBe(
       '/schoolabc/library?tab=catalog&library=main',
+    );
+    expect(resolveDemoLinkTarget('/demo/library', '?key=secret&tab=catalog')?.href).toBe(
+      '/schoolabc/library?tab=catalog',
     );
   });
 
@@ -77,18 +80,41 @@ describe('resolveDemoLinkTarget', () => {
 });
 
 describe('demoLinkUrl', () => {
+  const origin = 'https://leveluprewards.app';
+
   it('builds short links for School ABC and named links for other demo schools', () => {
-    const origin = 'https://leveluprewards.app';
-    expect(demoLinkUrl(origin, 'schoolabc')).toBe('https://leveluprewards.app/demo');
-    expect(demoLinkUrl(origin, 'schoolabc', 'library')).toBe('https://leveluprewards.app/demo/library');
-    expect(demoLinkUrl(origin, 'yeshiva', 'library')).toBe(
-      'https://leveluprewards.app/demo/yeshiva/library',
+    expect(demoLinkUrl(origin, 'schoolabc', '', 'K1')).toBe('https://leveluprewards.app/demo?key=K1');
+    expect(demoLinkUrl(origin, 'schoolabc', 'library', 'K1')).toBe(
+      'https://leveluprewards.app/demo/library?key=K1',
     );
-    expect(demoLinkUrl(origin, 'yeshiva')).toBe('https://leveluprewards.app/demo/yeshiva');
+    expect(demoLinkUrl(origin, 'yeshiva', 'library', 'K2', '?tab=catalog')).toBe(
+      'https://leveluprewards.app/demo/yeshiva/library?tab=catalog&key=K2',
+    );
   });
 
-  it('round-trips through resolveDemoLinkTarget', () => {
-    const url = new URL(demoLinkUrl('https://leveluprewards.app', 'yeshiva', 'rewards'));
+  it('round-trips through resolveDemoLinkTarget without passing the key to the page', () => {
+    const url = new URL(demoLinkUrl(origin, 'yeshiva', 'rewards', 'K2'));
     expect(resolveDemoLinkTarget(url.pathname, url.search)?.href).toBe('/yeshiva/admin?tab=prizes');
+    const lib = new URL(demoLinkUrl(origin, 'schoolabc', 'library', 'K1', '?tab=catalog'));
+    expect(resolveDemoLinkTarget(lib.pathname, lib.search)?.href).toBe('/schoolabc/library?tab=catalog');
+  });
+});
+
+describe('demoLinkForSchoolPage', () => {
+  const origin = 'https://leveluprewards.app';
+  const keys = { schoolabc: 'K1', yeshiva: 'K2' };
+
+  it('turns the demo page being viewed into a share link', () => {
+    expect(demoLinkForSchoolPage(origin, '/schoolabc/library', '?tab=catalog', keys)).toBe(
+      'https://leveluprewards.app/demo/library?tab=catalog&key=K1',
+    );
+    expect(demoLinkForSchoolPage(origin, '/yeshiva/office/grades', '', keys)).toBe(
+      'https://leveluprewards.app/demo/yeshiva/office/grades?key=K2',
+    );
+  });
+
+  it('never makes a link for a real school or without a key', () => {
+    expect(demoLinkForSchoolPage(origin, '/realschool/library', '', keys)).toBeNull();
+    expect(demoLinkForSchoolPage(origin, '/schoolabc/library', '', {})).toBeNull();
   });
 });

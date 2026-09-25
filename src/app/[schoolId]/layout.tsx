@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { SchoolSessionGate } from '@/components/auth/SchoolSessionGate';
+import { DemoShareButton } from '@/components/auth/DemoShareButton';
 
 /** Next.js 14: sync params. Next.js 15+: params may be a Promise — normalize both. */
 type SchoolRouteParams =
@@ -36,5 +37,10 @@ export default async function SchoolLayout({
   params: SchoolRouteParams;
 }) {
   const { schoolId } = await resolvedSchoolParams(params);
-  return <SchoolSessionGate routeSchoolId={schoolId}>{children}</SchoolSessionGate>;
+  return (
+    <SchoolSessionGate routeSchoolId={schoolId}>
+      {children}
+      <DemoShareButton schoolId={schoolId} />
+    </SchoolSessionGate>
+  );
 }

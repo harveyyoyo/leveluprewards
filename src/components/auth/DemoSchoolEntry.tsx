@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
@@ -10,17 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { syncSchoolSessionCookies } from '@/lib/auth/syncFirebaseSessionCookie';
-import { DEFAULT_DEMO_SCHOOL_ID, DEMO_LINK_ROOT, resolveDemoLinkTarget } from '@/lib/demoSchoolLink';
+import type { DemoLinkTarget } from '@/lib/demoSchoolLink';
 import { PUBLIC_SAMPLE_SCHOOL_NAMES, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
 import { normalizeSchoolId } from '@/lib/schoolId';
 
 /**
- * `/demo/…` share links: signs into a demo school with its public passcode (plus the demo admin
- * for staff pages), then opens the page. `resolveDemoLinkTarget` only ever returns demo schools.
+ * Owner-made demo links: the server already checked the key, so sign into the demo school with
+ * its public passcode (plus the demo admin for staff pages), then open the page.
  */
-export function DemoSchoolEntry() {
-  const pathname = usePathname();
-  const target = useMemo(() => resolveDemoLinkTarget(pathname), [pathname]);
+export function DemoSchoolEntry({ target }: { target: DemoLinkTarget }) {
   const {
     isInitialized,
     isUserLoading,
@@ -36,7 +33,7 @@ export function DemoSchoolEntry() {
   const startedAttemptRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!target || !isInitialized || isUserLoading) return;
+    if (!isInitialized || isUserLoading) return;
     if (startedAttemptRef.current === attempt) return;
     startedAttemptRef.current = attempt;
 
@@ -71,9 +68,7 @@ export function DemoSchoolEntry() {
       }
 
       if (!asDeveloper) await syncSchoolSessionCookies(auth, sid);
-      // The link's own query (e.g. `?tab=catalog`) rides along to the page.
-      const withQuery = resolveDemoLinkTarget(pathname, window.location.search);
-      window.location.replace(withQuery?.href ?? target.href);
+      window.location.replace(target.href);
     })();
   }, [
     attempt,
@@ -83,13 +78,12 @@ export function DemoSchoolEntry() {
     isUserLoading,
     login,
     loginState,
-    pathname,
     schoolId,
     startDeveloperSupportSession,
     target,
   ]);
 
-  if (target && !failure) {
+  if (!failure) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-6 text-muted-foreground">
         <Loader2 className="h-7 w-7 animate-spin" aria-hidden />
@@ -98,42 +92,31 @@ export function DemoSchoolEntry() {
     );
   }
 
-  const demoSchoolId = target?.schoolId ?? DEFAULT_DEMO_SCHOOL_ID;
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md rounded-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-destructive" aria-hidden />
-            {target ? 'The demo did not open' : 'This demo link does not work'}
+            The demo did not open
           </CardTitle>
-          <CardDescription>
-            {failure ?? 'Check the link you were sent, or open the demo school from the start.'}
-          </CardDescription>
+          <CardDescription>{failure}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {target ? (
-            <>
-              <Button
-                className="rounded-xl"
-                onClick={() => {
-                  setFailure(null);
-                  setAttempt((n) => n + 1);
-                }}
-              >
-                Try again
-              </Button>
-              <Button asChild variant="outline" className="rounded-xl">
-                <Link href={`/login?${new URLSearchParams({ school: demoSchoolId, next: target.href })}`}>
-                  Sign in with the passcode instead
-                </Link>
-              </Button>
-            </>
-          ) : (
-            <Button asChild className="rounded-xl">
-              <Link href={DEMO_LINK_ROOT}>Open {PUBLIC_SAMPLE_SCHOOL_NAMES[demoSchoolId]}</Link>
-            </Button>
-          )}
+          <Button
+            className="rounded-xl"
+            onClick={() => {
+              setFailure(null);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Try again
+          </Button>
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link href={`/login?${new URLSearchParams({ school: target.schoolId, next: target.href })}`}>
+              Sign in with the passcode instead
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

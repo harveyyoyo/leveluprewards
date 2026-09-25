@@ -1,40 +1,38 @@
-# No-passcode demo links
+# Owner-only no-passcode demo links
 
-The owner sends people links that open a demo school straight to one area, without the
-passcode screen. Only the public demo schools (`schoolabc`, `yeshiva`) can be opened this way;
-their passcode (`1234`) is already public on `/login`.
+The owner sends people links that open a demo school straight to one area, without the passcode
+screen. Only the owner can make these links, and only for the public demo schools
+(`schoolabc`, `yeshiva`). Real schools never get a passcode-free link.
+
+## How the owner makes a link
+
+- **Share button:** while signed in with the owner's Google account, every demo-school page
+  shows a small **Share** button (bottom-left). It copies a link to that exact page.
+- **Developer → Schools:** each demo school row has **No-passcode demo link:** buttons
+  (Portal, Rewards, Office, Classroom, Attendance, Library).
 
 ## Link shapes
 
-| Link | Opens |
-|------|-------|
-| `/demo` | School ABC "Where to?" portal |
-| `/demo/library` | School ABC library |
-| `/demo/rewards` | School ABC admin → Prizes tab |
-| `/demo/attendance` | School ABC admin → Attendance tab |
-| `/demo/classroom`, `/demo/office` | Those pages (signed in as the demo admin) |
-| `/demo/yeshiva/…` | Same, for the Yeshiva demo |
-| `/demo/library?tab=catalog` | Query strings pass through to the page |
-
-Any other page name is passed through (`/demo/student` → `/schoolabc/student`).
-Rewards/attendance map to the same admin tabs as the pillar boxes on the staff Welcome tab.
+`/demo/<page>?key=<key>` — e.g. `/demo/library?key=…`, `/demo/rewards?key=…` (admin Prizes tab),
+`/demo/attendance?key=…` (admin Attendance tab), `/demo/yeshiva/office?key=…`. Other query
+params pass through to the page; `key` never does. Without a valid key (or with another school's
+key) the link goes to the normal sign-in with the school filled in.
 
 ## How it works
 
-- Route: `src/app/demo/[[...path]]/page.tsx` → `DemoSchoolEntry`.
-- `resolveDemoLinkTarget` (`src/lib/demoSchoolLink.ts`) turns the link into a same-site page
-  inside the demo school, or rejects it. Never accepts a real school id.
-- `DemoSchoolEntry` runs the same `login('school', …)` as `/login` with the demo passcode.
-  Staff pages (admin, office, classroom, hall of fame, reports) also get the demo admin
-  sign-in, best effort. It then mints session cookies and hard-navigates.
+- Key: `src/lib/server/demoShareKey.ts` — HMAC of the school id with `AUTH_GATE_SIGNING_SECRET`,
+  one key per demo school. Changing that secret invalidates every link ever shared.
+- Owner-only key route: `GET /api/developer/demo-share-keys` (`guardDeveloperAuth`), used by
+  `useDemoShareKeys` (Share button + Developer page).
+- `src/app/demo/[[...path]]/page.tsx` checks the key on the server (`checkDemoLink`), then
+  `DemoSchoolEntry` runs the same `login('school', …)` as `/login` with the demo passcode.
+  Staff pages (admin, office, classroom, hall of fame, reports) also get the demo admin sign-in,
+  best effort. Then it mints session cookies and hard-navigates.
 - Already signed into that demo school → no new sign-in. Developer sessions stay developer
   (opens the demo as developer support).
 - On the main host, middleware sends `/demo…` to the portal host first
   (`canonicalPortalRedirectUrl`), so the session lives where the school pages live.
-- `demo` is reserved in the portal, office, SSS, and edge-session path lists so it is never
-  read as a school id. Do not create a school with the id `demo`.
-
-## Owner shortcut
-
-Developer → Schools → each demo school row has **No-passcode demo link:** buttons (Portal,
-Rewards, Office, Classroom, Attendance, Library) that copy the link.
+- `demo` is reserved in the portal, office, SSS, and edge-session path lists so it is never read
+  as a school id. Do not create a school with the id `demo`.
+- The demo passcode is still shown on `/login` ("Try a demo school"), so the demos themselves stay
+  open to anyone who types it; only the skip-the-passcode link is owner-only.

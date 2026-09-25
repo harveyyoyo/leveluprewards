@@ -1,11 +1,15 @@
 import { PUBLIC_SAMPLE_SCHOOL_IDS, type PublicSampleSchoolId } from '@/lib/sampleSchools';
 
 /**
- * Shareable demo links: `/demo/library` signs the visitor into a demo school with its public
- * passcode and opens that page, so whoever you send it to never sees the passcode screen.
- * Only the public sample schools can be opened this way.
+ * Owner-made demo links: `/demo/library?key=…` signs the visitor into a demo school with its
+ * public passcode and opens that page, so whoever the owner sends it to never sees the passcode
+ * screen. Only the server can make a valid key (see `src/lib/server/demoShareKey.ts`), and only
+ * the public sample schools can be opened this way.
  */
 export const DEMO_LINK_ROOT = '/demo';
+
+/** Query parameter carrying the owner-made key. Never forwarded to the page itself. */
+export const DEMO_LINK_KEY_PARAM = 'key';
 
 /** Demo school a link opens when it does not name one (`/demo/library`). */
 export const DEFAULT_DEMO_SCHOOL_ID: PublicSampleSchoolId = 'schoolabc';
@@ -59,8 +63,8 @@ function demoSchoolFromSegment(segment: string | undefined): PublicSampleSchoolI
 /**
  * Where a `/demo/…` link lands: `/demo` → School ABC's portal, `/demo/library` → its library,
  * `/demo/yeshiva/library` → the Yeshiva demo's library. The link's query string is kept
- * (`/demo/library?tab=catalog`). Returns null for anything but plain page names, so a demo
- * link can never open a real school or another site.
+ * (`/demo/library?tab=catalog`) except the key. Returns null for anything but plain page names,
+ * so a demo link can never open a real school or another site.
  */
 export function resolveDemoLinkTarget(pathname: string, search = ''): DemoLinkTarget | null {
   const path = pathname.toLowerCase().replace(/\/+$/, '');
@@ -74,7 +78,9 @@ export function resolveDemoLinkTarget(pathname: string, search = ''): DemoLinkTa
   const pillarTab = segments.length === 1 ? PILLAR_ADMIN_TABS.get(segments[0]) : undefined;
   const pagePath = pillarTab ? 'admin' : segments.join('/') || 'portal';
   const params = new URLSearchParams(pillarTab ? { tab: pillarTab } : undefined);
-  new URLSearchParams(search).forEach((value, key) => params.set(key, value));
+  new URLSearchParams(search).forEach((value, key) => {
+    if (key !== DEMO_LINK_KEY_PARAM) params.set(key, value);
+  });
   const query = params.toString();
   const schoolId = namedSchool ?? DEFAULT_DEMO_SCHOOL_ID;
 
@@ -85,9 +91,34 @@ export function resolveDemoLinkTarget(pathname: string, search = ''): DemoLinkTa
   };
 }
 
-/** Full shareable link, e.g. `https://leveluprewards.app/demo/library`. */
-export function demoLinkUrl(origin: string, schoolId: string, page = ''): string {
+/** Owner's shareable link, e.g. `https://leveluprewards.app/demo/library?key=…`. */
+export function demoLinkUrl(
+  origin: string,
+  schoolId: string,
+  page: string,
+  key: string,
+  search = '',
+): string {
   const sid = schoolId.trim().toLowerCase();
   const rest = [sid === DEFAULT_DEMO_SCHOOL_ID ? '' : sid, page].filter(Boolean).join('/');
-  return `${origin}${DEMO_LINK_ROOT}${rest ? `/${rest}` : ''}`;
+  const params = new URLSearchParams(search);
+  params.set(DEMO_LINK_KEY_PARAM, key);
+  return `${origin}${DEMO_LINK_ROOT}${rest ? `/${rest}` : ''}?${params}`;
+}
+
+/**
+ * Link for the demo-school page the owner is looking at (`/schoolabc/library?tab=catalog`).
+ * Null off the demo schools, so real schools never get a passcode-free link.
+ */
+export function demoLinkForSchoolPage(
+  origin: string,
+  pathname: string,
+  search: string,
+  keys: Partial<Record<string, string>>,
+): string | null {
+  const [first, ...page] = pathname.split('/').filter(Boolean);
+  const schoolId = demoSchoolFromSegment(first?.toLowerCase());
+  const key = schoolId ? keys[schoolId] : undefined;
+  if (!schoolId || !key) return null;
+  return demoLinkUrl(origin, schoolId, page.join('/'), key, search);
 }
