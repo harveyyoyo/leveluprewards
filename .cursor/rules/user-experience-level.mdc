@@ -27,6 +27,10 @@ Say the plain version instead:
 - “a login check” not “auth session”
 - “the page failed to open” not “503” or “SSR error” unless you also say “the site could not start, like a locked door”
 
+## Always end with a link to see it
+
+Whenever you finish something in the app, give the owner a web address they can click to see it. Link to the exact page that changed. Use the live link if it is live, or a local `http://localhost:...` link if it only runs on this computer (and say it only works while the app is running here). If there is nothing to see, say so plainly.
+
 ## After the live site is published
 
 Always open the real live website and click through it before telling the owner they can check. Home, sign-in, and any page the change touched. Do not skip this.
