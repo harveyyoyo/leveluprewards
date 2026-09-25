@@ -36,7 +36,7 @@ export function OfficeInterfaceSettingsSheet({ schoolId }: OfficeInterfaceSettin
         type="button"
         variant="outline"
         size="icon"
-        className="h-8 w-8 shrink-0 rounded-lg"
+        className="size-11 shrink-0 rounded-lg sm:size-8"
         onClick={() => setOpen(true)}
         aria-label="Interface and display settings"
         title="Interface"

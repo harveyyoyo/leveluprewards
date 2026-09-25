@@ -150,6 +150,10 @@
       }
       .btn-primary { color: white; background: linear-gradient(90deg, var(--accent-a), var(--accent-b)); }
       .btn-disabled { color: white; background: #334155; opacity: 0.5; cursor: not-allowed; }
+      @media (max-width: 360px) {
+        .best-of { padding: 1rem; }
+        .grid, .best-grid { grid-template-columns: minmax(0, 1fr); }
+      }
       .footer { margin-top: 4rem; text-align: center; color: #64748b; font-size: 0.75rem; }
       code { color: #94a3b8; }
     </style>

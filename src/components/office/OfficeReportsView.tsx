@@ -521,29 +521,31 @@ export function OfficeReportsView({
           {overdueInvoices.length === 0 ? (
             <p className="text-sm text-muted-foreground">No overdue invoices right now.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-xs font-bold uppercase text-muted-foreground">
-                  <th className="py-2 pr-3">Family</th>
-                  <th className="py-2 pr-3">Description</th>
-                  <th className="py-2 pr-3">Due</th>
-                  <th className="py-2">Remaining</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overdueInvoices.map((inv) => {
-                  const account = billingAccounts.find((a) => a.id === inv.accountId);
-                  return (
-                    <tr key={inv.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
-                      <td className="py-2 pr-3 font-medium">{account?.familyName ?? '—'}</td>
-                      <td className="py-2 pr-3">{inv.label}</td>
-                      <td className="py-2 pr-3 text-muted-foreground">{inv.dueDate}</td>
-                      <td className="py-2">{formatCents(invoiceRemainingCents(inv))}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto pb-2">
+              <table className="w-full min-w-[620px] text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs font-bold uppercase text-muted-foreground">
+                    <th className="py-2 pr-3">Family</th>
+                    <th className="py-2 pr-3">Description</th>
+                    <th className="py-2 pr-3">Due</th>
+                    <th className="py-2">Remaining</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overdueInvoices.map((inv) => {
+                    const account = billingAccounts.find((a) => a.id === inv.accountId);
+                    return (
+                      <tr key={inv.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
+                        <td className="py-2 pr-3 font-medium">{account?.familyName ?? '—'}</td>
+                        <td className="py-2 pr-3">{inv.label}</td>
+                        <td className="py-2 pr-3 text-muted-foreground">{inv.dueDate}</td>
+                        <td className="py-2">{formatCents(invoiceRemainingCents(inv))}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       ) : null}

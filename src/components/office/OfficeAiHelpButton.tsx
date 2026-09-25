@@ -538,7 +538,7 @@ export function OfficeAiHelpButton() {
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs"
+        className="h-11 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs sm:h-8"
         onClick={() => setOpen(true)}
         aria-label="Help"
         title="Guide to every page, and questions"

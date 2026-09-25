@@ -245,9 +245,9 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
     <div className="space-y-3">
       {confirmDialog}
       {askLabel ? <OfficeAssistantBanner label={askLabel} onClear={clearAsk} /> : null}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Previous day" onClick={() => setDate(shiftDate(date, -1))}>
+      <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-1 sm:justify-start">
+          <Button type="button" variant="ghost" size="icon" className="size-11 rounded-lg" aria-label="Previous day" onClick={() => setDate(shiftDate(date, -1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Input
@@ -255,14 +255,14 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
             value={date}
             max={today}
             onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="h-9 w-40 rounded-lg"
+            className="h-11 w-40 rounded-lg"
             aria-label="Day"
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-lg"
+            className="size-11 rounded-lg"
             aria-label="Next day"
             disabled={date >= today}
             onClick={() => setDate(shiftDate(date, 1))}
@@ -277,7 +277,7 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
         </div>
         <Button
           type="button"
-          className="gap-2 rounded-xl"
+          className="w-full gap-2 rounded-xl sm:w-auto"
           onClick={() => setDraft(emptyDraft(tab === 'nurse' ? 'nurse_visit' : 'late_arrival'))}
         >
           <Plus className="h-4 w-4" />

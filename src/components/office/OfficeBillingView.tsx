@@ -1247,12 +1247,12 @@ export function OfficeBillingView({
                       Balance: {formatCents(account.balanceCents || 0)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex w-full items-center justify-end gap-1 sm:w-auto">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 rounded-lg text-xs"
+                      className="h-11 rounded-lg text-xs"
                       onClick={() => openRecordPayment(account)}
                       disabled={(acctInvoices.filter(isInvoicePayable).length ?? 0) === 0}
                     >
@@ -1264,7 +1264,7 @@ export function OfficeBillingView({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg"
+                          className="size-11 rounded-lg"
                           aria-label={`More for ${account.familyName}`}
                         >
                           <MoreHorizontal className="h-4 w-4" />
@@ -1312,7 +1312,7 @@ export function OfficeBillingView({
                   <ul className="mt-4 space-y-2 border-t pt-3">
                     {acctInvoices.map((inv) => (
                       <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span>
+                        <span className="min-w-0 flex-1 basis-full">
                           {inv.label} · due {inv.dueDate} · {formatCents(inv.amountCents)}
                           {invoicePaidCents(inv) > 0 && inv.status !== 'paid' ? (
                             <span className="text-muted-foreground">
@@ -1321,7 +1321,7 @@ export function OfficeBillingView({
                             </span>
                           ) : null}
                         </span>
-                        <span className="flex items-center gap-1.5">
+                        <span className="ml-auto flex shrink-0 items-center gap-1.5">
                           {isInvoiceOverdue(inv) ? (
                             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
                               Overdue
@@ -1344,7 +1344,7 @@ export function OfficeBillingView({
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="h-7 rounded-lg"
+                              className="min-h-11 rounded-lg"
                               onClick={() => void sendDraft(inv)}
                             >
                               Send
@@ -1367,7 +1367,7 @@ export function OfficeBillingView({
                                 type="button"
                                 size="icon"
                                 variant="ghost"
-                                className="h-7 w-7 rounded-lg"
+                                className="size-11 rounded-lg"
                                 aria-label={`More for ${inv.label}`}
                               >
                                 <MoreHorizontal className="h-4 w-4" />

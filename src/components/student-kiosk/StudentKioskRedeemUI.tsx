@@ -119,11 +119,11 @@ export function StudentKioskLogoutControls({
           {tr('student.kiosk.sessionStaysOpen')}
         </p>
       )}
-      {!isKioskLocked && autoLogoutEnabled && onStaySignedIn && <button type="button" onClick={onStaySignedIn} className="rounded px-2 py-1 text-xs font-bold underline underline-offset-4">Stay signed in</button>}
+      {!isKioskLocked && autoLogoutEnabled && onStaySignedIn && <button type="button" onClick={onStaySignedIn} className="min-h-11 rounded px-2 py-1 text-xs font-bold underline underline-offset-4">Stay signed in</button>}
       <Button
         type="button"
         className={cn(
-          'h-9 shrink-0 rounded-xl border-2 px-3 text-xs font-bold shadow-sm [&_svg]:size-3',
+          'h-11 shrink-0 rounded-xl border-2 px-3 text-xs font-bold shadow-sm [&_svg]:size-3',
           !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
         )}
         style={

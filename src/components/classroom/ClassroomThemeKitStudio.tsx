@@ -253,6 +253,13 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
   const backHref = `/${schoolId.toLowerCase()}/classroom`;
   const standaloneHref = `/classroom-themes/${activeDesign.slug}.html${settings.darkMode ? '?dark=1' : ''}`;
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1280px)')?.matches) {
+      setSidebarOpen(true);
+      setControlsOpen(true);
+    }
+  }, []);
+
   const [applied, setApplied] = useState(false);
 
   const handleApplyToClassroom = () => {
@@ -307,15 +314,15 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
   };
 
   return (
-    <div className="flex h-screen w-full flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-zinc-950 font-sans text-zinc-100">
       {/* Top Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/90 px-3 sm:px-5 backdrop-blur-sm z-30">
-        <div className="flex items-center gap-3">
+      <header className="z-30 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-zinc-800 bg-zinc-900/90 px-3 py-2 backdrop-blur-sm sm:px-5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
           <Button
             asChild
             variant="ghost"
             size="sm"
-            className="text-zinc-300 hover:text-white hover:bg-zinc-800 gap-1.5"
+            className="min-h-11 gap-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white"
           >
             <Link href={backHref}>
               <ArrowLeft className="h-4 w-4" />
@@ -328,7 +335,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
           <button
             type="button"
             onClick={() => setSidebarOpen((v) => !v)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-1.5"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-700"
             title={sidebarOpen ? 'Hide themes list' : 'Show themes list'}
           >
             <Layers className="h-3.5 w-3.5 text-emerald-400" />
@@ -343,14 +350,14 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 xl:w-auto xl:flex-nowrap">
           <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-zinc-800/90 border border-zinc-700/80 px-3 py-1 text-xs font-medium text-zinc-300">
             <span className="text-emerald-400 font-bold">{activeIndex + 1} of 15</span>
             <span className="text-zinc-500">·</span>
             <span className="truncate max-w-[140px] md:max-w-none">{activeDesign.name}</span>
           </div>
 
-          <label className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors select-none">
+          <label className="flex min-h-11 cursor-pointer select-none items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-700 hover:text-white">
             <input
               type="checkbox"
               aria-label="Dark mode"
@@ -366,7 +373,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
             asChild
             variant="outline"
             size="sm"
-            className="border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white text-xs gap-1.5"
+            className="min-h-11 shrink-0 gap-1.5 border-zinc-700 bg-zinc-800 text-xs text-zinc-200 hover:bg-zinc-700 hover:text-white"
           >
             <a href={standaloneHref} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" />
@@ -379,7 +386,8 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
             variant="ghost"
             size="sm"
             onClick={() => setControlsOpen((v) => !v)}
-            className="text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs gap-1"
+            aria-label={controlsOpen ? 'Hide customizer' : 'Show customizer'}
+            className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white"
           >
             <Sliders className="h-3.5 w-3.5" />
             <span className="hidden md:inline">{controlsOpen ? 'Hide Tweaks' : 'Customize'}</span>
@@ -389,7 +397,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
             type="button"
             size="sm"
             onClick={handleApplyToClassroom}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 shadow-md px-3.5 h-8 rounded-lg"
+            className="h-11 shrink-0 gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500"
           >
             <Check className="h-3.5 w-3.5 stroke-[3]" />
             <span>{applied ? '✓ Applied to Classroom!' : 'Apply to Classroom'}</span>
@@ -398,7 +406,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
           <Button
             asChild
             size="sm"
-            className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs gap-1.5 h-8 rounded-lg"
+            className="h-11 shrink-0 gap-1.5 rounded-lg bg-sky-600 text-xs font-bold text-white hover:bg-sky-500"
           >
             <Link href={classroomHref(schoolId)}>
               <span>Open Classroom</span>
@@ -411,7 +419,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left Sidebar: 15 Themes grouped by 5 batches */}
         {sidebarOpen && (
-          <aside className="w-72 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-900/60 p-3 space-y-5 transition-all">
+          <aside className="absolute inset-y-0 left-0 z-40 w-[min(18rem,85vw)] space-y-5 overflow-y-auto border-r border-zinc-800 bg-zinc-900 p-3 shadow-2xl transition-all md:relative md:inset-auto md:z-auto md:w-72 md:bg-zinc-900/60 xl:shrink-0">
             <div className="px-1">
               <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                 15 Seating Chart Looks
@@ -461,10 +469,18 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
             ))}
           </aside>
         )}
+        {sidebarOpen ? (
+          <button
+            type="button"
+            className="absolute inset-0 z-30 bg-black/60 md:hidden"
+            aria-label="Close theme list"
+            onClick={() => setSidebarOpen(false)}
+          />
+        ) : null}
 
         {/* Center: Scaled Live Preview + Bottom Tweak Bar */}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-950">
-          <div className="min-h-0 flex-1 p-2 sm:p-4">
+          <div className="min-h-0 flex-1 p-2 sm:p-4 xl:p-5">
             <PreviewFrame
               title={activeDesign.name}
               html={activeDesign.html}
@@ -475,7 +491,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
           {/* Bottom Customizer Bar */}
           {controlsOpen && (
             <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/95 px-4 py-3 backdrop-blur-md">
-              <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-3 xl:gap-x-6">
                 {/* Heading Font */}
                 <div className="space-y-1">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">

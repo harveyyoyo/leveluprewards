@@ -142,7 +142,7 @@ export function AdminStaffAccountsTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                  className="h-11 gap-1.5 rounded-lg border-primary/20 bg-background font-semibold text-primary hover:bg-primary/5"
                   onClick={() => openEdit(a)}
                 >
                   <Edit className="h-3.5 w-3.5" />
@@ -163,7 +163,7 @@ export function AdminStaffAccountsTab({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                  className="size-11 rounded-lg text-destructive hover:bg-destructive/10"
                   onClick={() => void onDelete(a.id)}
                 >
                   <Trash2 className="w-3.5 h-3.5" />

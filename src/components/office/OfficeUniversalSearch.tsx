@@ -91,7 +91,7 @@ export function OfficeUniversalSearch() {
         type="button"
         variant="outline"
         size="icon"
-        className="h-8 w-8 rounded-lg sm:hidden"
+        className="size-11 rounded-lg sm:hidden"
         onClick={() => setOpen(true)}
         aria-label="Search School Office"
       >

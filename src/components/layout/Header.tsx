@@ -615,12 +615,12 @@ export default function Header() {
         >
       <div
         className={cn(
-          'grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3',
+          'grid min-h-20 min-w-0 w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]',
           adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(),
         )}
       >
         {/* Left: Branding */}
-        <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
+        <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 overflow-hidden sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
             <div className="flex items-center gap-1 sm:gap-4 pl-0.5">
             <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
@@ -651,7 +651,7 @@ export default function Header() {
               <Logo className="h-10 w-auto" />
             )}
             </Link>
-            <div className="hidden min-w-0 flex-col sm:flex">
+            <div className="hidden min-w-0 flex-col lg:flex">
               <Link
                 href={logoLink}
                 className="text-lg font-black tracking-widest uppercase text-primary"
@@ -667,7 +667,7 @@ export default function Header() {
 
         {/* Center: school name — in document flow so multi-line names expand the header */}
         {schoolId ? (
-          <div className="z-0 flex min-w-0 items-center justify-center justify-self-center px-1 sm:px-2">
+          <div className="z-0 flex min-w-0 items-center justify-center justify-self-center overflow-hidden px-1 sm:px-2">
             {schoolNameBlock()}
           </div>
         ) : (

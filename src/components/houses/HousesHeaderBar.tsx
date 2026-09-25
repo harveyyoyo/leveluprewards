@@ -55,7 +55,7 @@ export function HousesHeaderBar({
 
   return (
     <header className="relative z-20 w-full border-b hr-chrome backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 transition-colors">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:justify-between sm:gap-4">
         {/* Left: Logo & School Identity */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Link
@@ -90,7 +90,7 @@ export function HousesHeaderBar({
             title="Houses Home"
             aria-label="Houses Home"
             className={cn(
-              'flex items-center justify-center h-8 w-8 rounded-lg hr-nav-idle hr-muted hr-soft transition-colors',
+              'flex size-11 items-center justify-center rounded-lg hr-soft hr-nav-idle hr-muted transition-colors',
               activeTab === 'teams' && 'hr-fg hr-soft-strong',
             )}
           >
@@ -100,7 +100,7 @@ export function HousesHeaderBar({
 
         {/* Center: Main Navigation Tabs */}
         <nav
-          className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-2 overflow-x-auto py-0.5"
+          className="order-3 col-span-2 flex w-full min-w-0 items-center justify-start gap-1 overflow-x-auto py-0.5 [scrollbar-width:thin] sm:order-none sm:w-auto sm:flex-1 sm:justify-center sm:gap-2"
           aria-label="Houses sections"
         >
           {HOUSES_NAV_TABS.map(({ id, label, icon: TabIcon }) => {
@@ -113,7 +113,7 @@ export function HousesHeaderBar({
                 title={label}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold tracking-tight transition-all shrink-0',
+                  'flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold tracking-tight transition-all sm:gap-2 sm:text-sm',
                   active
                     ? 'hr-soft-strong hr-fg shadow-sm ring-1'
                     : 'hr-nav-idle hr-muted hr-soft',
@@ -146,7 +146,7 @@ export function HousesHeaderBar({
               onClick={onOpenGuide}
               title="Houses Guide"
               aria-label="Houses Guide"
-              className="h-8 px-3 rounded-full border hr-border hr-soft flex items-center gap-1.5 shadow-sm transition-all hover:-translate-y-0.5 text-xs font-bold shrink-0 hr-fg"
+              className="flex size-11 shrink-0 items-center justify-center gap-1.5 rounded-full border hr-border hr-soft text-xs font-bold shadow-sm transition-all hover:-translate-y-0.5 hr-fg"
             >
               <Compass className="h-4 w-4" style={{ color: 'var(--hr-accent-text, #fde68a)' }} />
               <span className="hidden sm:inline">Guide</span>
@@ -170,7 +170,7 @@ export function HousesHeaderBar({
                 type="button"
                 size="sm"
                 onClick={onOpenAddHouse}
-                className="h-8 rounded-full border-0 px-3 text-xs font-bold shadow-md transition-transform hover:-translate-y-0.5"
+                className="h-11 rounded-full border-0 px-3 text-xs font-bold shadow-md transition-transform hover:-translate-y-0.5"
                 style={{
                   backgroundImage:
                     'linear-gradient(135deg, var(--hr-accent-from, #fbbf24), var(--hr-accent-to, #7c3aed))',
@@ -190,7 +190,7 @@ export function HousesHeaderBar({
             title="Theme & Settings"
             aria-label="Theme & Settings"
             className={cn(
-              'grid h-8 w-8 place-items-center rounded-full border hr-border hr-soft hr-nav-idle hr-muted shadow-sm transition-all hover:-translate-y-0.5',
+              'grid size-11 place-items-center rounded-full border hr-border hr-soft hr-nav-idle hr-muted shadow-sm transition-all hover:-translate-y-0.5',
               activeTab === 'settings' && 'hr-fg hr-soft-strong ring-1',
             )}
             style={activeTab === 'settings' ? { borderColor: 'var(--hr-border)' } : undefined}

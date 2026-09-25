@@ -299,7 +299,7 @@ export function RandomStudentPickerModal({
                   variant="ghost"
                   onClick={startSpin}
                   disabled={isSpinning || isAwarding}
-                  className="flex-1 font-bold text-xs gap-1.5 rounded-2xl h-10"
+                  className="flex-1 font-bold text-xs gap-1.5 rounded-2xl min-h-11"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Spin Again
@@ -308,7 +308,7 @@ export function RandomStudentPickerModal({
                   type="button"
                   onClick={() => handleGiveAward(awardPoints)}
                   disabled={isAwarding}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs gap-1.5 rounded-2xl h-10 shadow"
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs gap-1.5 rounded-2xl min-h-11 shadow"
                 >
                   <Trophy className="h-3.5 w-3.5" />
                   Award +{awardPoints}

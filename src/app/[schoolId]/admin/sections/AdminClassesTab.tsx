@@ -210,7 +210,7 @@ export function AdminClassesTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 w-full gap-1.5 rounded-lg border-ring/35 bg-background hover:bg-secondary text-primary font-semibold"
+                      className="h-11 w-full gap-1.5 rounded-lg border-ring/35 bg-background font-semibold text-primary hover:bg-secondary"
                       onClick={() => toggleExpand(c.id)}
                     >
                       {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -221,7 +221,7 @@ export function AdminClassesTab({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 min-h-0 min-w-0 text-destructive hover:bg-destructive/10"
+                      className="size-11 text-destructive hover:bg-destructive/10"
                       onClick={() => onDeleteClass(c.id, students || [])}
                     >
                       <Trash2 className="w-4 h-4" />

@@ -710,7 +710,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
+                        className="size-11 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => handleOpenStudentModal?.(s)}
                         title="Edit student"
                       >
@@ -811,8 +811,8 @@ export function AdminStudentsTab({
                           defs={studentKioskWelcomeToggleDefs}
                           restrictToDefs
                           wrap={false}
-                          containerClassName="sm:contents shrink-0 flex-nowrap gap-0.5"
-                          toggleButtonClassName="h-8 w-8 min-h-0 min-w-0 text-[7px] sm:justify-self-center"
+                          containerClassName="flex-wrap gap-1 sm:contents sm:shrink-0 sm:flex-nowrap sm:gap-0.5"
+                          toggleButtonClassName="size-11 min-h-0 min-w-0 text-[7px] sm:justify-self-center"
                           onToggle={(key, val) => {
                             if (onUpdateStudent) {
                               onUpdateStudent({ ...s, [key]: val });
@@ -829,7 +829,7 @@ export function AdminStudentsTab({
                               variant={faceTrained ? "default" : "outline"}
                               size="icon"
                               className={cn(
-                                "h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center",
+                                "size-11 min-h-0 min-w-0 rounded-full sm:justify-self-center",
                                 faceTrained
                                   ? "border-sky-600 bg-sky-600 text-white hover:bg-sky-700 hover:text-white shadow-sm"
                                   : "border-dashed border-sky-300/80 bg-background/60 hover:bg-sky-50 dark:border-sky-800 dark:hover:bg-sky-950/40",
@@ -856,7 +856,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
+                        className="size-11 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => {
                           if (!schoolId?.trim()) {
                             toast({
@@ -879,7 +879,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
+                        className="size-11 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => setThemeStudent?.(s)}
                         title="Generate AI Theme"
                       >
@@ -888,7 +888,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
+                        className="size-11 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => handleOpenActivityModal?.(s)}
                         title="Activity history"
                       >
@@ -899,7 +899,7 @@ export function AdminStudentsTab({
                           variant="outline"
                           size="icon"
                           className={cn(
-                            "h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center",
+                            "size-11 min-h-0 min-w-0 rounded-full sm:justify-self-center",
                             (!s.earnedBadges || s.earnedBadges.length === 0) &&
                               "opacity-40",
                           )}
@@ -922,7 +922,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full text-primary hover:bg-primary/10 sm:justify-self-center"
+                        className="size-11 min-h-0 min-w-0 rounded-full text-primary hover:bg-primary/10 sm:justify-self-center"
                         title="Purge points & badges"
                         onClick={() => setStudentToPurge?.(s)}
                       >
@@ -931,7 +931,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full text-destructive hover:bg-destructive/10 sm:justify-self-center"
+                        className="size-11 min-h-0 min-w-0 rounded-full text-destructive hover:bg-destructive/10 sm:justify-self-center"
                         onClick={() => deleteStudent?.(s.id)}
                         title="Delete student"
                       >
@@ -939,7 +939,7 @@ export function AdminStudentsTab({
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full sm:justify-self-center" aria-label={`More actions for ${s.firstName} ${s.lastName}`}>
+                          <Button variant="outline" size="icon" className="size-11 rounded-full sm:justify-self-center" aria-label={`More actions for ${s.firstName} ${s.lastName}`}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

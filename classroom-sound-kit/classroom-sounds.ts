@@ -46,7 +46,7 @@ function tone(from: number, to: number, dur: number, vol: number, delay = 0) {
     const t = audioCtx.currentTime + delay * st.dur;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = st.wave;
+    osc.type = st.wave as OscillatorType;
     osc.frequency.setValueAtTime(from, t);
     osc.frequency.exponentialRampToValueAtTime(Math.max(to, 1), t + dur);
     gain.gain.setValueAtTime(vol * masterVolume, t);
@@ -107,7 +107,7 @@ export function attachClickSounds(on: boolean) {
       "button,[role=button],a,input,select,label"
     );
     if (!el) return tone(300, 180, 0.08, 0.05);
-    const big = el.offsetWidth > 140;
+    const big = (el as HTMLElement).offsetWidth > 140;
     tone(big ? 520 : 680, big ? 320 : 900, 0.09, 0.07);
   };
   document.removeEventListener("pointerdown", handler, true);

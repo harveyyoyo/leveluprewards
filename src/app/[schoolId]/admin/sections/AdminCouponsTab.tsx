@@ -321,7 +321,7 @@ export function AdminCouponsTab({
                               onClick={() => {
                                 if (window.confirm(`Delete coupon ${coupon.code}?`)) onDeleteCoupon(coupon.id);
                               }}
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                              className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               title="Delete coupon"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
