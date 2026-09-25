@@ -241,6 +241,44 @@ export const SCRIPTS = {
     { voice: 'Zephyr', style: 'Say this like a disappointed kid, sighing', text: 'Aw, man.' },
     { voice: 'Achird', style: 'Say this warm and funny, like a punchline', text: 'Be more like Ava. LevelUp Library.' },
   ],
+
+  // ── Batch 4: Bulletin, ID Cards, Notifications, Seating Shuffle (added 2026-09-25) ──
+  'story-bulletin-board': [
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Monday morning. The office posts this week\'s bulletin.' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Spirit Day, the book fair, a reminder about picture day — all in LevelUp Bulletin Board.' },
+    { voice: 'Sulafat', style: 'Say this warm and delighted', text: 'It shows up on every classroom screen and the family portal, automatically.' },
+    { voice: 'Sulafat', style: WARM, text: 'One post. Every screen. LevelUp Bulletin Board.' },
+  ],
+  'story-idcard-themes': [
+    { voice: 'Fenrir', style: HYPE, text: 'Same student ID. A hundred different looks.' },
+    { voice: 'Fenrir', style: HYPE, text: 'Space, ocean, retro arcade — Maya picks a theme, right from her portal.' },
+    { voice: 'Fenrir', style: 'Say this punchy and delighted', text: 'Her card, her kiosk screen, even her badge — all match, instantly.' },
+    { voice: 'Fenrir', style: HYPE, text: 'LevelUp ID Cards. Make it theirs.' },
+  ],
+  'story-staff-notifications': [
+    { voice: 'Achird', style: WARM, text: 'Mr. Chen is halfway through lunch duty.' },
+    { voice: 'Achird', style: 'Say this warm, with a little urgency', text: 'His phone buzzes. A LevelUp staff notification: a student needs a nurse check.' },
+    { voice: 'Achird', style: WARM, text: 'He taps it, sees exactly who and where, and heads right over.' },
+    { voice: 'Achird', style: WARM, text: 'LevelUp Notifications. The right message, to the right staff, instantly.' },
+  ],
+  'story-seating-shuffle': [
+    { voice: 'Kore', style: 'Say this like a warm, playful teacher', text: 'New month, new seats. Ms. Rivera opens the seating chart.' },
+    { voice: 'Kore', style: 'Say this playful and upbeat', text: 'One tap on shuffle, and LevelUp mixes up the whole class.' },
+    { voice: 'Zephyr', style: 'Say this like a curious, slightly nervous kid', text: 'Wait, who am I next to now?' },
+    { voice: 'Kore', style: 'Say this warm and amused', text: 'New friends, new view of the board. Same one tap.' },
+    { voice: 'Kore', style: WARM, text: 'LevelUp Classroom. Seating, sorted in seconds.' },
+  ],
+
+  // ── Software tutorial / demo (added 2026-09-25) ──
+  'demo-howitworks': [
+    { voice: 'Iapetus', style: 'Say this like a clear, friendly product tutorial narrator', text: "Here's LevelUp EDU, in five steps." },
+    { voice: 'Iapetus', style: 'Say this like a calm tutorial narrator', text: 'Step one. Students scan in at the kiosk, no line, no paperwork.' },
+    { voice: 'Iapetus', style: 'Say this like a calm tutorial narrator', text: 'Step two. Teachers tap a name on the seating chart to award points instantly.' },
+    { voice: 'Iapetus', style: 'Say this like a calm tutorial narrator', text: 'Step three. Students spend those points in the rewards shop.' },
+    { voice: 'Iapetus', style: 'Say this like a calm tutorial narrator', text: 'Step four. The library, attendance, and houses all run on the same points.' },
+    { voice: 'Iapetus', style: 'Say this like a calm tutorial narrator', text: "Step five. Everyone's wins show up on the Hall of Fame." },
+    { voice: 'Iapetus', style: 'Say this like a confident, friendly narrator wrapping up', text: 'That\'s LevelUp EDU. Try it free at your school.' },
+  ],
 };
 
 /** Voices in the sampler (the owner picks favorites from this). */

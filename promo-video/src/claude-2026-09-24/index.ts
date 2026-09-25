@@ -32,6 +32,18 @@ import {
   makeTeaser,
   principalTimeline,
 } from "./storiesBatch3";
+import { asTallFrame } from "./tallFrame";
+import {
+  StoryBulletinBoard,
+  StoryIdCardThemes,
+  StorySeatingShuffle,
+  StoryStaffNotifications,
+  bulletinTimeline,
+  idcardTimeline,
+  seatingShuffleTimeline,
+  staffNotifTimeline,
+} from "./storiesBatch4";
+import { ByTheNumbers, HowItWorksDemo, NUMBERS_TOTAL_FRAMES, howItWorksTimeline } from "./storiesTutorial";
 import { StoryClassroomHallPass, StoryClassroomOneTap, hallpassTimeline, onetapTimeline } from "./storiesClassroom";
 
 const TALL = { width: 1080, height: 1920 };
@@ -97,6 +109,27 @@ export const CLAUDE_2026_09_25_VIDEOS: ClaudeVideo[] = [
   { id: "Claude-2026-09-25-Tall-Office-Billing", component: StoryOfficeBilling, durationInFrames: billingTimeline.total, ...TALL },
   { id: "Claude-2026-09-25-Story-Library-BeMoreLikeAva", component: StoryLibraryTwoReturns, durationInFrames: twoReturnsTimeline.total, ...WIDE },
   { id: "Claude-2026-09-25-Tall-Library-BeMoreLikeAva", component: StoryLibraryTwoReturns, durationInFrames: twoReturnsTimeline.total, ...TALL },
+  // Notification-overlay alternative for the tall layout (owner also asked to see this one)
+  { id: "Claude-2026-09-25-Notify-Attendance-MorningScanIn", component: asTallFrame(AttendanceMorningScanIn, scanInTimeline, "Maya's Morning Scan-In", "Attendance"), durationInFrames: scanInTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Notify-Rewards-PrizeDay", component: asTallFrame(StoryRewardsPrizeDay, prizedayTimeline, "Prize Day", "Rewards"), durationInFrames: prizedayTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Notify-Classroom-OneTap", component: asTallFrame(StoryClassroomOneTap, onetapTimeline, "One Tap, Big Smile", "Classroom"), durationInFrames: onetapTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Notify-Maya-FirstWeek", component: asTallFrame(StoryMayaFirstWeek, firstWeekTimeline, "Maya's First Week", "Rewards"), durationInFrames: firstWeekTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Notify-Office-AskTheOffice", component: asTallFrame(StoryOfficeAsk, officeAskTimeline, "Ask the Office", "Office"), durationInFrames: officeAskTimeline.total, ...TALL },
+  { id: "Claude-2026-09-25-Notify-Library-BeMoreLikeAva", component: asTallFrame(StoryLibraryTwoReturns, twoReturnsTimeline, "Be More Like Ava", "Library"), durationInFrames: twoReturnsTimeline.total, ...TALL },
+];
+
+/** Made on 2026-09-25 — batch 4: reusing existing sets to cover more of the app. */
+export const CLAUDE_2026_09_25_BATCH4: ClaudeVideo[] = [
+  { id: "Claude-2026-09-25-Story-Displays-BulletinBoard", component: StoryBulletinBoard, durationInFrames: bulletinTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Story-Rewards-IdCardThemes", component: StoryIdCardThemes, durationInFrames: idcardTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Story-Office-StaffNotifications", component: StoryStaffNotifications, durationInFrames: staffNotifTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Story-Classroom-SeatingShuffle", component: StorySeatingShuffle, durationInFrames: seatingShuffleTimeline.total, ...WIDE },
+];
+
+/** Made on 2026-09-25 — non-cartoon promo styles: a software demo/tutorial, and a pure stats infographic. */
+export const CLAUDE_2026_09_25_OTHER_STYLES: ClaudeVideo[] = [
+  { id: "Claude-2026-09-25-Demo-HowItWorks", component: HowItWorksDemo, durationInFrames: howItWorksTimeline.total, ...WIDE },
+  { id: "Claude-2026-09-25-Demo-ByTheNumbers", component: ByTheNumbers, durationInFrames: NUMBERS_TOTAL_FRAMES, ...WIDE },
 ];
 
 /** Made on 2026-09-25 — 6-second teasers cut from the stories above. */

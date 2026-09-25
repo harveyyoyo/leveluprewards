@@ -1032,5 +1032,188 @@
       "min": 110,
       "tail": 30
     }
+  ],
+  "story-bulletin-board": [
+    {
+      "name": "post",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "items",
+      "voices": [
+        1
+      ],
+      "min": 170
+    },
+    {
+      "name": "screens",
+      "voices": [
+        2
+      ],
+      "min": 130
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-idcard-themes": [
+    {
+      "name": "hook",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "pick",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "match",
+      "voices": [
+        2
+      ],
+      "min": 130
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-staff-notifications": [
+    {
+      "name": "duty",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "buzz",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "go",
+      "voices": [
+        2
+      ],
+      "min": 120
+    },
+    {
+      "name": "end",
+      "voices": [
+        3
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-seating-shuffle": [
+    {
+      "name": "open",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "shuffle",
+      "voices": [
+        1
+      ],
+      "min": 120
+    },
+    {
+      "name": "nervous",
+      "voices": [
+        2
+      ],
+      "min": 70
+    },
+    {
+      "name": "newview",
+      "voices": [
+        3
+      ],
+      "min": 110
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "demo-howitworks": [
+    {
+      "name": "intro",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "step1",
+      "voices": [
+        1
+      ],
+      "min": 140
+    },
+    {
+      "name": "step2",
+      "voices": [
+        2
+      ],
+      "min": 140
+    },
+    {
+      "name": "step3",
+      "voices": [
+        3
+      ],
+      "min": 140
+    },
+    {
+      "name": "step4",
+      "voices": [
+        4
+      ],
+      "min": 140
+    },
+    {
+      "name": "step5",
+      "voices": [
+        5
+      ],
+      "min": 140
+    },
+    {
+      "name": "end",
+      "voices": [
+        6
+      ],
+      "min": 110,
+      "tail": 30
+    }
   ]
 }

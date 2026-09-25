@@ -110,7 +110,12 @@ export type VideoId =
   | "story-lobby-tv"
   | "story-principal-morning"
   | "story-office-billing"
-  | "story-library-tworeturns";
+  | "story-library-tworeturns"
+  | "story-bulletin-board"
+  | "story-idcard-themes"
+  | "story-staff-notifications"
+  | "story-seating-shuffle"
+  | "demo-howitworks";
 
 type SceneSpec = {
   name: string;
