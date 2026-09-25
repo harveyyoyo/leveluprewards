@@ -88,6 +88,7 @@ export type ClassroomSeatingPrefs = {
   /** How the live classroom takes attendance. */
   attendanceSource: ClassroomAttendanceSource;
   /** Which setting menus appear on the fullscreen monitor toolbar. */
+  monitorMenuTabs: ClassroomMonitorMenuTabs;
   /** Optional theme slug from the 15 Classroom Theme Kit designs. */
   themeKitSlug?: string;
   /** Optional customization settings (fonts, hue, vividness, corners, depth, dark mode). */
