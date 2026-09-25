@@ -1,6 +1,6 @@
 /** Cartoon stories: Library checkout, Rewards prize day, Houses assembly, Family portal. */
 import React from "react";
-import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   BrandBug,
   Confetti,
@@ -23,7 +23,7 @@ import {
   shot,
   usePop,
 } from "./common";
-import { Bookshelf, Bubble, CamKey, Character, Coins, Desk, Floor, LOOKS, Placed, Plant, Poster, Screen, Window, camera, reachAngle, walkTo } from "./cartoon";
+import { Bookshelf, Bubble, CamKey, Character, Coins, Desk, Floor, LOOKS, Placed, Plant, Poster, Screen, Stage, Window, camAt, reachAngle, useTall, walkTo } from "./cartoon";
 import { HOUSES } from "./houses";
 import { GROUND, Hallway, Kiosk, READER_CENTER, SCREEN, STOP_X } from "./scanIn";
 
@@ -32,13 +32,14 @@ const SCREEN_MID = { x: SCREEN.x + SCREEN.w / 2, y: SCREEN.y + SCREEN.h / 2 };
 const StoryEnd: React.FC<{ title: string; tagline: string; color: string; featured: Pillar[]; bg: string }> = ({ title, tagline, color, featured, bg }) => {
   const a = usePop(0, 12, 170);
   const b = usePop(12);
+  const { width } = useVideoConfig();
   return (
-    <AbsoluteFill style={{ background: bg, justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+    <AbsoluteFill style={{ background: bg, justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 50px" }}>
       <div style={{ transform: `scale(${a})` }}>
         <LogoLockup size={120} dark={false} />
       </div>
-      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: 150, color, lineHeight: 1.05, marginTop: 20, transform: `scale(${a})` }}>{title}</div>
-      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: 60, color: "#0f1f3a", marginTop: 10, opacity: b }}>{tagline}</div>
+      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: Math.min(150, width / 7.5), color, lineHeight: 1.05, marginTop: 20, transform: `scale(${a})` }}>{title}</div>
+      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: Math.min(60, width / 17), color: "#0f1f3a", marginTop: 10, opacity: b }}>{tagline}</div>
       <div style={{ marginTop: 44, opacity: b }}>
         <PillarStrip featured={featured} dark={false} delay={14} size={32} />
       </div>
@@ -158,8 +159,7 @@ const LibraryWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
   ];
 
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={camera(frame, cam)}>
+    <Stage frame={frame} cam={cam} tall={(f) => (f < Sc + 62 ? { s: f >= reachAt - 6 && f < grabAt + 16 ? 1.25 : 1, x: x + 100, y: 540 } : camAt(f, cam))}>
         <LibraryRoom />
         <Kiosk scanned={scanned} led={scanned ? 1 : 0} ring={interpolate(frame, [scanAt, scanAt + 22], [0, 1], clamp)} screen={<LibraryScreen done={scanned} t={(frame - scanAt) / 30} />} />
         {laser ? (
@@ -183,8 +183,7 @@ const LibraryWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
         </Placed>
         {scanned && frame < Hp ? <Coins x={SCREEN_MID.x} y={SCREEN.y + 290} t={interpolate(frame - Dn, [0, 30], [0, 1], clamp)} n={6} spread={160} /> : null}
         <Bubble x={x + 40} y={260} text="Best. Library. Ever!" pop={interpolate(frame, [Hp + 4, Hp + 12], [0, 1], clamp)} w={440} />
-      </g>
-    </svg>
+    </Stage>
   );
 };
 
@@ -277,8 +276,7 @@ const PrizeWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
   if (frame >= Pz) {
     const t = frame - Pz;
     return (
-      <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-        <g transform={camera(t, [{ f: 0, s: 1.25, x: 960, y: 600 }, { f: 60, s: 1.1, x: 960, y: 580 }])}>
+      <Stage frame={t} cam={[{ f: 0, s: 1.25, x: 960, y: 600 }, { f: 60, s: 1.1, x: 960, y: 580 }]} tall={[{ f: 0, s: 1, x: 1040, y: 540 }]}>
           <Cafeteria />
           <Placed x={820} y={GROUND}>
             <Character look={LOOKS.maya} arm={20 + Math.sin(frame * 0.2) * 4} hold="pizza" happy={1} frame={frame} jump={Math.abs(Math.sin(t * 0.2)) * 18} />
@@ -288,8 +286,7 @@ const PrizeWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
           </Placed>
           <Bubble x={1300} y={330} text="Whoa!" pop={interpolate(t, [4, 12], [0, 1], clamp)} w={220} tail="right" />
           <Bubble x={700} y={330} text="Totally worth it!" pop={interpolate(t, [14, 22], [0, 1], clamp)} w={420} />
-        </g>
-      </svg>
+      </Stage>
     );
   }
 
@@ -304,8 +301,7 @@ const PrizeWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
     { f: Rd + 14, s: 2.5, x: SCREEN_MID.x, y: SCREEN_MID.y },
   ];
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={camera(frame, cam)}>
+    <Stage frame={frame} cam={cam} tall={(f) => (f < Ci - 4 ? { s: 1, x: w.x + 110, y: 540 } : camAt(f, cam))}>
         <Hallway />
         <Kiosk
           scanned={frame >= tapCard}
@@ -317,8 +313,7 @@ const PrizeWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
           <Character look={LOOKS.maya} walking={w.walking} phase={frame * 0.32} arm={arm} holdCard={frame >= Ci + 4 && frame < Ci + 34} frame={frame} blink={frame % 84 < 4} happy={frame >= tapBtn + 6 ? 1 : 0} />
         </Placed>
         {frame >= tapBtn + 6 ? <Coins x={SCREEN_MID.x} y={SCREEN.y + 60} t={interpolate(frame - tapBtn - 6, [0, 30], [0, 1], clamp)} n={8} spread={150} /> : null}
-      </g>
-    </svg>
+    </Stage>
   );
 };
 
@@ -478,8 +473,17 @@ const AssemblyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
     { f: W + 12, s: 1, x: 960, y: 560 },
   ];
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={camera(frame, cam)}>
+    <Stage
+      frame={frame}
+      cam={cam}
+      tall={[
+        { f: 0, s: 1, x: 350, y: 540 },
+        { f: T.start - 10, s: 1, x: 1500, y: 540 },
+        { f: T.start + 20, s: 1.15, x: BIG.x + BIG.w / 2, y: 400 },
+        { f: W - 4, s: 1.15, x: BIG.x + BIG.w / 2, y: 400 },
+        { f: W + 12, s: 1, x: 740, y: 540 },
+      ]}
+    >
         <rect width={1920} height={1080} fill="#e7e5e4" />
         {HOUSES.map((h, i) => (
           <g key={h.name} transform={`translate(${[90, 350, 1370, 1630][i]} 20)`}>
@@ -508,8 +512,7 @@ const AssemblyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
             </text>
           </g>
         ) : null}
-      </g>
-    </svg>
+    </Stage>
   );
 };
 
@@ -587,8 +590,7 @@ const FamilyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
     { f: Pr + 12, s: 1.35, x: 1000, y: 520 },
   ];
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={camera(frame, cam)}>
+    <Stage frame={frame} cam={cam} tall={[{ f: 0, s: 1, x: DAD_X + 40, y: 540 }, { f: Pr - 4, s: 1, x: DAD_X + 40, y: 540 }, { f: Pr + 12, s: 1.2, x: DAD_X + 120, y: 480 }]}>
         <Office />
         <Placed x={DAD_X} y={GROUND}>
           <Character look={LOOKS.dad} arm={phoneUp} hold={frame >= O.start + 16 ? "phone" : "none"} happy={frame >= Pr ? 1 : 0} mouth={frame >= Pr ? "open" : "smile"} frame={frame} blink={frame % 90 < 4} />
@@ -604,8 +606,7 @@ const FamilyWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
             })
           : null}
         <Bubble x={DAD_X + 250} y={240} text="That's my kid! 😊" pop={interpolate(frame, [Pr + 2, Pr + 10], [0, 1], clamp)} w={400} />
-      </g>
-    </svg>
+    </Stage>
   );
 };
 
@@ -669,8 +670,9 @@ const PhoneUI: React.FC<{ dur: number; noteAt: number }> = ({ dur, noteAt }) => 
 const FamilyCards: React.FC<{ dur: number }> = ({ dur }) => {
   const items = ["✓  Attendance", "⭐  Points", "📝  Teacher notes"];
   const out = interpolate(useCurrentFrame(), [dur - 8, dur], [1, 0], clamp);
+  const tall = useTall();
   return (
-    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", gap: 30, flexDirection: "row", background: `rgba(15,23,42,${0.4 * out})`, opacity: out }}>
+    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", gap: 30, flexDirection: tall ? "column" : "row", background: `rgba(15,23,42,${0.4 * out})`, opacity: out }}>
       {items.map((t, i) => (
         <FamilyCard key={t} text={t} delay={6 + i * 12} />
       ))}

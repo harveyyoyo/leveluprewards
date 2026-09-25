@@ -23,7 +23,7 @@ import {
   usePop,
   BrandBug,
 } from "./common";
-import { Character, LOOKS } from "./cartoon";
+import { CamFn, Character, LOOKS, Stage, useTall } from "./cartoon";
 
 const MAYA = LOOKS.maya;
 const FRIEND = LOOKS.friend;
@@ -204,11 +204,18 @@ const World: React.FC = () => {
   const blink = frame % 84 < 4;
 
   // Camera: wide → close on the tap → medium for the celebration.
-  const cam = {
-    s: interpolate(frame, [T - 12, T + 10, P + 2, P + 20], [1, 1.9, 1.9, 1.4], { ...clamp, easing: Easing.inOut(Easing.cubic) }),
-    x: interpolate(frame, [T - 12, T + 10, P + 2, P + 20], [960, 1440, 1440, 1400], { ...clamp, easing: Easing.inOut(Easing.cubic) }),
-    y: interpolate(frame, [T - 12, T + 10, P + 2, P + 20], [540, 540, 540, 560], { ...clamp, easing: Easing.inOut(Easing.cubic) }),
-  };
+  const ease = { ...clamp, easing: Easing.inOut(Easing.cubic) };
+  const cam: CamFn = (f) => ({
+    s: interpolate(f, [T - 12, T + 10, P + 2, P + 20], [1, 1.9, 1.9, 1.4], ease),
+    x: interpolate(f, [T - 12, T + 10, P + 2, P + 20], [960, 1440, 1440, 1400], ease),
+    y: interpolate(f, [T - 12, T + 10, P + 2, P + 20], [540, 540, 540, 560], ease),
+  });
+  // Tall: follow Maya down the hall, then close on the kiosk.
+  const tall: CamFn = (f) => ({
+    s: interpolate(f, [T - 12, T + 10, P + 2, P + 20], [1, 1.5, 1.5, 1.15], ease),
+    x: interpolate(f, [T - 12, T + 10], [mayaX + 110, 1450], ease),
+    y: 540,
+  });
 
   // Background classmate walking the other way.
   const friendX = interpolate(frame, [0, walkEnd + 40], [1250, 80], clamp);
@@ -216,8 +223,7 @@ const World: React.FC = () => {
   const coins = Array.from({ length: 8 });
 
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={`translate(960 540) scale(${cam.s}) translate(${-cam.x} ${-cam.y})`}>
+    <Stage frame={frame} cam={cam} tall={tall}>
         <Hallway />
         <g transform={`translate(${friendX} 770) scale(-0.62 0.62)`} opacity={0.9} style={{ filter: "blur(1.5px)" }}>
           <ellipse cx={0} cy={0} rx={70} ry={12} fill="rgba(0,0,0,0.15)" />
@@ -254,8 +260,7 @@ const World: React.FC = () => {
               );
             })
           : null}
-      </g>
-    </svg>
+    </Stage>
   );
 };
 
@@ -327,13 +332,19 @@ const ScanEnd: React.FC = () => {
   const a = usePop(0, 12, 170);
   const b = usePop(10);
   const c = usePop(22);
+  const tall = useTall();
   return (
     <AbsoluteFill style={{ background: "linear-gradient(135deg, #fff7ed, #fde68a)", justifyContent: "center", alignItems: "center" }}>
-      <svg viewBox="-250 -620 500 660" width={420} height={560} style={{ position: "absolute", left: 120, bottom: 60 }}>
+      <svg
+        viewBox="-250 -620 500 660"
+        width={420}
+        height={560}
+        style={tall ? { position: "absolute", left: 330, bottom: 80 } : { position: "absolute", left: 120, bottom: 60 }}
+      >
         <ellipse cx={0} cy={2} rx={90} ry={14} fill="rgba(0,0,0,0.15)" />
         <Character look={MAYA} phase={frame * 0.2} walking={false} arm={-80 + Math.sin(frame * 0.35) * 22} happy={1} blink={frame % 70 < 4} />
       </svg>
-      <div style={{ textAlign: "center", marginLeft: 380 }}>
+      <div style={{ textAlign: "center", marginLeft: tall ? 0 : 380, marginBottom: tall ? 520 : 0, padding: "0 40px" }}>
         <div style={{ transform: `scale(${a})` }}>
           <LogoLockup size={120} dark={false} />
         </div>

@@ -600,5 +600,209 @@
       "min": 100,
       "tail": 30
     }
+  ],
+  "story-office-ask": [
+    {
+      "name": "office",
+      "voices": [
+        0
+      ],
+      "min": 130
+    },
+    {
+      "name": "parent",
+      "voices": [
+        1
+      ],
+      "min": 60
+    },
+    {
+      "name": "ask",
+      "voices": [
+        2
+      ],
+      "min": 120
+    },
+    {
+      "name": "answer",
+      "voices": [
+        3
+      ],
+      "min": 150
+    },
+    {
+      "name": "reply",
+      "voices": [
+        4
+      ],
+      "min": 80
+    },
+    {
+      "name": "end",
+      "voices": [
+        5
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "office-rapid": [
+    {
+      "name": "hook",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "absent",
+      "voices": [
+        1
+      ],
+      "min": 100
+    },
+    {
+      "name": "owe",
+      "voices": [
+        2
+      ],
+      "min": 110
+    },
+    {
+      "name": "bus",
+      "voices": [
+        3
+      ],
+      "min": 110
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-office-bus": [
+    {
+      "name": "street",
+      "voices": [
+        0
+      ],
+      "min": 110
+    },
+    {
+      "name": "driver",
+      "voices": [
+        1
+      ],
+      "min": 140
+    },
+    {
+      "name": "map",
+      "voices": [
+        2
+      ],
+      "min": 140
+    },
+    {
+      "name": "late",
+      "voices": [
+        3
+      ],
+      "min": 140
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-office-pickup": [
+    {
+      "name": "arrive",
+      "voices": [
+        0
+      ],
+      "min": 130
+    },
+    {
+      "name": "log",
+      "voices": [
+        1
+      ],
+      "min": 150
+    },
+    {
+      "name": "update",
+      "voices": [
+        2
+      ],
+      "min": 120
+    },
+    {
+      "name": "leave",
+      "voices": [
+        3
+      ],
+      "min": 150
+    },
+    {
+      "name": "end",
+      "voices": [
+        4
+      ],
+      "min": 100,
+      "tail": 30
+    }
+  ],
+  "story-rewards-vending": [
+    {
+      "name": "intro",
+      "voices": [
+        0
+      ],
+      "min": 90
+    },
+    {
+      "name": "tap",
+      "voices": [
+        1
+      ],
+      "min": 90
+    },
+    {
+      "name": "pick",
+      "voices": [
+        2
+      ],
+      "min": 100
+    },
+    {
+      "name": "drop",
+      "voices": [
+        3
+      ],
+      "min": 70
+    },
+    {
+      "name": "wow",
+      "voices": [
+        4
+      ],
+      "min": 60
+    },
+    {
+      "name": "end",
+      "voices": [
+        5
+      ],
+      "min": 110,
+      "tail": 30
+    }
   ]
 }

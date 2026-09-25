@@ -4,7 +4,7 @@
  * 1920x1080 world; characters stand with their feet at (0, 0) facing right.
  */
 import React from "react";
-import { interpolate } from "remotion";
+import { interpolate, useVideoConfig } from "remotion";
 import { LOGO, outfit } from "./common";
 
 /* ── Characters ──────────────────────────────────────────────────────── */
@@ -297,6 +297,51 @@ export const camera = (frame: number, keys: CamKey[]) => {
   const x = interpolate(frame, fs, keys.map((k) => k.x), opt);
   const y = interpolate(frame, fs, keys.map((k) => k.y), opt);
   return `translate(960 540) scale(${s}) translate(${-x} ${-y})`;
+};
+
+export type CamFn = (frame: number) => { s: number; x: number; y: number };
+
+export const camAt = (frame: number, cam: CamKey[] | CamFn) => {
+  if (typeof cam === "function") return cam(frame);
+  const fs = cam.map((k) => k.f);
+  const opt = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+  return {
+    s: interpolate(frame, fs, cam.map((k) => k.s), opt),
+    x: interpolate(frame, fs, cam.map((k) => k.x), opt),
+    y: interpolate(frame, fs, cam.map((k) => k.y), opt),
+  };
+};
+
+/**
+ * Renders the 1920x1080 cartoon world into the composition, wide or tall.
+ * Tall videos use `tall` camera moves when given; the view is kept inside the world.
+ */
+export const Stage: React.FC<{ frame: number; cam: CamKey[] | CamFn; tall?: CamKey[] | CamFn; children: React.ReactNode }> = ({
+  frame,
+  cam,
+  tall,
+  children,
+}) => {
+  const { width, height } = useVideoConfig();
+  const portrait = height > width;
+  const c = camAt(frame, portrait && tall ? tall : cam);
+  const base = portrait ? height / 1080 : width / 1920;
+  const k = c.s * base;
+  const halfW = width / 2 / k;
+  const halfH = height / 2 / k;
+  const x = Math.min(Math.max(c.x, halfW), 1920 - halfW);
+  const y = Math.min(Math.max(c.y, halfH), 1080 - halfH);
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height}>
+      <g transform={`translate(${width / 2} ${height / 2}) scale(${k}) translate(${-x} ${-y})`}>{children}</g>
+    </svg>
+  );
+};
+
+/** True when the composition is taller than it is wide. */
+export const useTall = () => {
+  const { width, height } = useVideoConfig();
+  return height > width;
 };
 
 /** Walk from x0 to x1 between frames f0..f1; returns x and whether walking. */

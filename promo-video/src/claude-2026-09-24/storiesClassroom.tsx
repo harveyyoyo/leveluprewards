@@ -1,6 +1,6 @@
 /** Cartoon stories in Ms. Rivera's classroom: "One Tap" praise and "Hall Pass". */
 import React from "react";
-import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   BrandBug,
   LogoLockup,
@@ -18,7 +18,7 @@ import {
   shot,
   usePop,
 } from "./common";
-import { Bubble, CamKey, Character, Coins, Desk, Floor, LOOKS, Placed, Poster, Screen, Window, camera } from "./cartoon";
+import { Bubble, CamKey, Character, Coins, Desk, Floor, LOOKS, Placed, Poster, Screen, Stage, Window } from "./cartoon";
 
 export const GROUND = 900;
 const SEAT_Y = GROUND + 40;
@@ -86,13 +86,14 @@ const TapRipple: React.FC<{ t: number }> = ({ t }) =>
 const StoryEnd: React.FC<{ title: string; tagline: string; color: string; pillar: "Classroom" }> = ({ title, tagline, color, pillar }) => {
   const a = usePop(0, 12, 170);
   const b = usePop(12);
+  const { width } = useVideoConfig();
   return (
-    <AbsoluteFill style={{ background: "linear-gradient(135deg, #e0f2fe, #ede9fe)", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+    <AbsoluteFill style={{ background: "linear-gradient(135deg, #e0f2fe, #ede9fe)", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 50px" }}>
       <div style={{ transform: `scale(${a})` }}>
         <LogoLockup size={120} dark={false} />
       </div>
-      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: 150, color, lineHeight: 1.05, marginTop: 20, transform: `scale(${a})` }}>{title}</div>
-      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: 64, color: "#0f1f3a", marginTop: 10, opacity: b }}>{tagline}</div>
+      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: Math.min(150, width / 7.5), color, lineHeight: 1.05, marginTop: 20, transform: `scale(${a})` }}>{title}</div>
+      <div style={{ fontFamily: outfit, fontWeight: 800, fontSize: Math.min(64, width / 17), color: "#0f1f3a", marginTop: 10, opacity: b }}>{tagline}</div>
       <div style={{ marginTop: 44, opacity: b }}>
         <PillarStrip featured={[pillar]} dark={false} delay={14} size={32} />
       </div>
@@ -173,8 +174,21 @@ const OneTapWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
   );
 
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={camera(frame, cam)}>
+    <Stage
+      frame={frame}
+      cam={cam}
+      tall={[
+        { f: 0, s: 1, x: 460, y: 540 },
+        { f: B - 12, s: 1, x: 460, y: 540 },
+        { f: B, s: 1, x: 1150, y: 540 },
+        { f: C - 4, s: 1, x: 1150, y: 540 },
+        { f: C + 14, s: 2, x: TABLET.x, y: TABLET.y },
+        { f: C + 36, s: 2, x: TABLET.x, y: TABLET.y },
+        { f: C + 54, s: 1, x: TV.x + TV.w / 2, y: 540 },
+        { f: D - 4, s: 1, x: TV.x + TV.w / 2, y: 540 },
+        { f: D + 14, s: 1, x: 1450, y: 540 },
+      ]}
+    >
         <ClassroomWall />
         {/* TV overlays are drawn in TV-local coords */}
         <g transform={`translate(${TV.x} ${TV.y})`}>
@@ -215,8 +229,7 @@ const OneTapWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
         <Bubble x={500} y={250} text="7 × 8 = ?" pop={interpolate(frame, [A.start + 10, A.start + 18], [0, 1], clamp) * (frame < B + 20 ? 1 : 0)} w={300} tail="left" />
         <Bubble x={1090} y={300} text="56!" pop={interpolate(frame, [B + 2, B + 10], [0, 1], clamp) * (frame < C ? 1 : 0)} w={180} tail="right" />
         <Bubble x={1480} y={300} text="Me next!" pop={interpolate(frame, [D + 34, D + 42], [0, 1], clamp)} w={260} tail="right" />
-      </g>
-    </svg>
+    </Stage>
   );
 };
 
@@ -333,8 +346,23 @@ const HallPassWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
   );
 
   return (
-    <svg viewBox="0 0 1920 1080" width={1920} height={1080}>
-      <g transform={camera(frame, cam)}>
+    <Stage
+      frame={frame}
+      cam={cam}
+      tall={[
+        { f: 0, s: 1, x: 1150, y: 540 },
+        { f: S - 2, s: 1, x: 1150, y: 540 },
+        { f: S + 12, s: 2, x: TABLET.x, y: TABLET.y },
+        { f: S + 28, s: 2, x: TABLET.x, y: TABLET.y },
+        { f: S + 44, s: 1, x: leoWalkX, y: 540 },
+        { f: V, s: 1, x: 1400, y: 540 },
+        { f: V + 16, s: 1, x: TV.x + TV.w / 2, y: 540 },
+        { f: Bk.start - 2, s: 1, x: TV.x + TV.w / 2, y: 540 },
+        { f: Bk.start + 14, s: 1, x: 1300, y: 540 },
+        { f: tapBack - 10, s: 1, x: 1100, y: 540 },
+        { f: tapBack + 6, s: 1, x: TV.x + TV.w / 2, y: 540 },
+      ]}
+    >
         <ClassroomWall />
         <g transform={`translate(${TV.x} ${TV.y})`}>
           <clipPath id="tvover2">
@@ -376,8 +404,7 @@ const HallPassWorld: React.FC<{ tl: Timeline }> = ({ tl }) => {
           </Placed>
         ) : null}
         <Bubble x={1080} y={300} text="Hall pass? 🚻" pop={interpolate(frame, [A + 8, A + 16], [0, 1], clamp) * (frame < S ? 1 : 0)} w={330} tail="right" />
-      </g>
-    </svg>
+    </Stage>
   );
 };
 

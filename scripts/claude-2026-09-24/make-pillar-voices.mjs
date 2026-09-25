@@ -156,6 +156,45 @@ export const SCRIPTS = {
     { voice: 'Achird', style: WARM, text: "Back in two minutes. One more tap, and he's back in class." },
     { voice: 'Achird', style: WARM, text: 'LevelUp Classroom. Hall passes, without the paperwork.' },
   ],
+
+  // ── Office + vending (added 2026-09-25) ──
+  'story-office-ask': [
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: "Monday morning in the school office. The phone's ringing, and a parent is at the desk." },
+    { voice: 'Despina', style: 'Say this like a friendly, slightly worried mom', text: 'Hi! Is Leo here today?' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Ms. Park just asks LevelUp Office. Who is absent today?' },
+    { voice: 'Sulafat', style: 'Say this warm and delighted', text: "The answer pops up in seconds. Leo's not on the list. He checked in at seven fifty-two." },
+    { voice: 'Erinome', style: 'Say this like a cheerful, kind school secretary', text: "He's in class! Anything else I can help with?" },
+    { voice: 'Sulafat', style: WARM, text: 'LevelUp Office. Your whole school, one question away.' },
+  ],
+  'office-rapid': [
+    { voice: 'Aoede', style: 'Say this upbeat and confident, like a modern tech ad', text: 'Your school office has questions. LevelUp Office has answers.' },
+    { voice: 'Aoede', style: 'Say this upbeat, like typing a question', text: 'Who is absent today?' },
+    { voice: 'Aoede', style: 'Say this upbeat, like typing a question', text: 'Families who owe more than a hundred dollars?' },
+    { voice: 'Aoede', style: 'Say this upbeat and impressed', text: 'And every bus, live on the map.' },
+    { voice: 'Aoede', style: 'Say this upbeat and confident', text: 'Just ask. LevelUp Office.' },
+  ],
+  'story-office-bus': [
+    { voice: 'Achird', style: WARM, text: 'Three twenty. The buses are rolling.' },
+    { voice: 'Achird', style: WARM, text: 'Driver mode marks every kid on, and off, the bus.' },
+    { voice: 'Achird', style: WARM, text: 'Back at the office, every bus shows up live on the map.' },
+    { voice: 'Achird', style: 'Say this warm, with a little suspense then relief', text: 'Bus four running late? The office sees it right away.' },
+    { voice: 'Achird', style: WARM, text: 'LevelUp Office. Every ride, on the radar.' },
+  ],
+  'story-office-pickup': [
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: "One fifteen. Leo's mom is here for an early pickup." },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Ms. Park logs it at the front desk. Picked up by Mom, one fifteen.' },
+    { voice: 'Sulafat', style: 'Say this like a warm storyteller', text: 'Attendance updates on its own. Left early today.' },
+    { voice: 'Sulafat', style: WARM, text: 'No clipboards. No guessing. Every arrival and pickup, in one place.' },
+    { voice: 'Sulafat', style: WARM, text: 'LevelUp Office. The front desk, sorted.' },
+  ],
+  'story-rewards-vending': [
+    { voice: 'Laomedeia', style: HYPE, text: "This isn't just any vending machine." },
+    { voice: 'Laomedeia', style: HYPE, text: 'Jordan taps his student card.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'Picks a prize with his points.' },
+    { voice: 'Laomedeia', style: 'Say this with a big dramatic build then pop', text: 'And... drop!' },
+    { voice: 'Zephyr', style: 'Say this like an amazed, thrilled kid', text: 'No way!' },
+    { voice: 'Laomedeia', style: HYPE, text: 'The LevelUp rewards vending machine. Points you can hold.' },
+  ],
 };
 
 /** Voices in the sampler (the owner picks favorites from this). */

@@ -61,7 +61,7 @@ export const usePop = (delay: number, damping = 12, stiffness = 180) => {
 
 /* ── Pillars ─────────────────────────────────────────────────────────── */
 
-export type Pillar = "Rewards" | "Attendance" | "Library" | "Classroom" | "Houses" | "Raffle" | "Family";
+export type Pillar = "Rewards" | "Attendance" | "Library" | "Classroom" | "Houses" | "Raffle" | "Family" | "Office";
 /** The four core pillars; add-ons (Houses, Raffle) are appended to the strip when featured. */
 export const PILLARS: Pillar[] = ["Rewards", "Attendance", "Library", "Classroom"];
 export const PILLAR_COLOR: Record<Pillar, string> = {
@@ -72,6 +72,7 @@ export const PILLAR_COLOR: Record<Pillar, string> = {
   Houses: "#dc2626",
   Raffle: "#0891b2",
   Family: "#0ea5e9",
+  Office: "#0f766e",
 };
 
 /* ── Voice-driven timeline ───────────────────────────────────────────── */
@@ -94,7 +95,12 @@ export type VideoId =
   | "story-rewards-prizeday"
   | "story-houses-assembly"
   | "story-family-portal"
-  | "story-classroom-hallpass";
+  | "story-classroom-hallpass"
+  | "story-office-ask"
+  | "office-rapid"
+  | "story-office-bus"
+  | "story-office-pickup"
+  | "story-rewards-vending";
 
 type SceneSpec = {
   name: string;
