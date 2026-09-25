@@ -733,8 +733,9 @@ exports.libraryCatalogSave = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https
   return saveLibraryCatalog(admin.firestore(), schoolId, data, actor.uid);
 });
 
-/** Saves a different reading level per copy at once (bulk "fetch reading levels" tool). */
-exports.libraryReadingLevelsSave = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https.onCall(async (data: any, context) => {
+/** Saves a different reading level per copy at once (bulk "fetch reading levels" tool).
+ *  Background job, so no warm instance: cold starts don't matter here and minInstances costs money. */
+exports.libraryReadingLevelsSave = functions.runWith({ ...HOT_KIOSK_FUNCTION_OPTIONS, minInstances: 0 }).https.onCall(async (data: any, context) => {
   const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
   const actor = await libraryActor(schoolId, context);
   if (!actor.staff) throw new functions.https.HttpsError("permission-denied", "Library staff access required.");
