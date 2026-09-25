@@ -94,7 +94,7 @@ export function ClassroomLiveCheatsheetDesk({
               {instantTap ? (
                 <>
                   {' · '}
-                  Right-click menu
+                  Right-click menu / hold
                 </>
               ) : (
                 <> → menu</>

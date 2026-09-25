@@ -58,4 +58,12 @@ describe('staffHelpCodeContext', () => {
     expect(block).toContain('Repository excerpts');
     expect(block).toContain('LibraryWorkspace');
   });
+
+  it('selects appKnowledgeScanner when asking about admin tabs', () => {
+    const paths = selectStaffHelpSourcePaths({
+      pathname: '/demo-school/admin',
+      userMessage: 'tell me what tabs are on the admin screen',
+    });
+    expect(paths).toContain('src/lib/appKnowledgeScanner.ts');
+  });
 });

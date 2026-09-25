@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Calendar, Clock, Loader2, RefreshCw, Smile, ThumbsDown, Trash2 } from 'lucide-react';
+import { AlertTriangle, Bell, Calendar, Clock, Filter, Loader2, RefreshCw, ShieldAlert, Smile, ThumbsDown, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -104,7 +104,7 @@ export function BehaviorTimelinePanel({
   const [isLoading, setIsLoading] = useState(() => !peekBehaviorNotesCache(schoolId));
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [kindFilter, setKindFilter] = useState<'all' | BehaviorNoteKind>('all');
+  const [kindFilter, setKindFilter] = useState<'all' | BehaviorNoteKind | 'principal' | 'auto_alert' | 'staff_only'>('all');
 
   const handleDelete = useCallback(
     async (noteId: string) => {
@@ -193,6 +193,9 @@ export function BehaviorTimelinePanel({
 
   const visibleRows = useMemo(() => {
     const scoped = liveLog ? rows.filter((row) => !row.createdAt || isSameLocalDay(row.createdAt)) : rows;
+    if (kindFilter === 'principal') return scoped.filter((r) => r.notifyPrincipal === true);
+    if (kindFilter === 'auto_alert') return scoped.filter((r) => r.autoAlert === true);
+    if (kindFilter === 'staff_only') return scoped.filter((r) => r.visibleToParent === false);
     if (kindFilter === 'all') return scoped;
     return scoped.filter((row) => row.kind === kindFilter);
   }, [kindFilter, liveLog, rows]);
@@ -201,7 +204,7 @@ export function BehaviorTimelinePanel({
     ? `Today's Notes (${visibleRows.length})`
     : mode === 'behavior'
       ? 'Behavior notes'
-      : 'Principal';
+      : 'Principal timeline';
   const description =
     liveLog
       ? null
@@ -210,48 +213,54 @@ export function BehaviorTimelinePanel({
         : 'School-wide log of behavior notes from all classes. Review positives, concerns, and incidents — separate from quick point awards.';
 
   const header = (
-    <div className="flex items-start justify-between gap-2">
-      <div className="space-y-2">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+      <div className="space-y-1 sm:space-y-2">
         {embedded ? (
           <h3 className={cn('font-black tracking-tight', liveLog ? 'text-sm' : 'text-lg')}>{title}</h3>
         ) : (
           <CardTitle className="text-lg font-black">{title}</CardTitle>
         )}
         {description ? (
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="max-w-2xl text-xs sm:text-sm leading-relaxed text-muted-foreground">{description}</p>
         ) : null}
       </div>
-      {liveLog ? (
+      <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
         <label className="sr-only" htmlFor="live-behavior-note-filter">
           Filter notes
         </label>
-      ) : null}
-      {liveLog ? (
         <select
           id="live-behavior-note-filter"
-          className="h-8 rounded-xl border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 shadow-sm"
+          className="h-8 rounded-xl border border-slate-200 dark:border-border/60 bg-white dark:bg-card px-2.5 text-xs font-bold text-slate-800 dark:text-foreground shadow-sm"
           value={kindFilter}
-          onChange={(event) => setKindFilter(event.target.value as 'all' | BehaviorNoteKind)}
+          onChange={(event) =>
+            setKindFilter(
+              event.target.value as 'all' | BehaviorNoteKind | 'principal' | 'auto_alert' | 'staff_only',
+            )
+          }
           aria-label="Filter notes"
         >
-          <option value="all">All</option>
-          <option value="positive">Positive</option>
-          <option value="concern">Comment</option>
-          <option value="incident">Incident</option>
+          <option value="all">All Notes</option>
+          <option value="principal">🚩 Flagged for Principal</option>
+          <option value="incident">⚠️ Incidents</option>
+          <option value="concern">💬 Comments / Concerns</option>
+          <option value="positive">✨ Positives</option>
+          <option value="auto_alert">🔔 Auto Alerts</option>
+          <option value="staff_only">🔒 Staff Only</option>
         </select>
-      ) : (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="shrink-0"
-        onClick={() => void load()}
-        disabled={isLoading}
-        aria-label="Refresh timeline"
-      >
-        <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-      </Button>
-      )}
+        {!liveLog ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-xl shrink-0"
+            onClick={() => void load()}
+            disabled={isLoading}
+            aria-label="Refresh timeline"
+          >
+            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -321,6 +330,24 @@ export function BehaviorTimelinePanel({
                   <span className="text-sm font-bold">{n.studentName}</span>
                   {n.className ? (
                     <span className="text-xs text-muted-foreground">· {n.className}</span>
+                  ) : null}
+                  {n.notifyPrincipal ? (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-[10px] font-bold border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                    >
+                      <ShieldAlert className="h-3 w-3" />
+                      Flagged for Principal
+                    </Badge>
+                  ) : null}
+                  {n.autoAlert ? (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-[10px] font-bold border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+                    >
+                      <Bell className="h-3 w-3" />
+                      Auto Alert
+                    </Badge>
                   ) : null}
                   {!n.visibleToParent ? (
                     <Badge variant="secondary" className="text-[10px]">

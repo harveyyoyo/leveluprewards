@@ -23,14 +23,15 @@ const ALLOWED_PREFIXES = [
 /** Staff-facing UI/features → source files (relative to repo root). */
 const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
-    keys: ['admin', 'dashboard', 'configuration', 'school settings'],
-    paths: ['src/app/[schoolId]/admin/page.tsx'],
+    keys: ['admin', 'tab', 'tabs', 'admin tabs', 'sections', 'configuration', 'school settings'],
+    paths: ['src/lib/appKnowledgeScanner.ts', 'src/components/settings/settingsModalConfig.ts'],
   },
   {
-    keys: ['student', 'roster', 'enroll', 'nickname', 'id card', 'idcard', 'face'],
+    keys: ['student', 'student theme', 'student themes', 'theme', 'roster', 'enroll', 'nickname', 'id card', 'idcard', 'face'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminStudentsTab.tsx',
-      'src/components/StudentModal.tsx',
+      'src/components/student/StudentModal.tsx',
+      'src/components/themes/ThemeGeneratorModal.tsx',
     ],
   },
   {
@@ -269,7 +270,6 @@ const STOP_WORDS = new Set([
   'too',
   'any',
   'app',
-  'tab',
   'page',
   'help',
   'what',

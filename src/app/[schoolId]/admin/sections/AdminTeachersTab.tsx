@@ -208,7 +208,7 @@ export function AdminTeachersTab({
       type="button"
       variant="outline"
       size="icon"
-      className="h-7 w-7 shrink-0 rounded-md"
+      className="h-11 w-11 shrink-0 rounded-md"
       title={copiedKey === key ? 'Copied' : 'Copy personal sign-in link'}
       aria-label={copiedKey === key ? 'Copied link' : 'Copy sign-in link'}
       onClick={() => void copyStaffPortalUrl(key)}
@@ -357,7 +357,7 @@ export function AdminTeachersTab({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
+                      className="h-11 w-11 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                       onClick={() => onEditTeacher(t)}
                       title="Edit teacher"
                       aria-label="Edit teacher"
@@ -379,7 +379,7 @@ export function AdminTeachersTab({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 w-full min-w-0 justify-between gap-0.5 rounded-md px-1 text-[10px] font-semibold"
+                      className="h-11 w-full min-w-0 justify-between gap-0.5 rounded-md px-1 text-[10px] font-semibold"
                       onClick={() => {
                         setExpandedClassesTeacherId((current) => (current === t.id ? '' : t.id));
                         setExpandedStudentsTeacherId('');
@@ -400,7 +400,7 @@ export function AdminTeachersTab({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 w-full min-w-0 justify-between gap-0.5 rounded-md px-1 text-[10px] font-semibold"
+                      className="h-11 w-full min-w-0 justify-between gap-0.5 rounded-md px-1 text-[10px] font-semibold"
                       onClick={() => {
                         setExpandedStudentsTeacherId((current) => (current === t.id ? '' : t.id));
                         setExpandedClassesTeacherId('');
@@ -437,7 +437,7 @@ export function AdminTeachersTab({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 shrink-0 text-ring hover:bg-ring/10"
+                      className="h-11 w-11 shrink-0 text-ring hover:bg-ring/10"
                       onClick={() => onPreviewStaffIdCard?.({ kind: 'teacher', teacher: t })}
                       title="Preview staff ID card"
                       aria-label="Preview staff ID card"
@@ -447,7 +447,7 @@ export function AdminTeachersTab({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                      className="h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10"
                       onClick={() => onDeleteTeacher(t.id)}
                       title="Delete teacher"
                       aria-label="Delete teacher"
@@ -723,7 +723,7 @@ export function AdminTeachersTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-7 w-7 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
+                    className="h-11 w-11 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                     onClick={() => onEditTeacher(t)}
                     title="Edit leadership staff"
                     aria-label="Edit leadership staff"
@@ -771,7 +771,7 @@ export function AdminTeachersTab({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 shrink-0 text-ring hover:bg-ring/10"
+                    className="h-11 w-11 shrink-0 text-ring hover:bg-ring/10"
                     onClick={() => onPreviewStaffIdCard?.({ kind: 'teacher', teacher: t })}
                     title="Preview staff ID card"
                     aria-label="Preview staff ID card"
@@ -781,7 +781,7 @@ export function AdminTeachersTab({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                    className="h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10"
                     onClick={() => onDeleteTeacher(t.id)}
                     title="Delete leadership staff"
                     aria-label="Delete leadership staff"
@@ -838,7 +838,7 @@ export function AdminTeachersTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-7 w-7 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
+                    className="h-11 w-11 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                     onClick={() => openEditDeskStaff(account)}
                     title="Edit staff"
                     aria-label="Edit staff"
@@ -867,7 +867,7 @@ export function AdminTeachersTab({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 shrink-0 text-ring hover:bg-ring/10"
+                    className="h-11 w-11 shrink-0 text-ring hover:bg-ring/10"
                     onClick={() => onPreviewStaffIdCard?.({ kind: 'staffAccount', account })}
                     title="Preview staff ID card"
                     aria-label="Preview staff ID card"
@@ -877,7 +877,7 @@ export function AdminTeachersTab({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                    className="h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10"
                     onClick={() => void onDeleteStaffAccount(account.id)}
                     title="Delete staff"
                     aria-label="Delete staff"

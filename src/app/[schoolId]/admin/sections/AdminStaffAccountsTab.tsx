@@ -119,9 +119,10 @@ export function AdminStaffAccountsTab({
         </Button>
       </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent>
-        <ul className="pr-1 space-y-1">
+        <ul className="overflow-x-auto pb-2 pr-1 space-y-1">
           {staffAccounts && staffAccounts.length > 0 ? (
             <AdminRecordListHeader
+              className="min-w-[640px]"
               gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(120px,160px)_minmax(120px,180px)_44px]"
               columns={[
                 { label: 'Edit' },

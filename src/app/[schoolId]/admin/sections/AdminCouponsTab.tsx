@@ -299,6 +299,7 @@ export function AdminCouponsTab({
                 {isCodeSearch ? (
                   <ul className="space-y-1">
                     <AdminRecordListHeader
+                      className="min-w-[640px]"
                       gridClassName="grid-cols-[44px_minmax(110px,150px)_minmax(180px,1fr)]"
                       columns={[
                         { label: 'Delete' },
@@ -381,8 +382,9 @@ export function AdminCouponsTab({
                     )}
                   </ul>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 overflow-x-auto pb-2">
                     <AdminRecordListHeader
+                      className="min-w-[640px]"
                       gridClassName="grid-cols-[minmax(140px,1fr)_minmax(120px,160px)_minmax(90px,120px)_minmax(80px,110px)_minmax(90px,120px)]"
                       columns={[
                         { label: 'Category & Scope' },
@@ -398,7 +400,7 @@ export function AdminCouponsTab({
                       .map((g) => {
                         const isExpanded = expandedAvailableGroupKey === g.key;
                         return (
-                          <div key={g.key} className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                          <div key={g.key} className="min-w-[640px] overflow-hidden rounded-xl border bg-card shadow-sm">
                             <button
                               type="button"
                               onClick={() => {
@@ -467,7 +469,7 @@ export function AdminCouponsTab({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="rounded-lg h-8 text-[10px] font-bold uppercase"
+                            className="min-h-11 rounded-lg text-[10px] font-bold uppercase"
                             disabled={availableGroupsPage <= 1}
                             onClick={() => {
                               setAvailableGroupsPage((p) => Math.max(1, p - 1));
@@ -479,7 +481,7 @@ export function AdminCouponsTab({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="rounded-lg h-8 text-[10px] font-bold uppercase"
+                            className="min-h-11 rounded-lg text-[10px] font-bold uppercase"
                             disabled={availableGroupsPage >= Math.ceil(availableGroups.length / GROUP_PAGE_SIZE)}
                             onClick={() => {
                               setAvailableGroupsPage((p) => Math.min(Math.ceil(availableGroups.length / GROUP_PAGE_SIZE), p + 1));
@@ -540,6 +542,7 @@ export function AdminCouponsTab({
                 {isCodeSearch ? (
                   <ul className="space-y-1">
                     <AdminRecordListHeader
+                      className="min-w-[640px]"
                       gridClassName="grid-cols-[44px_minmax(110px,150px)_minmax(180px,1fr)]"
                       columns={[
                         { label: 'Status' },
@@ -580,8 +583,9 @@ export function AdminCouponsTab({
                     )}
                   </ul>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 overflow-x-auto pb-2">
                     <AdminRecordListHeader
+                      className="min-w-[640px]"
                       gridClassName="grid-cols-[minmax(140px,1fr)_minmax(120px,160px)_minmax(90px,120px)_minmax(80px,110px)_minmax(90px,120px)]"
                       columns={[
                         { label: 'Category & Scope' },
@@ -597,7 +601,7 @@ export function AdminCouponsTab({
                       .map((g) => {
                         const isExpanded = expandedRedeemedGroupKey === g.key;
                         return (
-                          <div key={g.key} className="bg-card/70 rounded-xl border border-dashed shadow-sm overflow-hidden">
+                          <div key={g.key} className="min-w-[640px] overflow-hidden rounded-xl border border-dashed bg-card/70 shadow-sm">
                             <button
                               type="button"
                               onClick={() => {
@@ -662,7 +666,7 @@ export function AdminCouponsTab({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="rounded-lg h-8 text-[10px] font-bold uppercase"
+                            className="min-h-11 rounded-lg text-[10px] font-bold uppercase"
                             disabled={redeemedGroupsPage <= 1}
                             onClick={() => {
                               setRedeemedGroupsPage((p) => Math.max(1, p - 1));
@@ -674,7 +678,7 @@ export function AdminCouponsTab({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="rounded-lg h-8 text-[10px] font-bold uppercase"
+                            className="min-h-11 rounded-lg text-[10px] font-bold uppercase"
                             disabled={redeemedGroupsPage >= Math.ceil(redeemedGroups.length / GROUP_PAGE_SIZE)}
                             onClick={() => {
                               setRedeemedGroupsPage((p) =>

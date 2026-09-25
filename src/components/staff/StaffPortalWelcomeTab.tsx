@@ -186,6 +186,95 @@ function PortalLargeButton({
   );
 }
 
+type PillarBoxLink = {
+  tabValue: string;
+  icon: LucideIcon;
+  label: string;
+  description: string;
+};
+
+function PillarLinkRow({
+  icon: Icon,
+  label,
+  description,
+  onOpen,
+}: {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
+        'hover:bg-muted/40',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35',
+      )}
+    >
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-ring/10 text-ring transition-colors group-hover:bg-ring/20"
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-snug text-foreground">{label}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-muted-foreground">{description}</p>
+      </div>
+      <ChevronRight
+        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground"
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+function PillarBox({
+  icon: Icon,
+  gradient,
+  title,
+  subtitle,
+  links,
+  onGoToTab,
+}: {
+  icon: LucideIcon;
+  gradient: string;
+  title: string;
+  subtitle: string;
+  links: PillarBoxLink[];
+  onGoToTab: (tabValue: string) => void;
+}) {
+  if (links.length === 0) return null;
+
+  return (
+    <div className="space-y-4 rounded-2xl border bg-background p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-md bg-gradient-to-br', gradient)}>
+          <Icon className="h-6 w-6 text-white" aria-hidden />
+        </div>
+        <div>
+          <h3 className="text-xl font-black tracking-tight text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <div className="divide-y divide-border/50">
+        {links.map((link) => (
+          <PillarLinkRow
+            key={link.tabValue}
+            icon={link.icon}
+            label={link.label}
+            description={link.description}
+            onOpen={() => onGoToTab(link.tabValue)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function StaffPortalWelcomeHero({
   staffName,
   stats,
@@ -267,6 +356,7 @@ export function StaffPortalWelcomeTab({
   staffName,
   welcomeStats,
   adminStats,
+  sidebarTabValues,
   className,
 }: StaffPortalWelcomeTabProps) {
   const stats = welcomeStats ?? adminStats;
@@ -276,7 +366,6 @@ export function StaffPortalWelcomeTab({
   const root = schoolId ? `/${schoolId.toLowerCase()}` : '';
 
   const largePillarButtons = useMemo<PortalLargeButtonDef[]>(() => {
-
     return [
       {
         id: 'rewards',

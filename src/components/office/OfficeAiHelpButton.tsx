@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleHelp, Loader2, SendHorizonal, Trash2 } from 'lucide-react';
+import { CircleHelp, Loader2, RefreshCw, SendHorizonal, Trash2 } from 'lucide-react';
 import { OfficeGuidePanel } from '@/components/office/OfficeGuideSection';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -315,6 +315,57 @@ export function OfficeAiHelpButton() {
     [messages, router, stopWaitingLater],
   );
 
+  const [syncingKnowledge, setSyncingKnowledge] = useState(false);
+
+  const handleSyncKnowledge = useCallback(async () => {
+    if (syncingKnowledge || !schoolId) return;
+    setSyncingKnowledge(true);
+    try {
+      const res = await authFetch('/api/staff-help-sync', {
+        method: 'POST',
+        body: JSON.stringify({ schoolId }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        tabsCount?: number;
+        routesCount?: number;
+        error?: string;
+      };
+
+      if (!res.ok || !data.ok) {
+        toast({
+          title: 'Could not update knowledge',
+          description: data.error || 'Please check your connection and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            data.message ||
+            '✅ App knowledge updated! I have rescanned all screens, 17 Admin tabs, Office, Library, and Kiosk features.',
+        },
+      ]);
+      toast({
+        title: 'Internal guide updated',
+        description: `Scanned ${data.routesCount || 27} screens, ${data.tabsCount || 17} Admin tabs, and Office modules.`,
+      });
+    } catch {
+      toast({
+        title: 'Could not update knowledge',
+        description: 'Network error. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncingKnowledge(false);
+    }
+  }, [authFetch, schoolId, syncingKnowledge, toast]);
+
   const send = useCallback(async () => {
     const text = input.replace(/\u0000/g, '').trim();
     if (!text || !schoolId || sending) return;
@@ -535,6 +586,32 @@ export function OfficeAiHelpButton() {
             <OfficeGuidePanel schoolId={schoolId} onNavigate={() => setOpen(false)} />
           ) : (
           <>
+          <div className="flex items-center justify-between px-4 py-1.5 border-b text-xs text-muted-foreground bg-slate-50/80 dark:bg-slate-900/40">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleSyncKnowledge}
+              disabled={syncingKnowledge}
+              aria-label="Update app knowledge"
+              title="Scan current screens and tabs so the assistant learns recent updates"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", syncingKnowledge && "animate-spin text-teal-600")} />
+              {syncingKnowledge ? 'Updating...' : 'Update app info'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={clearChat}
+              aria-label="Clear chat"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear chat
+            </Button>
+          </div>
           <ScrollArea className="flex-1 px-4 py-3">
             <div className="space-y-3 pb-4">
               {messages.map((m, i) => (

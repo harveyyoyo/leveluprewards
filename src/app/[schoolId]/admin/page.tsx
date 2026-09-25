@@ -114,7 +114,19 @@ import {
   staffPortalTabTriggerClassName,
   staffPortalWorkspaceMainClassName,
 } from '@/components/staff/staffPortalNavStyles';
-import { normalizeStaffPortalTabValue, normalizeStaffPortalTabValues, staffPortalAdminAddOnIsOn, staffPortalAllAddOnTabValues, staffPortalCoreTabs, staffPortalMergePinnedAddOnValues, staffPortalOrderMainTabs, staffPortalSortPinnedTabDefs, staffPortalSortTabs } from '@/lib/staffPortal';
+import {
+  normalizeStaffPortalTabValue,
+  normalizeStaffPortalTabValues,
+  staffPortalAdminAddOnIsOn,
+  staffPortalAllAddOnTabValues,
+  staffPortalCoreTabs,
+  staffPortalMergePinnedAddOnValues,
+  staffPortalOrderMainTabs,
+  staffPortalSortPinnedTabDefs,
+  staffPortalSortTabs,
+  staffPortalTabsForRole,
+  STAFF_PORTAL_WELCOME_PILLAR_SET,
+} from '@/lib/staffPortal';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
 import { prizeIsListed } from '@/lib/prizes/prizeUtils';
 import { StaffPortalDocumentTitle } from '@/components/staff/StaffPortalDocumentTitle';
@@ -824,7 +836,9 @@ function AdminDashboardInner() {
       title: `${t.label} (pinned from Add more)`,
     }));
 
-    const available = [...base, ...pinnedExtras];
+    const available = [...base, ...pinnedExtras].filter(
+      (t) => !STAFF_PORTAL_WELCOME_PILLAR_SET.has(t.value),
+    );
 
     return staffPortalOrderMainTabs(available, settings.adminMainTabOrder);
   }, [pinnedAddOnTabs, settings]);
@@ -844,7 +858,11 @@ function AdminDashboardInner() {
 
   const mobileMoreTabOptions = useMemo(() => {
     const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
-    return staffPortalSortTabs(addOnTabDefs.filter((t) => !mainTabValues.has(t.value)));
+    return staffPortalSortTabs(
+      addOnTabDefs.filter(
+        (t) => !mainTabValues.has(t.value) && !STAFF_PORTAL_WELCOME_PILLAR_SET.has(t.value),
+      ),
+    );
   }, [addOnTabDefs, orderedMainTabs]);
 
   const adminCoreTabValues = useMemo(
@@ -1190,9 +1208,12 @@ function AdminDashboardInner() {
   };
 
   useLayoutEffect(() => {
-    const allowedTabs = new Set(orderedMainTabs.map((t) => t.value));
+    const allowedTabs = new Set([
+      ...orderedMainTabs.map((t) => t.value),
+      ...staffPortalTabsForRole('admin', settings).map((t) => t.value),
+    ]);
     if (!allowedTabs.has(activeMainTab)) goToMainTab('welcome');
-  }, [activeMainTab, orderedMainTabs, goToMainTab]);
+  }, [activeMainTab, orderedMainTabs, goToMainTab, settings]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [bulkRosterInitialTab, setBulkRosterInitialTab] = useState<BulkRosterTab>('csv');
@@ -1968,6 +1989,7 @@ function AdminDashboardInner() {
               schoolName={schoolData?.name?.trim() || null}
               staffName={userName}
               welcomeStats={adminWelcomeStats}
+              sidebarTabValues={orderedMainTabs.map((t) => t.value)}
             />
           </TabsContent>
 

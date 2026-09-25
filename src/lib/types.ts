@@ -890,6 +890,9 @@ export interface BehaviorNote {
   visibleToParent: boolean;
   /** When true, flags this note for principal review / notification. */
   notifyPrincipal?: boolean;
+  /** Set when this note was generated automatically by a classroom alert rule. */
+  autoAlert?: boolean;
+  autoAlertRuleId?: string;
   pointsAmount?: number;
   pointsLabel?: string;
   /** Soft-delete marker — set when a staff member removes a mistaken note. Filtered from listings. */

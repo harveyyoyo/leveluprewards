@@ -116,9 +116,10 @@ export function AdminClassesTab({
     >
     <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardContent>
-        <ul className="space-y-4 pr-1">
+        <ul className="space-y-4 overflow-x-auto pb-2 pr-1">
           {classes && classes.length > 0 ? (
             <AdminRecordListHeader
+              className="min-w-[600px]"
               gridClassName="grid-cols-[minmax(160px,1.2fr)_minmax(200px,2fr)_110px_44px]"
               columns={[
                 { label: 'Class Name' },
@@ -169,7 +170,7 @@ export function AdminClassesTab({
                           <button
                             type="button"
                             onClick={() => void handleRemoveTeacherFromClass(c, tid)}
-                            className="text-muted-foreground hover:text-destructive rounded-full p-0.5 transition-colors cursor-pointer"
+                            className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-destructive"
                             title={`Remove ${name}`}
                           >
                             <X className="h-3 w-3" />

@@ -17,6 +17,7 @@ import {
 } from '@/lib/classroomSeatingChart';
 import type { Student } from '@/lib/types';
 import { getStudentNickname } from '@/lib/utils';
+import { playClassroomSound } from '@/lib/classroom/classroomSoundSynth';
 
 
 type Props = {
@@ -61,6 +62,7 @@ export function ClassroomGroupAwardModal({
   const handleAward = async (group: ClassroomSeatingGroup) => {
     setAwardingGroupId(group.id);
     try {
+      playClassroomSound('applause', 0.75);
       await onAwardGroup(group.studentIds, group.name, awardAmount || defaultPoints);
       onOpenChange(false);
     } finally {

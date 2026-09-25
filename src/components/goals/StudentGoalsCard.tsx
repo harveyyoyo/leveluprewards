@@ -139,10 +139,10 @@ export function StudentGoalsCard(props: {
   if (isLoading || categoriesLoading || computing) {
     return (
       <Card
-        className={cn('border-none shadow-lg overflow-hidden', !themed && 'bg-white dark:bg-slate-900')}
+        className={cn('shrink-0 border-none shadow-lg overflow-hidden', !themed && 'bg-white dark:bg-slate-900')}
         style={themed ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
       >
-        <CardHeader className="pb-2 border-b" style={themed ? { borderColor: 'var(--theme-bg)' } : undefined}>
+        <CardHeader className="px-4 py-2 border-b" style={themed ? { borderColor: 'var(--theme-bg)' } : undefined}>
           <Skeleton className="h-6 w-40" />
         </CardHeader>
         <CardContent className="pt-4 space-y-3">
@@ -157,16 +157,16 @@ export function StudentGoalsCard(props: {
 
   return (
     <Card
-      className={cn('border-none shadow-lg overflow-hidden border-t-4 border-chart-2', !themed && 'bg-white dark:bg-slate-900')}
+      className={cn('shrink-0 border-none shadow-lg overflow-hidden border-t-4 border-chart-2', !themed && 'bg-white dark:bg-slate-900')}
       style={themed ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
     >
-      <CardHeader className="pb-2 border-b" style={themed ? { borderColor: 'var(--theme-bg)' } : undefined}>
+      <CardHeader className="px-4 py-3 border-b" style={themed ? { borderColor: 'var(--theme-bg)' } : undefined}>
         <CardTitle
           className={cn('text-sm font-black flex items-center gap-2', !themed && 'text-slate-800 dark:text-white')}
           style={themed ? { color: 'var(--theme-text)' } : undefined}
         >
           <div
-            className={cn('w-8 h-8 rounded-lg flex items-center justify-center', !themed && 'bg-slate-100 dark:bg-slate-800')}
+            className={cn('w-6 h-6 rounded-lg flex items-center justify-center', !themed && 'bg-slate-100 dark:bg-slate-800')}
             style={themed ? { backgroundColor: 'var(--theme-bg)' } : undefined}
           >
             <Target className="w-4 h-4 text-chart-2" style={themed ? { color: 'var(--theme-primary)' } : undefined} />
@@ -174,7 +174,7 @@ export function StudentGoalsCard(props: {
           Your goals
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 pt-4">
+      <CardContent className="grid gap-3 px-4 py-2">
         {rows.map(({ goal, progress }) => {
           const target = Number(goal.targetPoints ?? 0);
           const pct = progressPercent(progress, target);
@@ -188,7 +188,7 @@ export function StudentGoalsCard(props: {
                   : 'Savings goal'
                 : 'Personal goal';
           return (
-            <div key={goal.id} className="space-y-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <div key={goal.id} className="space-y-2">
               <div className="flex justify-between gap-2 items-start">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
@@ -198,13 +198,14 @@ export function StudentGoalsCard(props: {
                   ) : null}
                 </div>
                 <span
-                  className="text-xs font-black whitespace-nowrap shrink-0"
+                  className="text-xs font-bold text-right shrink-0"
                   style={themeForeground ? { color: themeForeground } : undefined}
                 >
-                  {progress.toLocaleString()} / {target.toLocaleString()}
+                  {progress.toLocaleString()} of {target.toLocaleString()} points
                 </span>
               </div>
               <Progress value={pct} className="h-2" />
+              {goal.status !== 'completed' && <p className="text-xs font-semibold">{Math.max(0, target - progress).toLocaleString()} points to go!</p>}
               {goal.status === 'completed' ? (
                 <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Completed — nice work!</p>
               ) : almost ? (

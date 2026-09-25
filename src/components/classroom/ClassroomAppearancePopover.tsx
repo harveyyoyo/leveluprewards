@@ -277,6 +277,23 @@ export function ClassroomAppearancePopover({
               </span>
             </label>
           </div>
+
+          <div className="space-y-1.5 border-t border-border/40 pt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Teacher desk</p>
+            <div className="space-y-1">
+              <label htmlFor="teacher-desk-label-input" className="text-[11px] font-medium text-muted-foreground">
+                Custom desk title (leave blank for teacher name)
+              </label>
+              <input
+                id="teacher-desk-label-input"
+                type="text"
+                value={prefs.teacherDeskLabel ?? ''}
+                placeholder="Auto (teacher's name)"
+                className="h-8 w-full rounded-xl border border-input bg-background px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                onChange={(e) => onChange({ teacherDeskLabel: e.target.value })}
+              />
+            </div>
+          </div>
         </motion.div>
       </PopoverContent>
     </Popover>
