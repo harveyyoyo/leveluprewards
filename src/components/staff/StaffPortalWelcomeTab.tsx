@@ -6,6 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ChevronRight,
   GraduationCap,
+  Home,
   UserCheck,
   Users,
   Gift,
@@ -136,7 +137,9 @@ type PortalLargeButtonDef = {
   tabValue?: string;
   title: string;
   subtitle: string;
-  image: string;
+  /** Photo illustration. Omit and pass `icon` instead when no illustration exists yet. */
+  image?: string;
+  icon?: LucideIcon;
   accentColor: string;
 };
 
@@ -154,6 +157,8 @@ function PortalLargeButton({
     }
   };
 
+  const Icon = item.icon;
+
   return (
     <Link
       href={item.href}
@@ -166,12 +171,21 @@ function PortalLargeButton({
     >
       {/* Top illustration container */}
       <div className="relative aspect-square w-full overflow-hidden rounded-xl sm:rounded-2xl bg-muted/20">
-        <img
-          src={item.image}
-          alt={item.title}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="eager"
-        />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="eager"
+          />
+        ) : Icon ? (
+          <div
+            className="flex h-full w-full items-center justify-center transition-transform duration-300 group-hover:scale-105"
+            style={{ background: `linear-gradient(135deg, ${item.accentColor}, ${item.accentColor}99)` }}
+          >
+            <Icon className="h-1/2 w-1/2 text-white" aria-hidden />
+          </div>
+        ) : null}
       </div>
 
       {/* Title & subtitle below */}
@@ -410,6 +424,15 @@ export function StaffPortalWelcomeTab({
         image: '/pillars/pillar-library.png',
         accentColor: '#7c3aed',
       },
+      {
+        id: 'houses',
+        href: `${root}/admin?tab=houses`,
+        tabValue: 'houses',
+        title: 'Houses',
+        subtitle: 'TEAM SPIRIT',
+        icon: Home,
+        accentColor: '#0891b2',
+      },
     ];
   }, [root]);
 
@@ -434,8 +457,8 @@ export function StaffPortalWelcomeTab({
           />
         ) : null}
 
-        {/* Pillar boxes: 5 cards in a single row on desktop */}
-        <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 items-stretch">
+        {/* Pillar boxes: 6 cards in a single row on desktop */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 items-stretch">
           {largePillarButtons.map((item) => (
             <PortalLargeButton
               key={item.id}
