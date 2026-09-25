@@ -72,6 +72,8 @@ export function OfficeBusDriverMode({
   const [driverRole, setDriverRole] = useState<'primary' | 'relief'>('primary');
   const [tripId, setTripId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [reliefCode, setReliefCode] = useState('');
+  const [claimingRelief, setClaimingRelief] = useState(false);
   const [offlinePacket, setOfflinePacket] = useState<OfficeDriverOfflinePacket | null>(() => readDriverOfflinePacket(schoolId));
   const [offlineOpen, setOfflineOpen] = useState(false);
 
@@ -112,6 +114,23 @@ export function OfficeBusDriverMode({
       toast({ variant: 'destructive', title: 'Could not start', description: (e as Error).message });
     } finally {
       setStarting(false);
+    }
+  };
+
+  const claimRelief = async () => {
+    if (!route || !reliefCode.trim() || claimingRelief) return;
+    setClaimingRelief(true);
+    try {
+      const date = localIsoDate();
+      const tripId = existing?.id ?? tripDocId(date, route.id, run);
+      const result = await transport.claimOfficeReliefHandoff(tripId, reliefCode.trim());
+      setTripId(result.tripId);
+      setReliefCode('');
+      toast({ title: 'Relief handoff accepted', description: `The run is now assigned to ${result.driverName}.` });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not use the handoff code', description: (error as Error).message });
+    } finally {
+      setClaimingRelief(false);
     }
   };
 
@@ -224,7 +243,26 @@ export function OfficeBusDriverMode({
               {reliefMissing ? 'Add a relief driver before starting this run.' : 'Add at least one student stop and the school before driving.'}
             </p>
           ) : null}
-          <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !canDrive} onClick={() => void start()}>
+           {route?.reliefDriverName ? (
+             <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 dark:border-teal-900 dark:bg-teal-950/30">
+               <p className="text-sm font-semibold">Relief driver taking over?</p>
+               <p className="mt-1 text-xs text-muted-foreground">Ask the School Office for the one-time code for this run.</p>
+               <div className="mt-3 flex gap-2">
+                 <Input
+                   aria-label="Relief handoff code"
+                   value={reliefCode}
+                   onChange={(event) => setReliefCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+                   placeholder="8-character code"
+                   maxLength={8}
+                   className="h-11 flex-1 rounded-xl font-mono uppercase"
+                 />
+                 <Button type="button" variant="outline" className="h-11 rounded-xl" disabled={claimingRelief || reliefCode.length !== 8} onClick={() => void claimRelief()}>
+                   {claimingRelief ? 'Checking…' : 'Use code'}
+                 </Button>
+               </div>
+             </div>
+           ) : null}
+           <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !canDrive} onClick={() => void start()}>
             {starting ? 'Starting…' : existing ? 'Continue this run' : hasPriorTrip ? 'Start another run' : 'Start run'}
           </Button>
           {offlinePacket ? (

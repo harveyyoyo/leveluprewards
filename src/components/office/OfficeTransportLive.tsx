@@ -183,6 +183,17 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
     }
   };
 
+  const createHandoff = async (trip: OfficeBusTrip): Promise<{ code: string; expiresAt: number } | null> => {
+    try {
+      const result = await transport.createOfficeReliefHandoff(trip.id);
+      toast({ title: 'Relief handoff code created', description: 'Share it only with the relief driver. It expires soon and works once.' });
+      return result;
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not create a handoff code', description: (error as Error).message });
+      return null;
+    }
+  };
+
   const activeTrips = runTrips.filter((t) => t.status === 'active');
   const lateCount = activeTrips.filter((t) => {
     const r = routeForTrip(routes.find((x) => x.id === t.routeId), t);
@@ -466,6 +477,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
               onQueueEmail={queueSelectedFamilyUpdate}
               onCreateException={createException}
               onResolveException={resolveException}
+              onCreateHandoff={createHandoff}
             />
           ) : (
             <ul className="divide-y dark:divide-slate-800">
@@ -612,6 +624,7 @@ function RouteDetail({
   onQueueEmail,
   onCreateException,
   onResolveException,
+  onCreateHandoff,
 }: {
   route: OfficeBusRoute;
   trip: OfficeBusTrip | null;
@@ -631,7 +644,9 @@ function RouteDetail({
   onQueueEmail: () => void;
   onCreateException: (trip: OfficeBusTrip, kind: OfficeBusRunExceptionKind, stopId: string | null, note: string) => Promise<boolean>;
   onResolveException: (trip: OfficeBusTrip, exceptionId: string) => void;
+  onCreateHandoff: (trip: OfficeBusTrip) => Promise<{ code: string; expiresAt: number } | null>;
 }) {
+  const { toast } = useToast();
   const displayRoute = trip ? routeForTrip(route, trip) ?? route : route;
   const status = statusOf(displayRoute, trip, now);
   const stops = orderedStops(displayRoute, run);
@@ -642,11 +657,16 @@ function RouteDetail({
   const [exceptionStopId, setExceptionStopId] = useState('');
   const [exceptionNote, setExceptionNote] = useState('');
   const [exceptionSaving, setExceptionSaving] = useState(false);
+  const [handoffCode, setHandoffCode] = useState<string | null>(null);
+  const [handoffExpiresAt, setHandoffExpiresAt] = useState<number | null>(null);
+  const [handoffSaving, setHandoffSaving] = useState(false);
   const exceptions = Object.values(trip?.exceptions ?? {}).sort((a, b) => b.createdAt - a.createdAt);
   useEffect(() => {
     setExceptionFormOpen(false);
     setExceptionStopId('');
     setExceptionNote('');
+    setHandoffCode(null);
+    setHandoffExpiresAt(null);
   }, [route.id, trip?.id]);
   const counts = { on: 0, off: 0, absent: 0, waiting: 0 };
   for (const kid of riders) {
@@ -658,6 +678,28 @@ function RouteDetail({
   const vehicle = vehicleLabel(displayRoute.vehicle);
   const vehicleDue = vehicleDueLabel(displayRoute.vehicle, now);
   const lastService = latestMaintenanceLabel(displayRoute.vehicle);
+  const createHandoffCode = async () => {
+    if (!trip) return;
+    setHandoffSaving(true);
+    try {
+      const result = await onCreateHandoff(trip);
+      if (result) {
+        setHandoffCode(result.code);
+        setHandoffExpiresAt(result.expiresAt);
+      }
+    } finally {
+      setHandoffSaving(false);
+    }
+  };
+  const copyHandoffCode = async () => {
+    if (!handoffCode) return;
+    try {
+      await navigator.clipboard.writeText(handoffCode);
+      toast({ title: 'Handoff code copied', description: 'Share it only with the relief driver.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not copy the handoff code' });
+    }
+  };
 
   return (
     <div className="flex max-h-[560px] flex-col">
@@ -704,6 +746,31 @@ function RouteDetail({
             {vehicleDue ? ` · ${vehicleDue}` : ''}
             {lastService ? ` · Last service ${lastService}` : ''}
           </p>
+        ) : null}
+
+        {trip?.status === 'active' && displayRoute.reliefDriverName ? (
+          <section className="rounded-xl border border-teal-200 bg-teal-50/50 p-3 dark:border-teal-900 dark:bg-teal-950/20">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">Relief driver handoff</p>
+                <p className="mt-1 text-xs text-muted-foreground">Create a short-lived code when the relief driver needs to take over this active run.</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg text-xs" disabled={handoffSaving} onClick={() => void createHandoffCode()}>
+                {handoffSaving ? 'Making code…' : handoffCode ? 'Make a new code' : 'Create handoff code'}
+              </Button>
+            </div>
+            {handoffCode ? (
+              <div className="mt-3 rounded-lg border border-teal-200 bg-white/80 p-3 dark:border-teal-900 dark:bg-slate-900/60">
+                <p className="text-xs font-medium text-muted-foreground">One-time code</p>
+                <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em]">{handoffCode}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{handoffExpiresAt && handoffExpiresAt > now ? `Expires at ${clockLabel(handoffExpiresAt)}` : 'This code has expired. Make a new one.'}</p>
+                <Button type="button" variant="outline" size="sm" className="mt-2 h-8 rounded-lg text-xs" onClick={() => void copyHandoffCode()}>
+                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy code
+                </Button>
+              </div>
+            ) : null}
+            <p className="mt-2 text-[11px] text-muted-foreground">The code is not saved in the trip record. Share it only with the relief driver.</p>
+          </section>
         ) : null}
 
         <div className="flex flex-wrap gap-2">

@@ -67,6 +67,10 @@ export function useOfficeTransportApi(schoolId: string | null) {
         call<{ exception: unknown }>({ action: 'exception-acknowledge', tripId, exceptionId }),
       resolveOfficeBusRunException: (tripId: string, exceptionId: string) =>
         call<{ exception: unknown }>({ action: 'exception-resolve', tripId, exceptionId }),
+      createOfficeReliefHandoff: (tripId: string) =>
+        call<{ code: string; expiresAt: number }>({ action: 'handoff-create', tripId }),
+      claimOfficeReliefHandoff: (tripId: string, code: string) =>
+        call<{ tripId: string; driverName: string }>({ action: 'handoff-claim', tripId, code }),
       endOfficeBusTrip: (trip: Pick<OfficeBusTrip, 'id' | 'run'>, _route: OfficeBusRoute, childCheckDone: boolean) =>
         call<{ ok: true }>({ action: 'end', tripId: trip.id, run: trip.run, childCheckDone }),
       closeStaleOfficeBusTrip: (tripId: string, reason: string, sameDay = false) =>
