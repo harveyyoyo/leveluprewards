@@ -4,6 +4,8 @@
 
 The owner is a beginner. Never use technical terms in replies they will read. Assume they are new. See `.agent/knowledge/user-communication.md`.
 
+Whenever you finish something in the app, always end your reply with a link (web address) the owner can click to see it: the exact page that changed, live or local (`http://localhost:...`). If there is nothing to see, say so plainly.
+
 ## Multiple agents run here at once
 
 The user runs several Claude Code agents/sessions concurrently, often against this same

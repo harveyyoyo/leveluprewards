@@ -7,6 +7,7 @@ The owner is a beginner. They asked every helper to **assume they are new** and 
 - Everyday words only in messages they will read.
 - Say what happened and what they can try next. Skip shop talk.
 - After the live site is published, always open it and click through before telling the owner they can check.
+- **Always end with a link.** Whenever you finish something, give the owner a web address they can click to see it: the exact page that changed (the live link, or a local `http://localhost:...` link if it's only on this computer). If nothing can be seen, say so plainly.
 - Full note: `.agent/knowledge/user-communication.md`. Cursor rule: `.cursor/rules/user-experience-level.mdc`.
 
 ## Demo school access (all agents)
