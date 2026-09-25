@@ -3942,7 +3942,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   /* Theme fonts/weights flow from the card root (match DTC print path). */
-  body.id-card-printing #student-id-print-wrapper .student-id-print-slot .print-id-card.is-colored *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center):not([data-branded-qr]):not(.print-id-qr) {
+  body.id-card-printing #student-id-print-wrapper .student-id-print-slot .print-id-card.is-colored:not(.print-id-card--custom) *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center):not([data-branded-qr]):not(.print-id-qr) {
     font-family: inherit !important;
     font-style: inherit !important;
   }
@@ -4530,7 +4530,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   /* Inherit theme font (and italic) from the card root; Avery/print rules above set Ubuntu on .print-id-header, etc. */
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center):not([data-branded-qr]):not(.print-id-qr) {
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card:not(.print-id-card--custom) *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center):not([data-branded-qr]):not(.print-id-qr) {
     font-family: inherit !important;
     font-style: inherit !important;
   }
@@ -6165,4 +6165,24 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 .library-readable :where(h1, h2, h3, h4, h5, p, span, label).font-bold,
 .library-readable :where(h1, h2, h3, h4, h5, p, span, label).font-extrabold {
   color: inherit;
+}
+
+/* Custom artwork uses the same ID-1 stock, with an unobstructed identity strip. */
+.print-id-card.print-id-card--custom,
+html body.id-card-printing #student-id-print-wrapper .student-id-print-page .student-id-print-slot > .print-id-card.print-id-card--custom,
+html body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card.print-id-card--custom {
+  padding: 0 !important;
+  gap: 0 !important;
+  justify-content: flex-start !important;
+}
+.print-id-card--custom .custom-card-scan .print-barcode {
+  height: 100% !important;
+  width: 100% !important;
+  padding: 0 2mm !important;
+}
+.print-id-card--custom .custom-card-scan .print-barcode-svg {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
 }

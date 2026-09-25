@@ -19,6 +19,8 @@ import { useAppContext } from '@/components/AppProvider';
 import { useAuthFetch } from '@/lib/authFetch';
 import type { Student } from '@/lib/types';
 import { StudentIdCard } from '@/components/student/StudentIdCard';
+import { StudentCardDesigner } from '@/components/student/StudentCardDesigner';
+import { sanitizeCardDesign } from '../../../functions/src/cardDesign';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
@@ -262,7 +264,7 @@ async function readJsonErrorMessage(response: Response, fallback: string): Promi
 interface ThemeGeneratorModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (theme: StudentTheme) => void;
+    onSave: (theme: StudentTheme) => void | boolean | Promise<void | boolean>;
     currentTheme?: StudentTheme;
     /** Shown in the dialog title; use full name when available. */
     studentName: string;
@@ -346,6 +348,7 @@ export function ThemeGeneratorModal({
         inferBackgroundMode(initialTheme),
     );
     const [isRemovingTheme, setIsRemovingTheme] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     useLayoutEffect(() => {
         const el = previewWrapRef.current;
@@ -466,11 +469,22 @@ export function ThemeGeneratorModal({
 
     const normalizedPreviewTheme = normalizeStudentTheme(previewTheme);
 
-    const handleSave = () => {
-        if (!previewTheme) return;
+    const handleSave = async () => {
+        if (!previewTheme || isSaving) return;
         // Persist only contrast-normalized themes so low-contrast palettes can't be stored.
-        onSave(normalizedPreviewTheme ?? previewTheme);
-        onOpenChange(false);
+        setIsSaving(true);
+        try {
+            const themeToSave = { ...(normalizedPreviewTheme ?? previewTheme) };
+            if (themeToSave.cardDesign) {
+                const design = sanitizeCardDesign(themeToSave.cardDesign);
+                if (!design) throw new Error('Invalid card design');
+                themeToSave.cardDesign = design;
+            }
+            const result = await onSave(themeToSave);
+            if (result !== false) onOpenChange(false);
+        } catch {
+            toast({ variant: 'destructive', title: 'Could not save your design', description: 'Your work is still here. Please try again.' });
+        } finally { setIsSaving(false); }
     };
 
     const canRemoveThemeFromWizard = Boolean(previewTheme || currentTheme);
@@ -616,7 +630,7 @@ export function ThemeGeneratorModal({
       <DialogContent wide className="max-h-[min(92dvh,92vh)]" data-settings-open="true">
                 <DialogHeader>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <DialogTitle className="text-xl font-black tracking-tight">Generate theme for {displayTitleName}</DialogTitle>
+                        <DialogTitle className="text-xl font-black tracking-tight">Design studio · {displayTitleName}</DialogTitle>
                         <div className="flex items-center gap-1.5 shrink-0">
                             <Button
                                 type="button"
@@ -647,13 +661,36 @@ export function ThemeGeneratorModal({
                         </div>
                     </div>
                     <DialogDescription>
-                        Describe a theme and let AI generate a custom look. Themes can include gradients/patterns, and even “animated vibe” ideas (moving colors or playful motion like an emoji popping in/out).
-                        After generating, you can also fine‑tune specific parts like the emoji and colors.
-                        Use fonts that are easy to read on kiosk screens—clear sans-serif typefaces work best; avoid decorative, script, or ultra-narrow fonts.
+                        Build your own ID card from a blank page. Add your favorite colors, words, pictures, and stickers.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-6 py-4">
+                    <StudentCardDesigner
+                        name={displayTitleName}
+                        value={previewTheme?.cardDesign}
+                        currentTheme={initialTheme}
+                        assets={{ name: displayTitleName, class: `Class: ${classLabel}`, school: previewSchoolName,
+                            photo: previewStudent?.photoUrl || '', schoolLogo: previewSchoolLogoUrl || '',
+                            appLogo: previewAppLogoUrl || '', themeImage: previewStudent?.customEmojiUrl || '' }}
+                        currentCard={previewStudent ? <StudentIdCard student={{ ...previewStudent, theme: initialTheme }}
+                            schoolName={previewSchoolName} schoolLogoUrl={previewSchoolLogoUrl} className={classLabel}
+                            appLogoUrl={previewAppLogoUrl} appName={previewAppName} appTagline={previewAppTagline}
+                            isColorEnabled forceStudentThemePreview /> : undefined}
+                        onChange={(cardDesign) => commitTheme({
+                            background: '#ffffff', text: '#111827', primary: '#7c3aed',
+                            cardBackground: '#ffffff', accent: '#2563eb',
+                            ...previewTheme, cardDesign,
+                        })}
+                    />
+                    <div className="flex justify-end gap-2">
+                        {previewTheme?.cardDesign && <Button variant="outline" disabled={isSaving} onClick={() => {
+                            const { cardDesign: _artwork, ...theme } = previewTheme;
+                            commitTheme(theme);
+                        }}>Use ready-made layout</Button>}
+                        <Button variant="outline" disabled={isSaving} onClick={() => onOpenChange(false)}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={!previewTheme || isSaving}>{isSaving ? 'Saving…' : 'Save my design'}</Button>
+                    </div>
                     <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-start">
                         <div className="space-y-6">
                             {previewTheme ? (
@@ -1484,8 +1521,8 @@ export function ThemeGeneratorModal({
                                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                                         Cancel
                                     </Button>
-                                    <Button onClick={handleSave} disabled={!previewTheme}>
-                                        Save & Apply Theme
+                                    <Button onClick={handleSave} disabled={!previewTheme || isSaving}>
+                                        {isSaving ? 'Saving…' : 'Save my design'}
                                     </Button>
                                 </div>
                             </div>

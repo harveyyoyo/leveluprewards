@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
+import { sanitizeCardDesign } from './cardDesign';
 import { FieldValue } from "firebase-admin/firestore";
 import { studentMayRedeemCouponData } from "./couponRedemption";
 import { decryptField } from "./crypto";
@@ -479,6 +480,12 @@ function sanitizeKioskStudentThemePayload(raw: unknown): Record<string, unknown>
   if (typeof data.idCardLayout === "string" && STUDENT_THEME_ID_CARD_LAYOUTS.has(data.idCardLayout)) {
     out.idCardLayout = data.idCardLayout;
   }
+  if (data.cardDesign !== undefined) {
+    const design = sanitizeCardDesign(data.cardDesign);
+    if (!design) return null;
+    out.cardDesign = design;
+  }
+  if (typeof data.idCardUseQr === 'boolean') out.idCardUseQr = data.idCardUseQr;
   return out;
 }
 

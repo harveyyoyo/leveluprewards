@@ -256,6 +256,7 @@ export interface AttendanceRewardRule {
 }
 
 export interface StudentTheme {
+  cardDesign?: import('../../functions/src/cardDesign').CardDesign;
   background: string;
   text: string;
   primary: string;

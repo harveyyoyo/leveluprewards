@@ -3,6 +3,8 @@
 
 
 import React from 'react';
+import { CardArtwork } from './CardArtwork';
+import { sanitizeCardDesign } from '../../../functions/src/cardDesign';
 
 import type { Student, IdCardCustomOptions } from '@/lib/types';
 import {
@@ -263,6 +265,23 @@ export function StudentIdCard({
       <PrintIdCardScanCode value={student.nfcId} placement="footer" />
     </div>
   ) : null;
+
+  const customDesign = sanitizeCardDesign(theme?.cardDesign);
+  if (customDesign) return (
+    <div className={cn('print-id-card print-id-card--custom', isColorEnabled && 'is-colored', resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular')} style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: '#ffffff', color: '#111827', borderRadius: resolvedCornerStyle === 'rectangular' ? 0 : '3mm', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', filter: isColorEnabled ? undefined : 'grayscale(1)' }}>
+      <div style={{ width: '100%', height: '62%', flexShrink: 0 }}><CardArtwork design={customDesign} assets={{ name: fullName, class: `Class: ${className ?? ''}`, school: schoolName, photo: student.photoUrl || '', schoolLogo: schoolLogoUrl || '', appLogo: appLogoUrl || '', themeImage: student.customEmojiUrl || '' }} /></div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', padding: '1.5mm 2mm', height: useQr ? '38%' : '21%', overflow: 'hidden' }}>
+        {student.photoUrl && <img src={student.photoUrl} alt="" style={{ width: '9mm', height: '9mm', objectFit: 'cover', borderRadius: '1mm' }} />}
+        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.1 }}>
+          <div style={{ fontSize: '6pt', overflowWrap: 'anywhere' }}>{schoolName}</div>
+          <div style={{ fontSize: fullName.length > 28 ? '7pt' : '9pt', fontWeight: 800, overflowWrap: 'anywhere' }}>{fullName}</div>
+          <div style={{ fontSize: '6pt' }}>{className} · {student.nfcId}</div>
+        </div>
+        {useQr && <div style={{ width: '16mm', height: '16mm', flexShrink: 0 }}><PrintIdCardScanCode value={student.nfcId} useQr placement="inline" hideCenterBadge /></div>}
+      </div>
+      {!useQr && <div className="custom-card-scan" style={{ height: '17%', width: '100%', background: '#ffffff' }}><PrintIdCardScanCode value={student.nfcId} placement="footer" /></div>}
+    </div>
+  );
 
   return (
     <div
