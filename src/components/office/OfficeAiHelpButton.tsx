@@ -16,6 +16,7 @@ import {
   OFFICE_ASSISTANT_PAGE_LABEL,
   describeOfficeAssistantView,
   findClassByAskedName,
+  findTeacherByAskedName,
   officeAssistantViewHref,
   parseOfficeAssistantDecision,
   type OfficeAssistantView,
@@ -254,8 +255,9 @@ export function OfficeAssistant() {
         useMarksTerminology: settings?.useMarksTerminology,
         gradeEntries: portal.gradeEntries,
         termLabel: workingTerm,
+        classes: shared.classes,
       }),
-    [shared.students, shared.families, portal.billingAccounts, portal.invoices, settings?.useMarksTerminology, portal.gradeEntries, workingTerm],
+    [shared.students, shared.families, shared.classes, portal.billingAccounts, portal.invoices, settings?.useMarksTerminology, portal.gradeEntries, workingTerm],
   );
 
   const welcome = useMemo<ChatMessage>(
@@ -476,11 +478,16 @@ export function OfficeAssistant() {
         const askedClass =
           decision.view.page === 'students' || decision.view.page === 'attendance' ? decision.view.className : null;
         const missingClass = askedClass && !findClassByAskedName(shared.classes, askedClass);
+        // Same for a teacher: otherwise the list is just empty ("no students found").
+        const askedTeacher = decision.view.page === 'students' ? decision.view.teacher : null;
+        const missingTeacher = askedTeacher && !findTeacherByAskedName(shared.teacherNameById, askedTeacher);
         const cannot = turnedOff
           ? `${page} is turned off for this school. It can be turned back on in Settings.`
           : missingClass
             ? `I couldn't find a class called “${askedClass}”. Check the name on the Classes page and ask again.`
-            : null;
+            : missingTeacher
+              ? `I couldn't find a teacher called “${askedTeacher}”. Check the name on the Teachers page and ask again.`
+              : null;
         if (cannot) {
           setMessages((prev) => [...prev, { role: 'assistant', content: cannot }]);
           setSending(false);
@@ -548,6 +555,7 @@ export function OfficeAssistant() {
     sending,
     toast,
     shared.classes,
+    shared.teacherNameById,
     stopWaitingLater,
     features.aiRecords,
     userName,

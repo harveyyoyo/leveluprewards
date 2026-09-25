@@ -9,6 +9,8 @@ import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantRes
 import {
   filterOfficeStudents,
   officeFailingStudentIds,
+  officeStudentRidesBus,
+  officeTopGradeStudentIds,
   officeStudentsListReport,
   type OfficeRosterFilter,
 } from '@/lib/office/officeAssistantLists';
@@ -75,6 +77,8 @@ type RosterFilter = OfficeRosterFilter;
 const ROSTER_FILTERS: RosterFilter[] = [
   'missing-grades',
   'failing',
+  'top-grades',
+  'bus',
   'no-billing',
   'unassigned',
   'no-teacher',
@@ -181,6 +185,12 @@ export function OfficeStudentsView({
 
   const failingForTerm = useMemo(() => officeFailingStudentIds(gradeEntries, activeTerm), [gradeEntries, activeTerm]);
   const failingCount = activeStudents.filter((s) => failingForTerm.has(s.id)).length;
+  const topGradesForTerm = useMemo(() => officeTopGradeStudentIds(gradeEntries, activeTerm), [gradeEntries, activeTerm]);
+  const topGradesCount = activeStudents.filter((s) => topGradesForTerm.has(s.id)).length;
+  const busCount = useMemo(
+    () => activeStudents.filter((s) => officeStudentRidesBus(s, s.familyId ? familyById.get(s.familyId) : undefined)).length,
+    [activeStudents, familyById],
+  );
   const missingGradesCount = activeStudents.length - activeStudents.filter((s) => gradedForTerm.has(s.id)).length;
   const noBillingCount = useMemo(
     () => activeStudents.filter((s) => !billingAccountForStudent(billingAccounts, s.id)).length,
@@ -202,7 +212,7 @@ export function OfficeStudentsView({
         birthMonth,
         idsFilter,
       },
-      { classNameById, teacherNameById, gradedForTerm, failingForTerm, billingAccounts, familyById },
+      { classNameById, teacherNameById, gradedForTerm, failingForTerm, topGradesForTerm, billingAccounts, familyById },
     );
     return list.slice().sort((a, b) => {
       if (sortBy === 'name-desc') {
@@ -227,6 +237,7 @@ export function OfficeStudentsView({
     teacherNameById,
     gradedForTerm,
     failingForTerm,
+    topGradesForTerm,
     billingAccounts,
     teacherText,
     addressText,
@@ -334,6 +345,8 @@ export function OfficeStudentsView({
       ? [{ id: 'missing-grades' as const, label: `Missing grades (${missingGradesCount})` }]
       : []),
     ...(failingCount > 0 ? [{ id: 'failing' as const, label: `Failing a subject (${failingCount})` }] : []),
+    ...(topGradesCount > 0 ? [{ id: 'top-grades' as const, label: `Top grades, 90+ (${topGradesCount})` }] : []),
+    ...(busCount > 0 ? [{ id: 'bus' as const, label: `Rides the bus (${busCount})` }] : []),
     ...(noBillingCount > 0 ? [{ id: 'no-billing' as const, label: `No billing (${noBillingCount})` }] : []),
     ...(unassignedCount > 0 ? [{ id: 'unassigned' as const, label: `No class (${unassignedCount})` }] : []),
     ...(noTeacherCount > 0
