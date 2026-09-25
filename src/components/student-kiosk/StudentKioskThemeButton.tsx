@@ -60,7 +60,7 @@ export function StudentKioskThemeButton({
         title: 'Not ready',
         description: 'Connection is still starting. Try again in a moment.',
       });
-      return;
+      return false;
     }
     setSavingTheme(true);
     try {
@@ -84,12 +84,14 @@ export function StudentKioskThemeButton({
             : 'Your colors are updated on this kiosk.',
       });
       if (settings.soundEnabled) playSound('success');
+      return true;
     } catch (e) {
       toast({
         variant: 'destructive',
         title: 'Could not save theme',
         description: getReadableErrorMessage(e, 'Try again or ask a teacher for help.'),
       });
+      return false;
     } finally {
       setSavingTheme(false);
     }
@@ -124,8 +126,8 @@ export function StudentKioskThemeButton({
           className,
         )}
         style={triggerStyle}
-        aria-label="Change theme"
-        title="Change theme"
+        aria-label="Design my card"
+        title="Design my card"
         onClick={() => {
           if (settings.soundEnabled) playSound('click');
           setThemeModalOpen(true);
@@ -133,7 +135,7 @@ export function StudentKioskThemeButton({
       >
         <span className={cn('flex items-center justify-center gap-1.5', sidebar && 'w-full')}>
           <Palette className={cn('shrink-0 opacity-90', sidebar ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-3.5 w-3.5')} aria-hidden />
-          {sidebar ? 'Change theme' : 'Edit Theme'}
+          Design my card
         </span>
       </Button>
 
@@ -145,7 +147,7 @@ export function StudentKioskThemeButton({
           previewStudent={student}
           classLabel={classLabel}
           currentTheme={student.theme}
-          onSave={(theme) => void persistTheme(theme)}
+          onSave={(theme) => persistTheme(theme)}
           onRemoveTheme={student.theme ? () => void persistTheme(null) : undefined}
         />
       ) : null}

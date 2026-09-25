@@ -69,7 +69,7 @@ export function StudentKioskOptionsMenu({ schoolId, student, classLabel = '', th
         title: 'Not ready',
         description: 'Connection is still starting. Try again in a moment.',
       });
-      return;
+      return false;
     }
     setSavingTheme(true);
     try {
@@ -93,12 +93,14 @@ export function StudentKioskOptionsMenu({ schoolId, student, classLabel = '', th
             : 'Your colors are updated on this kiosk.',
       });
       if (settings.soundEnabled) playSound('success');
+      return true;
     } catch (e) {
       toast({
         variant: 'destructive',
         title: 'Could not save theme',
         description: getReadableErrorMessage(e, 'Try again or ask a teacher for help.'),
       });
+      return false;
     } finally {
       setSavingTheme(false);
     }
@@ -211,7 +213,7 @@ export function StudentKioskOptionsMenu({ schoolId, student, classLabel = '', th
                 }}
               >
                 <Wand2 className="h-4 w-4 text-purple-500" aria-hidden />
-                Customize my colors
+                Design my card & colors
               </DropdownMenuItem>
             </>
           ) : null}
@@ -226,7 +228,7 @@ export function StudentKioskOptionsMenu({ schoolId, student, classLabel = '', th
           previewStudent={student}
           classLabel={classLabel}
           currentTheme={student.theme}
-          onSave={(theme) => void persistTheme(theme)}
+          onSave={(theme) => persistTheme(theme)}
           onRemoveTheme={student.theme ? () => void persistTheme(null) : undefined}
         />
       ) : null}
