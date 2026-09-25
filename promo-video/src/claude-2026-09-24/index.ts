@@ -44,6 +44,7 @@ import {
   staffNotifTimeline,
 } from "./storiesBatch4";
 import { ByTheNumbers, HowItWorksDemo, NUMBERS_TOTAL_FRAMES, howItWorksTimeline } from "./storiesTutorial";
+import { FeatureSpotlightCarousel, carouselTimeline } from "./storiesCarousel";
 import { StoryClassroomHallPass, StoryClassroomOneTap, hallpassTimeline, onetapTimeline } from "./storiesClassroom";
 
 const TALL = { width: 1080, height: 1920 };
@@ -130,6 +131,7 @@ export const CLAUDE_2026_09_25_BATCH4: ClaudeVideo[] = [
 export const CLAUDE_2026_09_25_OTHER_STYLES: ClaudeVideo[] = [
   { id: "Claude-2026-09-25-Demo-HowItWorks", component: HowItWorksDemo, durationInFrames: howItWorksTimeline.total, ...WIDE },
   { id: "Claude-2026-09-25-Demo-ByTheNumbers", component: ByTheNumbers, durationInFrames: NUMBERS_TOTAL_FRAMES, ...WIDE },
+  { id: "Claude-2026-09-25-Demo-FeatureCarousel", component: FeatureSpotlightCarousel, durationInFrames: carouselTimeline.total, ...SQUARE },
 ];
 
 /** Made on 2026-09-25 — 6-second teasers cut from the stories above. */

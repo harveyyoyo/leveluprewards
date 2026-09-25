@@ -115,7 +115,8 @@ export type VideoId =
   | "story-idcard-themes"
   | "story-staff-notifications"
   | "story-seating-shuffle"
-  | "demo-howitworks";
+  | "demo-howitworks"
+  | "demo-featurecarousel";
 
 type SceneSpec = {
   name: string;

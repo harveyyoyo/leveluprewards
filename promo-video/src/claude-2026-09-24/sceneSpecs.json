@@ -1215,5 +1215,64 @@
       "min": 110,
       "tail": 30
     }
+  ],
+  "demo-featurecarousel": [
+    {
+      "name": "hook",
+      "voices": [
+        0
+      ],
+      "min": 80
+    },
+    {
+      "name": "f1",
+      "voices": [
+        1
+      ],
+      "min": 70
+    },
+    {
+      "name": "f2",
+      "voices": [
+        2
+      ],
+      "min": 70
+    },
+    {
+      "name": "f3",
+      "voices": [
+        3
+      ],
+      "min": 75
+    },
+    {
+      "name": "f4",
+      "voices": [
+        4
+      ],
+      "min": 70
+    },
+    {
+      "name": "f5",
+      "voices": [
+        5
+      ],
+      "min": 80
+    },
+    {
+      "name": "f6",
+      "voices": [
+        6
+      ],
+      "min": 80
+    },
+    {
+      "name": "end",
+      "voices": [
+        7
+      ],
+      "min": 110,
+      "tail": 30
+    }
   ]
 }

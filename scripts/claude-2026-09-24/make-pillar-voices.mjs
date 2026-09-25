@@ -279,6 +279,18 @@ export const SCRIPTS = {
     { voice: 'Iapetus', style: 'Say this like a calm tutorial narrator', text: "Step five. Everyone's wins show up on the Hall of Fame." },
     { voice: 'Iapetus', style: 'Say this like a confident, friendly narrator wrapping up', text: 'That\'s LevelUp EDU. Try it free at your school.' },
   ],
+
+  // ── Feature Spotlight carousel (added 2026-09-25) ──
+  'demo-featurecarousel': [
+    { voice: 'Laomedeia', style: HYPE, text: 'Six things LevelUp EDU does for your school.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'Rewards that make good behavior visible.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'Attendance that pays off.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'A library kids check out themselves.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'Classroom points in one tap.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'Houses that bring the whole school together.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'And an office that answers its own questions.' },
+    { voice: 'Laomedeia', style: HYPE, text: 'LevelUp EDU. All of it, together.' },
+  ],
 };
 
 /** Voices in the sampler (the owner picks favorites from this). */
