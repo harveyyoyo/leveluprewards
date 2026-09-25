@@ -73,7 +73,9 @@ jobs:
             fi
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
             # Main site address (owner preference: no `portal.` prefix). Old
-            # portal.leveluprewards.app links forward to the same page here.
+            # portal.leveluprewards.app links keep working unchanged for now. To move
+            # everyone to the main site later (devices sign in once more), add:
+            #   printf 'PORTAL_HOST_FORWARD=1\n'
             printf 'PORTAL_CANONICAL_HOST=leveluprewards.app\n'
             printf 'NEXT_PUBLIC_PORTAL_CANONICAL_HOST=leveluprewards.app\n'
           } > .env

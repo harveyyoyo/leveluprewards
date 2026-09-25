@@ -128,23 +128,17 @@ async function checkPortal() {
   console.log(`[live-uptime] /${schoolId}/portal returned ${response.status}.`);
 }
 
-/** Old portal-subdomain links (bookmarks, QR codes) should open the school's page on the main site. */
+/** Old portal-subdomain links (bookmarks, QR codes) must still open the school's portal page. */
 async function checkOldPortalLink() {
   if (!oldPortalUrl) return;
   const oldLink = `${oldPortalUrl}/${schoolId}`;
-  const response = await fetchWithTimeout(oldLink, { redirect: 'manual' });
-  const location = response.headers.get('location') || '';
-  const target = location ? new URL(location, oldLink) : null;
-  const expected = new URL(`${baseUrl}/${schoolId}/portal`);
-  if (
-    !(response.status >= 300 && response.status < 400) ||
-    !target ||
-    target.host !== expected.host ||
-    target.pathname !== expected.pathname
-  ) {
-    fail(`${oldLink} should forward to ${expected}. HTTP ${response.status}`, location);
+  const response = await fetchWithTimeout(oldLink, { redirect: 'follow' });
+  // Strict edge mode sends signed-out visitors to /login first.
+  const landed = new URL(response.url).pathname;
+  if (!response.ok || (landed !== `/${schoolId}/portal` && landed !== '/login')) {
+    fail(`${oldLink} should open the school's portal page. HTTP ${response.status}`, response.url);
   }
-  console.log(`[live-uptime] ${oldLink} forwards to ${target}.`);
+  console.log(`[live-uptime] ${oldLink} opens ${response.url} (HTTP ${response.status}).`);
 }
 
 async function checkSchoolAccessApi() {

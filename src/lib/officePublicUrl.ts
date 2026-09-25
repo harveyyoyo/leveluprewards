@@ -103,6 +103,10 @@ function portalCanonicalOrigin(): string | null {
     if (isLocalDevHost(window.location.host) && !isPortalHostname(window.location.host)) {
       return null;
     }
+    // On the old portal. address, keep links there, where the user is signed in.
+    if (isPortalHostname(window.location.host) && !isPortalHostname(host)) {
+      return null;
+    }
   }
   const scheme = host.includes('localhost') ? 'http' : 'https';
   return `${scheme}://${host}`;

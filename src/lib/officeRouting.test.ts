@@ -143,12 +143,50 @@ describe('office routing', () => {
     }
   });
 
-  it('derives the main site from office host when PORTAL_CANONICAL_HOST is unset', () => {
+  it('derives portal host from office host when PORTAL_CANONICAL_HOST is unset', () => {
     const previousPortal = process.env.PORTAL_CANONICAL_HOST;
     const previousPublic = process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
     delete process.env.PORTAL_CANONICAL_HOST;
     delete process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
     try {
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+    } finally {
+      if (previousPortal === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previousPortal;
+      }
+      if (previousPublic === undefined) {
+        delete process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST = previousPublic;
+      }
+    }
+  });
+
+  it('keeps office links on the old portal host until the forward switch is on', () => {
+    const previousPortal = process.env.PORTAL_CANONICAL_HOST;
+    const previousForward = process.env.PORTAL_HOST_FORWARD;
+    process.env.PORTAL_CANONICAL_HOST = 'leveluprewards.app';
+    delete process.env.PORTAL_HOST_FORWARD;
+    try {
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+
+      process.env.PORTAL_HOST_FORWARD = '1';
       expect(
         officeHostToPortalRedirectUrl(
           '/yeshiva/teachers',
@@ -163,10 +201,10 @@ describe('office routing', () => {
       } else {
         process.env.PORTAL_CANONICAL_HOST = previousPortal;
       }
-      if (previousPublic === undefined) {
-        delete process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
+      if (previousForward === undefined) {
+        delete process.env.PORTAL_HOST_FORWARD;
       } else {
-        process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST = previousPublic;
+        process.env.PORTAL_HOST_FORWARD = previousForward;
       }
     }
   });

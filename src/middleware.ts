@@ -70,9 +70,10 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
-  // Full page loads only. Next.js hides its RSC headers from middleware, so use the browser's
-  // Sec-Fetch-Dest: in-app fetches (`empty`), frames, and form actions on a page already open on
-  // the old portal host keep working there until it reloads. Older browsers omit the header.
+  // Old portal-host links → main site, once PORTAL_HOST_FORWARD is on. Full page loads only.
+  // Next.js hides its RSC headers from middleware, so use the browser's Sec-Fetch-Dest: in-app
+  // fetches (`empty`), frames, and form actions on a page already open on the old portal host keep
+  // working there until it reloads. Older browsers omit the header.
   const fetchDest = request.headers.get('sec-fetch-dest');
   const isPageLoad =
     (request.method === 'GET' || request.method === 'HEAD') &&

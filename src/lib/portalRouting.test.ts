@@ -118,9 +118,41 @@ describe('portal routing', () => {
     }
   });
 
-  it('sends old portal-host links to the same page on the main site', () => {
+  it('keeps old portal-host links as they are until the forward switch is on', () => {
     const previous = process.env.PORTAL_CANONICAL_HOST;
     process.env.PORTAL_CANONICAL_HOST = 'leveluprewards.app';
+    try {
+      expect(
+        portalHostToCanonicalRedirectUrl('/yeshiva', '', 'portal.leveluprewards.app', 'https:'),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl('/yeshiva/portal', '', 'portal.leveluprewards.app', 'https:'),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl('/login', '', 'portal.leveluprewards.app', 'https:'),
+      ).toBeNull();
+
+      // The main site itself no longer bounces sign-in and school pages elsewhere.
+      expect(
+        canonicalPortalRedirectUrl('/login', '', 'leveluprewards.app', 'https:'),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl('/yeshiva/portal', '', 'leveluprewards.app', 'https:'),
+      ).toBeNull();
+    } finally {
+      if (previous === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previous;
+      }
+    }
+  });
+
+  it('with the forward switch on, sends old portal-host links to the same page on the main site', () => {
+    const previous = process.env.PORTAL_CANONICAL_HOST;
+    const previousForward = process.env.PORTAL_HOST_FORWARD;
+    process.env.PORTAL_CANONICAL_HOST = 'leveluprewards.app';
+    process.env.PORTAL_HOST_FORWARD = '1';
     try {
       const fromPortalHost = (pathname: string, search = '') =>
         portalHostToCanonicalRedirectUrl(
@@ -151,19 +183,16 @@ describe('portal routing', () => {
       expect(
         portalHostToCanonicalRedirectUrl('/yeshiva', '', 'portal.localhost:3000', 'http:'),
       ).toBeNull();
-
-      // The main site itself no longer bounces sign-in and school pages elsewhere.
-      expect(
-        canonicalPortalRedirectUrl('/login', '', 'leveluprewards.app', 'https:'),
-      ).toBeNull();
-      expect(
-        canonicalPortalRedirectUrl('/yeshiva/portal', '', 'leveluprewards.app', 'https:'),
-      ).toBeNull();
     } finally {
       if (previous === undefined) {
         delete process.env.PORTAL_CANONICAL_HOST;
       } else {
         process.env.PORTAL_CANONICAL_HOST = previous;
+      }
+      if (previousForward === undefined) {
+        delete process.env.PORTAL_HOST_FORWARD;
+      } else {
+        process.env.PORTAL_HOST_FORWARD = previousForward;
       }
     }
   });

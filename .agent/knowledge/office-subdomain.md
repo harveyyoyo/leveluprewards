@@ -4,7 +4,7 @@
 
 **Live bookmark:** `https://leveluprewards.app/{school}/office` (example: `https://leveluprewards.app/yeshiva/office/teachers`).
 
-If someone opens the old `office.leveluprewards.app` address (or a short path like `/yeshiva/teachers`), the rewards app middleware **redirects** to the matching main-site URL with `/office` in the path. Old `portal.leveluprewards.app` links forward the same way.
+If someone opens the old `office.leveluprewards.app` address (or a short path like `/yeshiva/teachers`), the rewards app middleware **redirects** to the matching School Office URL with `/office` in the path — on the old `portal.` address for now, on the main site once `PORTAL_HOST_FORWARD=1` is on (see "Main site address" in `deployment.md`). Old `portal.leveluprewards.app` links keep working as before.
 
 Use the rest of this doc only if you later want a dedicated office hostname again.
 
