@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-slate-950 p-6 text-slate-100">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 overflow-x-hidden bg-slate-950 p-6 text-slate-100">
       <HomeLandingLogo />
       <Suspense
         fallback={

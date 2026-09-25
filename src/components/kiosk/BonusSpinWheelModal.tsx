@@ -136,7 +136,7 @@ export function BonusSpinWheelModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={() => {}}>
-            <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-md border border-border/60 shadow-2xl p-6 rounded-3xl overflow-hidden text-center flex flex-col items-center justify-center space-y-6">
+            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-border/60 bg-card/95 p-4 text-center shadow-2xl backdrop-blur-md sm:max-w-md sm:p-6">
                 <DialogHeader className="w-full">
                     <DialogTitle className="text-2xl font-black tracking-tight uppercase italic flex items-center justify-center gap-2 text-primary">
                         <Sparkles className="w-6 h-6 animate-pulse" /> Bonus Spin Wheel <Sparkles className="w-6 h-6 animate-pulse" />
@@ -146,7 +146,7 @@ export function BonusSpinWheelModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="relative w-64 h-64 my-4 flex items-center justify-center">
+                <div className="relative my-4 aspect-square w-[min(16rem,calc(100vw-5rem))] flex items-center justify-center">
                     {/* Pointer */}
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 w-8 h-8 text-primary">
                         <div className="w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[24px] border-t-primary drop-shadow-md" />
@@ -169,7 +169,7 @@ export function BonusSpinWheelModal({
                         }}
                     >
                         {/* SVG rendered wheel segments */}
-                        <svg width="240" height="240" className="absolute inset-0">
+                        <svg viewBox="0 0 240 240" className="absolute inset-0 size-full">
                             {svgPaths.map((path, idx) => (
                                 <g key={idx}>
                                     <path d={path} fill={segmentColors[idx % segmentColors.length]} />

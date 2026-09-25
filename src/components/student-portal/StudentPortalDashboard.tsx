@@ -195,17 +195,17 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 pb-2">
+          <div className="grid grid-cols-1 gap-4 pb-2 sm:grid-cols-2">
             <div className="rounded-2xl border bg-primary/5 p-4 text-center">
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Spendable Balance</p>
-              <p className="font-headline text-4xl sm:text-5xl font-black tabular-nums text-primary mt-1">
+              <p className="mt-1 font-headline text-3xl font-black tabular-nums text-primary sm:text-5xl">
                 {(student.points ?? 0).toLocaleString()}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">To spend on prizes</p>
             </div>
             <div className="rounded-2xl border bg-muted/40 p-4 text-center">
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">All-Time Points</p>
-              <p className="font-headline text-4xl sm:text-5xl font-black tabular-nums text-foreground mt-1">
+              <p className="mt-1 font-headline text-3xl font-black tabular-nums text-foreground sm:text-5xl">
                 {((student.lifetimePoints ?? student.points) ?? 0).toLocaleString()}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">Earned all year</p>

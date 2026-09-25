@@ -1134,7 +1134,7 @@ export function LibraryStudentSelfCheckoutPortal({
             </div>
           ) : null}
 
-          <h2 className="whitespace-nowrap text-center text-[clamp(0.95rem,2.3vw,1.35rem)] font-black leading-none text-foreground">
+          <h2 className="mx-auto max-w-full whitespace-normal text-center text-[clamp(0.95rem,2.3vw,1.35rem)] font-black leading-tight text-foreground">
             {step === 'student'
               ? mode === 'return'
                 ? 'Scan a book to return.'

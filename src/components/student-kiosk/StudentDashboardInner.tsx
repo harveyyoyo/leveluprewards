@@ -2207,26 +2207,28 @@ export function StudentDashboardInner({
                 >
                   Other info
                 </p>
-                {libraryBlock}
-                {profileExtrasBlock}
-                <StudentKioskPointCategoriesPanel
-                  themed={!!effectiveTheme}
-                  totals={pointTypeTotals}
-                  footer={portalRaffleFooter}
-                />
-                {schoolId ? (
-                  <StudentKioskActivityPreview
-                    schoolId={schoolId}
-                    studentId={student.id}
+                <StudentKioskFadeScrollPane themed={!!effectiveTheme}>
+                  {libraryBlock}
+                  {profileExtrasBlock}
+                  <StudentKioskPointCategoriesPanel
                     themed={!!effectiveTheme}
-                    variant="sidebar"
-                    showFooterCta={false}
-                    onViewAll={() => {
-                      playSound('click');
-                      setActivityDialogOpen(true);
-                    }}
+                    totals={pointTypeTotals}
+                    footer={portalRaffleFooter}
                   />
-                ) : null}
+                  {schoolId ? (
+                    <StudentKioskActivityPreview
+                      schoolId={schoolId}
+                      studentId={student.id}
+                      themed={!!effectiveTheme}
+                      variant="sidebar"
+                      showFooterCta={false}
+                      onViewAll={() => {
+                        playSound('click');
+                        setActivityDialogOpen(true);
+                      }}
+                    />
+                  ) : null}
+                </StudentKioskFadeScrollPane>
                 {schoolId ? (
                   <StudentKioskMoreActivityButton
                     themed={{ active: !!effectiveTheme }}

@@ -241,7 +241,7 @@ export default function Header() {
     compactDisplay && showPortalDock && visibleDockItems.length > 0 ? (
       <nav
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-[100] border-t py-3 pb-[max(1rem,env(safe-area-inset-bottom))] no-print',
+          'fixed bottom-0 left-0 right-0 z-30 border-t py-3 pb-[max(1rem,env(safe-area-inset-bottom))] no-print',
           settings.darkMode
             ? 'border-border bg-background/90 shadow-[0_-8px_28px_hsl(222_47%_11%/0.35)] backdrop-blur-md'
             : 'border-border bg-card shadow-[0_-8px_28px_hsl(var(--primary)/0.1)]',

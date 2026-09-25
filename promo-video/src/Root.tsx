@@ -7,6 +7,18 @@ import {
   PillarsShortPromo,
   PILLARS_PROMO_TOTAL_FRAMES,
 } from "./PillarsShortPromo";
+import { PillarQuickLandscape } from "./pillarStyles/PillarQuickLandscape";
+import { PillarQuickPromo } from "./pillarStyles/PillarQuickPromo";
+import {
+  PILLAR_QUICK_FPS,
+  PILLAR_QUICK_HEIGHT,
+  PILLAR_QUICK_LANDSCAPE_HEIGHT,
+  PILLAR_QUICK_LANDSCAPE_WIDTH,
+  PILLAR_QUICK_PROMO_IDS,
+  PillarQuickPromoSchema,
+  PILLAR_QUICK_TOTAL_FRAMES,
+  PILLAR_QUICK_WIDTH,
+} from "./pillarStyles/pillarStyleData";
 import {
   WidescreenPromo,
   WidescreenPromoSchema,
@@ -116,6 +128,42 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1080}
       />
+
+      {/* Six fast phone samples across core school tools */}
+      {PILLAR_QUICK_PROMO_IDS.map((pillarId) => {
+        const compositionId = `PillarQuick${pillarId.charAt(0).toUpperCase()}${pillarId.slice(1)}`;
+        return (
+          <Composition
+            key={pillarId}
+            id={compositionId}
+            component={PillarQuickPromo}
+            durationInFrames={PILLAR_QUICK_TOTAL_FRAMES}
+            fps={PILLAR_QUICK_FPS}
+            width={PILLAR_QUICK_WIDTH}
+            height={PILLAR_QUICK_HEIGHT}
+            defaultProps={{ pillarId }}
+            schema={PillarQuickPromoSchema}
+          />
+        );
+      })}
+
+      {/* Matching widescreen samples */}
+      {PILLAR_QUICK_PROMO_IDS.map((pillarId) => {
+        const compositionId = `PillarQuick${pillarId.charAt(0).toUpperCase()}${pillarId.slice(1)}Landscape`;
+        return (
+          <Composition
+            key={`${pillarId}-landscape`}
+            id={compositionId}
+            component={PillarQuickLandscape}
+            durationInFrames={PILLAR_QUICK_TOTAL_FRAMES}
+            fps={PILLAR_QUICK_FPS}
+            width={PILLAR_QUICK_LANDSCAPE_WIDTH}
+            height={PILLAR_QUICK_LANDSCAPE_HEIGHT}
+            defaultProps={{ pillarId }}
+            schema={PillarQuickPromoSchema}
+          />
+        );
+      })}
 
       {/* Long Feature Showcase Promo */}
       <Composition

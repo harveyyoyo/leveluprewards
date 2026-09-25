@@ -23,6 +23,7 @@ type StaffPortalAddFeatureTabsMenuProps = {
   align?: 'start' | 'end';
   className?: string;
   getTabStyle?: (value: string) => CSSProperties | undefined;
+  collapsed?: boolean;
 };
 
 /** Add-only menu — lists feature tabs not already in the sidebar. */
@@ -34,6 +35,7 @@ export function StaffPortalAddFeatureTabsMenu({
   align = 'start',
   className,
   getTabStyle,
+  collapsed = false,
 }: StaffPortalAddFeatureTabsMenuProps) {
   const { t } = useTranslation();
   const hasBulkActions = !!(onTurnAllOn || onTurnAllOff);
@@ -46,14 +48,20 @@ export function StaffPortalAddFeatureTabsMenu({
           type="button"
           className={
             className ??
-            'inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-3 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground'
+            (collapsed
+              ? 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-transparent text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground mx-auto'
+              : 'inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-3 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground')
           }
-          title="Add feature tab"
-          aria-label="Add feature tab"
+          title={t('staff.nav.addMore')}
+          aria-label={t('staff.nav.addMore')}
         >
           <Settings className="w-4 h-4" aria-hidden />
-          {t('staff.nav.addMore')}
-          <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
+          {!collapsed && (
+            <>
+              {t('staff.nav.addMore')}
+              <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
+            </>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

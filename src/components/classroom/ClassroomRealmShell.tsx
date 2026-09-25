@@ -190,7 +190,7 @@ function ClassroomRealmNav({
   if (variant === 'dock') {
     return (
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-white/10 bg-black/60 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-white/10 bg-black/60 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl lg:hidden"
         aria-label="Classroom navigation"
       >
         {dockItems.map((item) => {
@@ -318,7 +318,7 @@ export function ClassroomRealmShell({
             </Link>
           </div>
         </header>
-        <main className="flex-1 overflow-auto pb-20 lg:pb-0">{children}</main>
+        <main className="flex-1 overflow-auto pb-[max(5rem,calc(3.25rem+env(safe-area-inset-bottom)))] lg:pb-0">{children}</main>
         <Suspense fallback={null}>
           <ClassroomRealmNav schoolId={schoolId} variant="dock" />
         </Suspense>

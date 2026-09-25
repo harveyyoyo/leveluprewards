@@ -19,6 +19,7 @@ import {
    Settings, History, Award, CheckCircle, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2,
    FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices,
+   PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -322,6 +323,51 @@ function AdminDashboardInner() {
   const { settings, updateSettings } = useSettings();
   const couponsTabMigratedRef = useRef(false);
   const displaysTabMigratedRef = useRef(false);
+
+  // User can explicitly pin the sidebar open, otherwise it starts collapsed by default and expands on hover.
+  const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('admin_sidebar_collapsed');
+        return localStorage.getItem('admin_sidebar_pinned') === 'true';
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  const [isSidebarHovered, setIsSidebarHovered] = useState<boolean>(false);
+  const hoverLeaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSidebarMouseEnter = useCallback(() => {
+    if (hoverLeaveTimeoutRef.current) {
+      clearTimeout(hoverLeaveTimeoutRef.current);
+      hoverLeaveTimeoutRef.current = null;
+    }
+    setIsSidebarHovered(true);
+  }, []);
+
+  const handleSidebarMouseLeave = useCallback(() => {
+    if (hoverLeaveTimeoutRef.current) {
+      clearTimeout(hoverLeaveTimeoutRef.current);
+    }
+    hoverLeaveTimeoutRef.current = setTimeout(() => {
+      setIsSidebarHovered(false);
+    }, 120);
+  }, []);
+
+  const toggleSidebarPinned = useCallback(() => {
+    setSidebarPinnedOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('admin_sidebar_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const isSidebarCollapsed = !sidebarPinnedOpen && !isSidebarHovered;
 
   useEffect(() => {
     if (couponsTabMigratedRef.current) return;
@@ -1701,8 +1747,25 @@ function AdminDashboardInner() {
         >
         <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3">
 
-        <StaffPortalWorkspace>
-          <div className={staffPortalSidebarRailClassName()}>
+        <StaffPortalWorkspace
+          className={cn(
+            isSidebarCollapsed
+              ? 'lg:grid-cols-[4.5rem_minmax(0,1fr)]'
+              : 'lg:grid-cols-[minmax(13.5rem,15rem)_minmax(0,1fr)]',
+            'transition-[grid-template-columns] duration-200 ease-in-out',
+          )}
+        >
+          <div
+            className={cn(
+              staffPortalSidebarRailClassName(),
+              isSidebarCollapsed
+                ? 'lg:w-[4.5rem] lg:px-2 lg:items-center'
+                : 'lg:w-full lg:px-3 lg:items-stretch',
+              'transition-all duration-200 ease-in-out overflow-hidden',
+            )}
+            onMouseEnter={handleSidebarMouseEnter}
+            onMouseLeave={handleSidebarMouseLeave}
+          >
               <div className="lg:hidden">
                 <Label htmlFor="admin-portal-section" className="sr-only">
                   Admin portal section
@@ -1745,6 +1808,34 @@ function AdminDashboardInner() {
                 </Select>
               </div>
               <div className="hidden w-full min-w-0 lg:block">
+                {/* Desktop sidebar collapse / expand toggle header */}
+                <div
+                  className={cn(
+                    'flex items-center pb-2 pt-0.5 mb-1.5 border-b border-border/40 w-full transition-all duration-200',
+                    isSidebarCollapsed ? 'justify-center' : 'justify-between px-1',
+                  )}
+                >
+                  {!isSidebarCollapsed && (
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground select-none animate-in fade-in duration-150">
+                      Menu
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-lg shrink-0"
+                    onClick={toggleSidebarPinned}
+                    title={sidebarPinnedOpen ? 'Collapse sidebar (auto-expand on hover)' : 'Keep sidebar open'}
+                    aria-label={sidebarPinnedOpen ? 'Collapse sidebar (auto-expand on hover)' : 'Keep sidebar open'}
+                  >
+                    {sidebarPinnedOpen ? (
+                      <PanelLeftClose className="h-4 w-4" />
+                    ) : (
+                      <PanelLeftOpen className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               <AdminMainTabsList
                 activeTabValue={activeMainTab}
                 orientation="vertical"
@@ -1764,6 +1855,7 @@ function AdminDashboardInner() {
                     onTurnAllOff={disableAllAddOnTabs}
                     getTabStyle={adminAddOnTabMenuStyle}
                     align="end"
+                    collapsed={isSidebarCollapsed}
                   />
                 }
                 onDragOver={(e) => {
@@ -1797,23 +1889,28 @@ function AdminDashboardInner() {
                           ? cn(
                               staffPortalAddOnTabTriggerClassName(),
                               'border-solid data-[state=inactive]:shadow-none',
+                              isSidebarCollapsed && 'justify-center px-0 w-10 h-10 mx-auto',
                             )
-                          : adminTabTriggerClassName
+                          : cn(
+                              adminTabTriggerClassName,
+                              isSidebarCollapsed && 'justify-center px-0 w-10 h-10 mx-auto',
+                            )
                       }
                       triggerStyle={
                         isColoredAddOn
                           ? adminAddOnTabTriggerStyle(t.value, settings, isTabActive)
                           : undefined
                       }
-                      title={t.title ?? 'Drag to reorder'}
-                      removable={removable}
+                      title={t.label}
+                      removable={!isSidebarCollapsed && removable}
                       removeLabel={`Remove ${t.label} from sidebar`}
                       onRemove={removable ? () => unpinAdminAddOnTab(t.value) : undefined}
-                      wrapperClassName="flex w-full shrink-0"
+                      wrapperClassName={cn('flex w-full shrink-0', isSidebarCollapsed && 'justify-center')}
                       wrapperProps={{
-                        draggable: true,
-                        title: t.title ?? 'Drag to reorder',
+                        draggable: !isSidebarCollapsed,
+                        title: t.label,
                         onDragStart: (e) => {
+                          if (isSidebarCollapsed) return;
                           e.dataTransfer.setData('text/admin-main-tab', t.value);
                           e.dataTransfer.effectAllowed = 'move';
                           draggingMainTabValueRef.current = t.value;
@@ -1825,6 +1922,7 @@ function AdminDashboardInner() {
                           draggingMainTabValueRef.current = null;
                         },
                         onDragOver: (e) => {
+                          if (isSidebarCollapsed) return;
                           const dragged = draggingMainTabValueRef.current;
                           if (!dragged) return;
                           e.preventDefault();
@@ -1840,7 +1938,12 @@ function AdminDashboardInner() {
                         },
                       }}
                     >
-                      <Icon className="w-4 h-4 shrink-0" /> {t.label}
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {!isSidebarCollapsed && (
+                        <span className="truncate whitespace-nowrap animate-in fade-in duration-150">
+                          {t.label}
+                        </span>
+                      )}
                     </StaffPortalSidebarTabRow>
                   );
                 })}

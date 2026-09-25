@@ -499,10 +499,10 @@ export function StudentModal({
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent size="lg" className="flex flex-col p-0 overflow-hidden max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+        <DialogHeader className="border-b px-4 pb-4 pt-6 sm:px-6">
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName ?? ''}`.trim() : 'New Student'}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
           <div className="grid gap-4">
           {isEditing && (
             <div className="space-y-2">
@@ -520,7 +520,7 @@ export function StudentModal({
                   {effectivePhotoUrl && (
                     <button
                       onClick={handleRemovePhoto}
-                      className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -right-2 -top-2 inline-flex size-11 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-100 transition-opacity focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                       title="Remove photo"
                       disabled={isPhotoUploading}
                       type="button"
@@ -572,7 +572,7 @@ export function StudentModal({
                     <button
                       type="button"
                       onClick={() => void handleRemoveCustomEmoji()}
-                      className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -right-2 -top-2 inline-flex size-11 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-100 transition-opacity focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                       title="Remove sticker"
                       disabled={isCustomEmojiUploading}
                     >
@@ -598,7 +598,7 @@ export function StudentModal({
               ) : null}
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="firstName">First Name</Label>
               <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} />
@@ -608,7 +608,7 @@ export function StudentModal({
               <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="middleName">Middle Name (Optional)</Label>
               <Input id="middleName" value={middleName} onChange={e => setMiddleName(e.target.value)} />
@@ -691,7 +691,7 @@ export function StudentModal({
                   else if (val !== 'custom') setCustomLibraryLimit(val);
                 }}
               >
-                <SelectTrigger id="student-library-limit" className="w-64 h-9 text-xs rounded-xl">
+                <SelectTrigger id="student-library-limit" className="h-9 w-full rounded-xl text-xs sm:w-64">
                   <SelectValue placeholder="Select checkout limit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -751,7 +751,7 @@ export function StudentModal({
             <Label htmlFor="points">Points</Label>
             <Input id="points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="parentEmail">Parent Email (Optional)</Label>
               <Input
@@ -773,7 +773,7 @@ export function StudentModal({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
               <div className="space-y-0.5">
                 <Label className="text-sm font-bold">Parent notifications</Label>
@@ -800,7 +800,7 @@ export function StudentModal({
               <Switch checked={parentWeeklyDigestOptIn} onCheckedChange={setParentWeeklyDigestOptIn} />
             </div>
           ) : null}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="studentEmail">Student Email (Optional)</Label>
               <Input

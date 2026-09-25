@@ -538,7 +538,7 @@ function TeacherClassesTab({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 sm:size-8 sm:opacity-0 sm:group-hover:opacity-100"
                                     onClick={() => void handleUnlinkClass(c)}
                                     disabled={isBusy}
                                 >

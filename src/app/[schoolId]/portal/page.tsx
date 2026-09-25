@@ -452,7 +452,7 @@ export default function PortalPage() {
             {/* Main layout: always fits on screen, centered without vertical scrolling */}
             <div
                 className={cn(
-                    'relative z-[10] flex h-full min-h-0 w-full flex-col justify-center overflow-hidden',
+                    'relative z-[10] flex h-full min-h-0 w-full flex-col justify-start overflow-x-hidden overflow-y-auto md:justify-center',
                     compactDisplay
                         ? 'px-3 py-2 sm:px-4 sm:py-3'
                         : hubDenseLayout
@@ -463,7 +463,7 @@ export default function PortalPage() {
             >
                 <div
                     className={cn(
-                        'flex h-full max-h-full w-full flex-1 min-h-0 flex-col items-center justify-center',
+                        'flex min-h-full w-full flex-1 flex-col items-center justify-start md:h-full md:max-h-full md:min-h-0 md:justify-center',
                         portalHubOuterGapClass(hubCardCount, compactDisplay),
                     )}
                 >

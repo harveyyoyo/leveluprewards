@@ -124,7 +124,7 @@ export function RandomStudentPickerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md rounded-3xl p-6 sm:p-8 overflow-hidden text-center">
+      <DialogContent className="max-w-md overflow-y-auto rounded-3xl p-4 text-center sm:p-8">
         <DialogHeader className="space-y-1">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 mb-1">
             <Shuffle className="h-6 w-6" />
@@ -219,7 +219,7 @@ export function RandomStudentPickerModal({
                       variant="outline"
                       disabled={isAwarding}
                       onClick={() => handleGiveAward(pts)}
-                      className="rounded-2xl border-2 font-black text-sm h-11 transition-transform hover:scale-105 hover:border-amber-400"
+                      className="h-11 min-w-0 rounded-2xl border-2 px-1 font-black text-sm transition-transform hover:scale-105 hover:border-amber-400 sm:px-3"
                     >
                       <Award className="mr-1.5 h-4 w-4 text-amber-500" />
                       +{pts} pts
