@@ -239,6 +239,8 @@ export type OfficeBusRoute = {
   color: string;
   driverName?: string | null;
   driverPhone?: string | null;
+  reliefDriverName?: string | null;
+  reliefDriverPhone?: string | null;
   /** Seats on the bus; used for the "full" warning only. */
   capacity?: number | null;
   /** Optional vehicle identity and maintenance dates. */
@@ -251,6 +253,8 @@ export type OfficeBusRoute = {
   requireReleaseConfirmations?: boolean;
   stops: OfficeBusStop[];
   notes?: string | null;
+  /** Server-only lock for the one active run on this route. */
+  activeTripId?: string | null;
   updatedAt: number;
   updatedBy?: string | null;
   archived?: boolean;
@@ -258,7 +262,11 @@ export type OfficeBusRoute = {
 };
 
 /** The route details needed to read a past trip after the route is edited or removed. */
-export type OfficeBusRouteSnapshot = Pick<OfficeBusRoute, 'name' | 'busNumber' | 'color' | 'vehicle' | 'stops'>;
+export type OfficeBusRouteSnapshot = Pick<
+  OfficeBusRoute,
+  'name' | 'busNumber' | 'color' | 'vehicle' | 'stops' | 'capacity' | 'driverName' | 'driverPhone' | 'reliefDriverName' | 'reliefDriverPhone' |
+    'notifyFamiliesOnAlert' | 'notifyFamiliesOnArrival' | 'requireReleaseConfirmations'
+>;
 
 export type OfficeBusRun = 'am' | 'pm';
 export type OfficeBusRiderStatus = 'on' | 'off' | 'absent';
@@ -272,6 +280,26 @@ export type OfficeBusTripAlert = {
   minutes?: number | null;
   at: number;
   by?: string | null;
+};
+
+export type OfficeBusRunExceptionKind = 'closed_stop' | 'detour' | 'replacement_vehicle' | 'pickup_change' | 'delay';
+export type OfficeBusRunExceptionStatus = 'open' | 'acknowledged' | 'resolved';
+
+export type OfficeBusRunException = {
+  id: string;
+  tripId: string;
+  routeId: string;
+  kind: OfficeBusRunExceptionKind;
+  stopId?: string | null;
+  note?: string | null;
+  status: OfficeBusRunExceptionStatus;
+  createdAt: number;
+  createdBy: string;
+  expiresAt: number;
+  acknowledgedAt?: number | null;
+  acknowledgedBy?: string | null;
+  resolvedAt?: number | null;
+  resolvedBy?: string | null;
 };
 
 export type OfficeBusLocation = {
@@ -296,12 +324,15 @@ export type OfficeBusRelease = {
   note?: string | null;
   occurredAt: number;
   by: string;
+  /** Set when Office staff explicitly corrects an earlier release. */
+  correctsReleaseAt?: number;
+  correctionReason?: string | null;
 };
 
 export type OfficeBusEvent =
   | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
   | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string; source?: 'browser' | 'gps_device' | 'manual'; deviceId?: string | null; sampleId?: string | null; accuracyM?: number | null; distanceM?: number | null }
-  | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string };
+  | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string; correctsReleaseAt?: number; correctionReason?: string | null };
 
 export type OfficeBusRiderManifestEntry = {
   studentId: string;
@@ -332,6 +363,9 @@ export type OfficeBusTrip = {
   status: 'active' | 'done';
   driverId?: string | null;
   driverName?: string | null;
+  driverPhone?: string | null;
+  driverRole?: 'primary' | 'relief';
+  driverRoleChangedAt?: number;
   startedAt: number;
   endedAt?: number | null;
   location?: OfficeBusLocation | null;
@@ -348,10 +382,18 @@ export type OfficeBusTrip = {
   /** Release confirmation for each rider who was marked off. */
   releases?: Record<string, OfficeBusRelease> | null;
   alerts?: OfficeBusTripAlert[] | null;
+  /** Temporary route changes that Office and the assigned driver can track. */
+  exceptions?: Record<string, OfficeBusRunException> | null;
   /** Append-only rider and stop events kept for the safety record. */
   events?: OfficeBusEvent[] | null;
   /** Driver walked the bus at the end and confirmed nobody was left on. */
   childCheckDone?: boolean | null;
+  /** School Office closed an old run that a driver left open. */
+  closedByOffice?: boolean;
+  closedAt?: number | null;
+  closeReason?: string | null;
+  /** Number of unique office family updates queued for this run. */
+  familyUpdateCount?: number;
   updatedAt: number;
 };
 

@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, rateLimit } from '@/lib/server/apiSecurity';
+import { getTransportSchoolTimeZone } from '@/lib/server/transportSchoolTime';
 import { latestTripForRoute, transportPhoneStatusText } from '@/lib/office/officeTransport';
 import type { OfficeBusRoute, OfficeBusRun, OfficeBusTrip } from '@/lib/office/types';
 
@@ -71,13 +72,15 @@ export async function GET(req: NextRequest) {
   try {
     const run = parseRun(req.nextUrl.searchParams.get('run'));
     const firestore = await getFirebaseAdminFirestore();
-    const routeRef = firestore.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(routeId);
+    const schoolRef = firestore.collection('schools').doc(schoolId);
+    const timeZone = await getTransportSchoolTimeZone(firestore, schoolId);
+    const routeRef = schoolRef.collection('officeBusRoutes').doc(routeId);
     const routeSnap = await routeRef.get();
     if (!routeSnap.exists) {
       return NextResponse.json({ error: 'That bus route was not found.' }, { status: 404, headers: responseHeaders() });
     }
     const route = { id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute;
-    const tripSnap = await firestore.collection('schools').doc(schoolId).collection('officeBusTrips').where('routeId', '==', routeId).limit(100).get();
+    const tripSnap = await schoolRef.collection('officeBusTrips').where('routeId', '==', routeId).get();
     const trips = tripSnap.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as OfficeBusTrip));
     const trip = run
       ? latestTripForRoute(trips, routeId, run)
@@ -85,7 +88,7 @@ export async function GET(req: NextRequest) {
           if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
           return b.startedAt - a.startedAt;
         })[0] ?? null;
-    const status = transportPhoneStatusText(route, trip);
+    const status = transportPhoneStatusText(route, trip, Date.now(), timeZone);
 
     if (format === 'twilio') {
       const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say>${escapeXml(status.text)}</Say></Response>`;

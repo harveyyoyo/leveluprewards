@@ -14,7 +14,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { officeAuditSnapshot, writeOfficeAuditEntry } from '@/lib/office/officeAuditLog';
-import { riderSnapshotFromStudents } from '@/lib/office/officeTransport';
+import { riderSnapshotFromStudents, routeSnapshotForRun } from '@/lib/office/officeTransport';
 import { billingStatusForAccount } from '@/lib/office/officeUtils';
 import type {
   OfficeAttendanceEntry,
@@ -965,12 +965,21 @@ function assertValidVehicle(vehicle: OfficeBusVehicleDetails | null | undefined)
   }
 }
 
-function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'notifyFamiliesOnAlert' | 'notifyFamiliesOnArrival' | 'requireReleaseConfirmations' | 'stops'>): void {
+function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capacity' | 'vehicle' | 'driverName' | 'driverPhone' | 'reliefDriverName' | 'reliefDriverPhone' | 'notifyFamiliesOnAlert' | 'notifyFamiliesOnArrival' | 'requireReleaseConfirmations' | 'stops'>): void {
   if (!data.name.trim() || data.name.trim().length > 100) throw new Error('Give the route a name under 100 characters.');
   if (!/^#[0-9a-f]{6}$/i.test(data.color)) throw new Error('Choose a valid route color.');
   if (data.notifyFamiliesOnAlert != null && typeof data.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
   if (data.notifyFamiliesOnArrival != null && typeof data.notifyFamiliesOnArrival !== 'boolean') throw new Error('Arrival notification choice is invalid.');
   if (data.requireReleaseConfirmations != null && typeof data.requireReleaseConfirmations !== 'boolean') throw new Error('Release confirmation choice is invalid.');
+  for (const [key, label, max] of [
+    ['driverName', 'Driver name', 120],
+    ['driverPhone', 'Driver phone', 50],
+    ['reliefDriverName', 'Relief driver name', 120],
+    ['reliefDriverPhone', 'Relief driver phone', 50],
+  ] as const) {
+    const value = data[key];
+    if (value != null && (typeof value !== 'string' || value.trim().length > max)) throw new Error(`${label} is invalid.`);
+  }
   if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1 || data.capacity > 200)) {
     throw new Error('Bus capacity must be between 1 and 200.');
   }
@@ -992,6 +1001,9 @@ function assertValidBusRoute(data: Pick<OfficeBusRoute, 'name' | 'color' | 'capa
     if (stop.isSchool) schoolStops += 1;
   }
   if (schoolStops > 1) throw new Error('A route can have only one school stop.');
+  if (schoolStops === 1 && data.stops[data.stops.length - 1]?.isSchool !== true) {
+    throw new Error('Keep the school as the last stop so afternoon runs start at school.');
+  }
 }
 
 export async function upsertOfficeBusRoute(
@@ -1110,12 +1122,7 @@ function tripRef(ctx: OfficeWriteContext, tripId: string) {
 }
 
 function routeSnapshot(route: OfficeBusRoute): OfficeBusRouteSnapshot {
-  return {
-    name: route.name,
-    busNumber: route.busNumber ?? null,
-    color: route.color,
-    stops: route.stops ?? [],
-  };
+  return routeSnapshotForRun(route);
 }
 
 /** Starts (or resumes) a run. A completed run is never overwritten. Returns the trip id. */

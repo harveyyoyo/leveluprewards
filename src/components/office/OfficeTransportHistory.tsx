@@ -6,15 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { useToast } from '@/hooks/use-toast';
-import { useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
+import { useOfficeBusActiveTrips, useOfficeBusTripsForDate, useNow } from '@/lib/office/useOfficeTransport';
+import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import { downloadCsv } from '@/lib/office/officeUtils';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import {
   BUS_ALERT_LABEL,
+  BUS_EXCEPTION_LABEL,
   BUS_RELEASE_METHOD_LABEL,
   BUS_RUN_LABEL,
   clockLabel,
   localIsoDate,
+  isAbandonedRunCandidate,
+  isFreshLocation,
   orderedStops,
   routeForTrip,
   riderNameForTrip,
@@ -45,9 +49,15 @@ export function OfficeTransportHistory({
   studentNameById: Map<string, string>;
 }) {
   const today = localIsoDate();
+  const now = useNow(30_000);
   const [date, setDate] = useState(today);
   const [openId, setOpenId] = useState<string | null>(null);
   const { trips, isLoading, error } = useOfficeBusTripsForDate(schoolId, date);
+  const { trips: activeTrips } = useOfficeBusActiveTrips(schoolId);
+  const staleTrips = activeTrips.filter((trip) => !isFreshLocation(trip.location, now) && (trip.date < today || (trip.date === today && isAbandonedRunCandidate(trip, now))));
+  const transport = useOfficeTransportApi(schoolId);
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const [resolvingExceptionId, setResolvingExceptionId] = useState<string | null>(null);
   const summary = useMemo(() => transportDaySummary(trips, routes), [trips, routes]);
   const { toast } = useToast();
   // Removed routes are still named here so old trips stay readable.
@@ -62,6 +72,38 @@ export function OfficeTransportHistory({
     }
   };
 
+  const closeStaleRun = async (trip: OfficeBusTrip) => {
+    const sameDay = trip.date === today;
+    if (trip.status !== 'active' || trip.date > today || (sameDay && !isAbandonedRunCandidate(trip, now))) return;
+    const warning = sameDay
+      ? 'This run has been open for at least 30 minutes without a fresh bus update. Close it only after checking with the driver.'
+      : 'Close this older bus run? It will stay in History, but it will no longer block this bus.';
+    if (!window.confirm(warning)) return;
+    const reason = window.prompt('Why is the office closing this run? This note will stay in the record.')?.trim();
+    if (!reason) return;
+    setClosingId(trip.id);
+    try {
+      await transport.closeStaleOfficeBusTrip(trip.id, reason, sameDay);
+      toast({ title: sameDay ? 'Open run closed' : 'Older run closed', description: 'The bus is free to start a new run.' });
+    } catch (cause) {
+      toast({ variant: 'destructive', title: 'Could not close the run', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
+    } finally {
+      setClosingId(null);
+    }
+  };
+
+  const resolveException = async (trip: OfficeBusTrip, exceptionId: string) => {
+    setResolvingExceptionId(exceptionId);
+    try {
+      await transport.resolveOfficeBusRunException(trip.id, exceptionId);
+      toast({ title: 'Route exception resolved', description: 'The change is saved in the run history.' });
+    } catch (cause) {
+      toast({ variant: 'destructive', title: 'Could not resolve the exception', description: cause instanceof Error ? cause.message : 'Try again in a moment.' });
+    } finally {
+      setResolvingExceptionId(null);
+    }
+  };
+
   const downloadDayCsv = () => {
     const rows = trips.map((trip) => {
       const route = routeForTrip(routeById.get(trip.routeId), trip);
@@ -72,7 +114,7 @@ export function OfficeTransportHistory({
         route ? routeLabel(route) : 'Removed route',
         route?.busNumber ?? '',
         trip.driverName ?? route?.driverName ?? '',
-        trip.status === 'done' ? 'Finished' : 'On the road',
+        trip.closedByOffice ? 'Closed by School Office' : trip.status === 'done' ? 'Finished' : 'On the road',
         clockLabel(trip.startedAt),
         trip.endedAt ? clockLabel(trip.endedAt) : '',
         String(minutes),
@@ -92,6 +134,30 @@ export function OfficeTransportHistory({
 
   return (
     <div className="space-y-3">
+      {staleTrips.length > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100" role="alert">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">An open bus run needs Office attention.</p>
+              <p className="mt-1 text-xs">Close it only after checking with the driver. The record will stay in History.</p>
+              <ul className="mt-2 space-y-1">
+                {staleTrips.map((trip) => {
+                  const route = routeForTrip(routeById.get(trip.routeId), trip);
+                  return (
+                    <li key={trip.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span>{route ? routeLabel(route) : 'Bus route'} · {BUS_RUN_LABEL[trip.run]} · {trip.date}</span>
+                      <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" disabled={closingId === trip.id} onClick={() => void closeStaleRun(trip)}>
+                        {closingId === trip.id ? 'Closing…' : trip.date === today ? 'Close open run' : 'Close older run'}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center gap-1">
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Previous day" onClick={() => setDate(shiftDate(date, -1))}>
           <ChevronLeft className="h-4 w-4" />
@@ -151,6 +217,12 @@ export function OfficeTransportHistory({
               open={openId === trip.id}
               onToggle={() => setOpenId(openId === trip.id ? null : trip.id)}
               studentNameById={studentNameById}
+              canCloseStale={trip.status === 'active' && trip.date < today}
+              closing={closingId === trip.id}
+              onCloseStale={() => void closeStaleRun(trip)}
+              now={now}
+              resolvingExceptionId={resolvingExceptionId}
+              onResolveException={(exceptionId) => void resolveException(trip, exceptionId)}
             />
           ))}
         </ul>
@@ -174,12 +246,24 @@ function TripRow({
   open,
   onToggle,
   studentNameById,
+  canCloseStale,
+  closing,
+  onCloseStale,
+  now,
+  resolvingExceptionId,
+  onResolveException,
 }: {
   trip: OfficeBusTrip;
   route: OfficeBusRoute | undefined;
   open: boolean;
   onToggle: () => void;
   studentNameById: Map<string, string>;
+  canCloseStale: boolean;
+  closing: boolean;
+  onCloseStale: () => void;
+  now: number;
+  resolvingExceptionId: string | null;
+  onResolveException: (exceptionId: string) => void;
 }) {
   const riders = Object.entries(trip.riders ?? {});
   const riderEvents = (trip.events ?? []).filter(
@@ -191,6 +275,8 @@ function TripRow({
   const rode = riders.filter(([, r]) => r.status !== 'absent').length;
   const leftOn = riders.filter(([, r]) => r.status === 'on');
   const alerts = trip.alerts ?? [];
+  const exceptions = Object.values(trip.exceptions ?? {}).sort((a, b) => b.createdAt - a.createdAt);
+  const openExceptions = exceptions.filter((exception) => exception.status !== 'resolved');
   const minutes = trip.endedAt ? Math.round((trip.endedAt - trip.startedAt) / 60_000) : null;
   const stops = route ? orderedStops(route, trip.run) : [];
   const vehicle = vehicleLabel(route?.vehicle);
@@ -207,6 +293,8 @@ function TripRow({
             </span>
             {trip.status === 'active' ? (
               <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">On the road</span>
+            ) : trip.closedByOffice ? (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">Closed by School Office</span>
             ) : null}
           </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -214,7 +302,8 @@ function TripRow({
               `${clockLabel(trip.startedAt)}${trip.endedAt ? ` – ${clockLabel(trip.endedAt)}` : ''}`,
               minutes !== null ? `${minutes} min` : null,
               `${rode} rode`,
-              trip.driverName ? `Driver ${trip.driverName}` : null,
+              trip.driverName ? `${trip.driverRole === 'relief' ? 'Relief driver' : 'Driver'} ${trip.driverName}` : null,
+              trip.driverRole === 'relief' && trip.driverRoleChangedAt ? `Relief since ${clockLabel(trip.driverRoleChangedAt)}` : null,
               vehicle,
             ]
               .filter(Boolean)
@@ -225,8 +314,11 @@ function TripRow({
               <Flag tone="danger">{leftOn.length} never marked off</Flag>
             ) : null}
             {alerts.length ? <Flag tone="caution">{alerts.length} report{alerts.length === 1 ? '' : 's'} from driver</Flag> : null}
+             {openExceptions.length ? <Flag tone="caution">{openExceptions.length} open route exception{openExceptions.length === 1 ? '' : 's'}</Flag> : null}
             {trip.status === 'done' ? (
-              trip.childCheckDone ? (
+              trip.closedByOffice ? (
+                <Flag tone="caution">Closed without finishing check</Flag>
+              ) : trip.childCheckDone ? (
                 <Flag tone="good">
                   <ShieldCheck className="h-3 w-3" /> Bus checked
                 </Flag>
@@ -241,6 +333,21 @@ function TripRow({
 
       {open ? (
         <div className="grid gap-4 border-t bg-slate-50/60 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/60 sm:grid-cols-2">
+          {canCloseStale ? (
+            <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="text-sm font-semibold">This older run is still open.</p>
+              <p className="mt-1 text-xs">Close it so this bus can start today’s run. The old record will stay in History.</p>
+              <Button type="button" variant="outline" size="sm" className="mt-2 gap-2 rounded-xl" disabled={closing} onClick={onCloseStale}>
+                <AlertTriangle className="h-4 w-4" /> {closing ? 'Closing…' : 'Close older run'}
+              </Button>
+            </div>
+          ) : null}
+          {trip.closedByOffice ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:col-span-2">
+              <p className="text-sm font-semibold">Closed by School Office without a finishing check.</p>
+              {trip.closeReason ? <p className="mt-1 text-xs">Office note: {trip.closeReason}</p> : null}
+            </div>
+          ) : null}
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Stops</p>
             <ul className="mt-1.5 space-y-1">
@@ -277,6 +384,28 @@ function TripRow({
                   ))}
                 </ul>
               </>
+            ) : null}
+            {exceptions.length > 0 ? (
+              <div className="mt-4 border-t pt-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Temporary route exceptions</p>
+                <ul className="mt-1.5 space-y-2">
+                  {exceptions.map((exception) => {
+                    const stop = exception.stopId ? stops.find((item) => item.id === exception.stopId) : null;
+                    const status = exception.status === 'resolved' ? 'Resolved' : exception.expiresAt <= now ? 'Expired' : exception.status === 'acknowledged' ? 'Acknowledged' : 'Open';
+                    return (
+                      <li key={exception.id} className="rounded-lg border border-amber-200/80 bg-white/70 p-2.5 text-xs dark:border-amber-900 dark:bg-slate-900/50">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium">{BUS_EXCEPTION_LABEL[exception.kind]}{stop ? ` · ${stop.name}` : ''}</span>
+                          <span className="shrink-0 text-muted-foreground">{status}</span>
+                        </div>
+                        {exception.note ? <p className="mt-1">{exception.note}</p> : null}
+                        <p className="mt-1 text-[11px] text-muted-foreground">Added {clockLabel(exception.createdAt)} · expires {clockLabel(exception.expiresAt)}</p>
+                         {exception.status !== 'resolved' ? <Button type="button" variant="outline" size="sm" className="mt-2 h-7 rounded-lg text-xs" disabled={resolvingExceptionId === exception.id} onClick={() => onResolveException(exception.id)}>{resolvingExceptionId === exception.id ? 'Resolving…' : 'Mark resolved'}</Button> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : null}
           </div>
           <div>
@@ -323,7 +452,7 @@ function TripRow({
                     <li key={`${event.studentId}-${event.at}-${index}`} className="flex items-center justify-between gap-2 text-xs">
                       <span>{riderNameForTrip(trip, event.studentId, studentNameById)}</span>
                       <span className="text-muted-foreground">
-                        {BUS_RELEASE_METHOD_LABEL[event.method]} · {event.contactName} · {clockLabel(event.at)}
+                        {BUS_RELEASE_METHOD_LABEL[event.method]} · {event.contactName} · {clockLabel(event.at)}{event.correctionReason ? ` · corrected: ${event.correctionReason}` : ''}
                       </span>
                     </li>
                   ))}

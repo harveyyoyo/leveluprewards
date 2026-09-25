@@ -40,6 +40,19 @@ export function useOfficeBusTripsForDate(schoolId: string | null, date: string |
   return { trips, isLoading, error };
 }
 
+/** Active runs from any day, used by Office to find an abandoned run. */
+export function useOfficeBusActiveTrips(schoolId: string | null) {
+  const firestore = useFirestore();
+  const normalizedSchoolId = schoolId?.trim().toLowerCase() ?? '';
+  const tripsQuery = useMemoFirebase(
+    () => (firestore && normalizedSchoolId ? query(collection(firestore, 'schools', normalizedSchoolId, 'officeBusTrips'), where('status', '==', 'active')) : null),
+    [firestore, normalizedSchoolId],
+  );
+  const { data, isLoading, error } = useCollection<OfficeBusTrip>(tripsQuery, LOCAL_PERMISSION_ERRORS);
+  const trips = useMemo(() => [...(data ?? [])].sort((a, b) => a.startedAt - b.startedAt), [data]);
+  return { trips, isLoading, error };
+}
+
 /** Re-renders every `ms` so "2 min ago" and late warnings stay current. */
 export function useNow(ms = 15_000): number {
   const [now, setNow] = useState(() => Date.now());

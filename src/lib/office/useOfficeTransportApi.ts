@@ -6,6 +6,7 @@ import type {
   OfficeBusAlertKind,
   OfficeBusLocation,
   OfficeBusReleaseMethod,
+  OfficeBusRunExceptionKind,
   OfficeBusRiderStatus,
   OfficeBusRoute,
   OfficeBusRun,
@@ -37,10 +38,10 @@ export function useOfficeTransportApi(schoolId: string | null) {
 
   return useMemo(
     () => ({
-      startOfficeBusTrip: (route: OfficeBusRoute, params: { tripId: string; date: string; run: OfficeBusRun }) =>
+      startOfficeBusTrip: (route: OfficeBusRoute, params: { tripId: string; date: string; run: OfficeBusRun; driverRole: 'primary' | 'relief' }) =>
         call<{ tripId: string }>({ action: 'start', routeId: route.id, ...params }),
       updateOfficeBusTripLocation: (tripId: string, location: OfficeBusLocation, reachedStopId?: string | null) =>
-        call<{ ok: true }>({ action: 'location', tripId, location, reachedStopId: reachedStopId ?? null }),
+        call<{ ok: true; ignored?: boolean }>({ action: 'location', tripId, location, reachedStopId: reachedStopId ?? null }),
       setOfficeBusStopReached: (trip: Pick<OfficeBusTrip, 'id'>, stopId: string, reached: boolean) =>
         call<{ ok: true }>({ action: 'stop', tripId: trip.id, stopId, reached }),
       setOfficeBusRiders: (
@@ -51,17 +52,25 @@ export function useOfficeTransportApi(schoolId: string | null) {
       recordOfficeBusRelease: (
         trip: Pick<OfficeBusTrip, 'id' | 'run'>,
         studentId: string,
-        release: { method: OfficeBusReleaseMethod; contactId?: string | null; recipientName?: string | null; note?: string | null },
+        release: { method: OfficeBusReleaseMethod; contactId?: string | null; recipientName?: string | null; note?: string | null; correctionReason?: string | null },
       ) => call<{ release: unknown }>({ action: 'release', tripId: trip.id, studentId, ...release }),
       queueOfficeBusFamilyUpdate: (trip: Pick<OfficeBusTrip, 'id'>) =>
-        call<{ queued: number }>({ action: 'queue', tripId: trip.id }),
+        call<{ queued: number; duplicate?: boolean }>({ action: 'queue', tripId: trip.id }),
       addOfficeBusTripAlert: (
         trip: Pick<OfficeBusTrip, 'id' | 'run'>,
         _route: OfficeBusRoute,
         alert: { kind: OfficeBusAlertKind; message?: string | null; minutes?: number | null },
-      ) => call<{ ok: true; notificationsQueued: number; notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' }>({ action: 'alert', tripId: trip.id, run: trip.run, ...alert }),
+      ) => call<{ ok: true; notificationsQueued: number; notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' | 'office_only' }>({ action: 'alert', tripId: trip.id, run: trip.run, ...alert }),
+      createOfficeBusRunException: (tripId: string, input: { kind: OfficeBusRunExceptionKind; stopId?: string | null; note?: string | null; expiresInMinutes?: number }) =>
+        call<{ exception: unknown }>({ action: 'exception-create', tripId, ...input }),
+      acknowledgeOfficeBusRunException: (tripId: string, exceptionId: string) =>
+        call<{ exception: unknown }>({ action: 'exception-acknowledge', tripId, exceptionId }),
+      resolveOfficeBusRunException: (tripId: string, exceptionId: string) =>
+        call<{ exception: unknown }>({ action: 'exception-resolve', tripId, exceptionId }),
       endOfficeBusTrip: (trip: Pick<OfficeBusTrip, 'id' | 'run'>, _route: OfficeBusRoute, childCheckDone: boolean) =>
         call<{ ok: true }>({ action: 'end', tripId: trip.id, run: trip.run, childCheckDone }),
+      closeStaleOfficeBusTrip: (tripId: string, reason: string, sameDay = false) =>
+        call<{ ok: true }>({ action: 'close-stale', tripId, reason, sameDay, confirmed: sameDay }),
     }),
     [call],
   );

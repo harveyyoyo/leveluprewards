@@ -13,6 +13,7 @@ export type TransportParentBus = {
   message: string;
   nextStopName: string | null;
   etaMinutes: number | null;
+  familyStops: Array<{ name: string; morningTime: string | null; afternoonTime: string | null }>;
   lastUpdateAt: number | null;
   stale: boolean;
 };
@@ -21,12 +22,22 @@ export type TransportParentStatus = {
   familyName: string;
   arrivalPreferences: TransportParentArrivalPreferences;
   buses: TransportParentBus[];
+  timeZone: string | null;
   checkedAt: number;
 };
 
+export class TransportParentClientError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'TransportParentClientError';
+    this.status = status;
+  }
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   const data = (await response.json().catch(() => ({}))) as T & { error?: string };
-  if (!response.ok) throw new Error(data.error || 'Private bus status is temporarily unavailable.');
+  if (!response.ok) throw new TransportParentClientError(data.error || 'Private bus status is temporarily unavailable.', response.status);
   return data;
 }
 

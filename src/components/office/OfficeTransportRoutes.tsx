@@ -26,6 +26,8 @@ import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import {
   BUS_ROUTE_COLORS,
+  BUS_RUN_LABEL,
+  buildDriverRunSheet,
   exampleRoutes,
   latestMaintenanceLabel,
   localIsoDate,
@@ -69,7 +71,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
   const visibleRoutes = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return routes;
-    return routes.filter((route) => [route.name, route.busNumber, route.driverName, vehicleLabel(route.vehicle)].filter(Boolean).join(' ').toLowerCase().includes(query));
+    return routes.filter((route) => [route.name, route.busNumber, route.driverName, route.reliefDriverName, vehicleLabel(route.vehicle)].filter(Boolean).join(' ').toLowerCase().includes(query));
   }, [routes, search]);
 
   const saveSchool = async (place: LatLng & { label: string }) => {
@@ -207,7 +209,8 @@ export function OfficeTransportRoutes({ schoolId, routes, students, familyById, 
                         Add {readiness.missing.join(' and ')}
                       </span>
                     ) : null}
-                    {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
+                    {route.reliefDriverName ? <span className="mt-1 block text-xs text-muted-foreground">Relief driver: {route.reliefDriverName}</span> : null}
+                     {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
                     {lastService ? <span className="mt-1 block text-xs text-muted-foreground">Last service: {lastService}</span> : null}
                     {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
@@ -296,6 +299,8 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     color: BUS_ROUTE_COLORS.find((c) => !used.includes(c)) ?? BUS_ROUTE_COLORS[0],
     driverName: '',
     driverPhone: '',
+    reliefDriverName: '',
+    reliefDriverPhone: '',
     capacity: null,
     vehicle: {},
     notifyFamiliesOnAlert: false,
@@ -340,6 +345,7 @@ function OfficeBusRouteSheet({
   const [dirty, setDirty] = useState(false);
   const [focusStop, setFocusStop] = useState<string | null>(null);
   const [addStudentId, setAddStudentId] = useState('');
+  const [driverRun, setDriverRun] = useState<'am' | 'pm'>('am');
   const [maintenanceDraft, setMaintenanceDraft] = useState({
     serviceDate: localIsoDate(),
     serviceType: '',
@@ -430,6 +436,11 @@ function OfficeBusRouteSheet({
       toast({ variant: 'destructive', title: 'Give the route a name', description: 'For example North, Route 3, or Hillside.' });
       return;
     }
+    const schoolIndex = draft.stops.findIndex((stop) => stop.isSchool);
+    if (schoolIndex >= 0 && schoolIndex !== draft.stops.length - 1) {
+      toast({ variant: 'destructive', title: 'Keep school last', description: 'Afternoon runs start at school, so the school must be the final stop in the morning list.' });
+      return;
+    }
     setBusy(true);
     try {
       const id = await write.upsertOfficeBusRoute(write.ctx, {
@@ -440,6 +451,8 @@ function OfficeBusRouteSheet({
         busNumber: draft.busNumber?.trim() || null,
         driverName: draft.driverName?.trim() || null,
         driverPhone: draft.driverPhone?.trim() || null,
+        reliefDriverName: draft.reliefDriverName?.trim() || null,
+        reliefDriverPhone: draft.reliefDriverPhone?.trim() || null,
         notes: draft.notes?.trim() || null,
         capacity: draft.capacity && draft.capacity > 0 ? Math.round(draft.capacity) : null,
         vehicle: cleanVehicle(draft.vehicle),
@@ -492,6 +505,27 @@ function OfficeBusRouteSheet({
     } finally {
       setBusy(false);
     }
+  };
+
+  const downloadDriverSheet = () => {
+    const sheet = buildDriverRunSheet(
+      { id: route?.id ?? 'draft-route', name: draft.name.trim() || 'Route', busNumber: draft.busNumber, stops: draft.stops },
+      assignedStudents,
+      driverRun,
+    );
+    const rows = sheet.stops.flatMap((stop) => {
+      const base = [sheet.routeName, sheet.busNumber, BUS_RUN_LABEL[driverRun], String(stop.order), stop.name, stop.plannedTime ?? ''];
+      if (stop.riders.length === 0) return [[...base, '']];
+      return stop.riders.map((rider) => [...base, rider]);
+    });
+    if (rows.length === 0) rows.push([sheet.routeName, sheet.busNumber, BUS_RUN_LABEL[driverRun], '—', 'No stops added', '', '']);
+    const fileName = (sheet.routeName || 'route').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'route';
+    downloadCsv(
+      `driver-run-sheet-${fileName}-${driverRun}.csv`,
+      ['Route', 'Bus number', 'Run', 'Stop order', 'Stop', 'Planned time', 'Rider'],
+      rows,
+    );
+    toast({ title: 'Driver run sheet downloaded', description: 'It contains only the route, stops, times, rider names, and assigned stops.' });
   };
 
   const downloadManifest = () => {
@@ -659,6 +693,14 @@ function OfficeBusRouteSheet({
               <Input id="route-phone" type="tel" value={draft.driverPhone ?? ''} onChange={(e) => patch({ driverPhone: e.target.value })} className="rounded-xl" />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="route-relief-driver">Relief driver</Label>
+              <Input id="route-relief-driver" value={draft.reliefDriverName ?? ''} onChange={(e) => patch({ reliefDriverName: e.target.value })} placeholder="Optional" className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="route-relief-phone">Relief driver phone</Label>
+              <Input id="route-relief-phone" type="tel" value={draft.reliefDriverPhone ?? ''} onChange={(e) => patch({ reliefDriverPhone: e.target.value })} placeholder="Optional" className="rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="route-seats">Seats</Label>
               <Input
                 id="route-seats"
@@ -803,6 +845,22 @@ function OfficeBusRouteSheet({
                 <span className="block text-sm font-medium">Email families when the driver reports a problem</span>
                 <span className="mt-1 block text-xs text-muted-foreground">
                   Opted-in family contacts are added to the office mail queue. This is off by default.
+                </span>
+              </span>
+            </label>
+          </section>
+
+          <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={draft.notifyFamiliesOnArrival === true}
+                onCheckedChange={(checked) => patch({ notifyFamiliesOnArrival: checked === true })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Send opted-in families a message when the bus reaches their stop</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Each family hears only about their own rider’s stop. This is off by default and does not confirm that a child got on or off.
                 </span>
               </span>
             </label>
@@ -988,8 +1046,18 @@ function OfficeBusRouteSheet({
 
           {route ? (
             <div className="flex flex-wrap items-center gap-4">
-              <button type="button" disabled={busy} onClick={downloadManifest} title="Includes approved pickup contacts" className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
-                <Download className="h-3.5 w-3.5" /> Download rider manifest
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-teal-200 bg-teal-50/60 px-2.5 py-1.5 dark:border-teal-900 dark:bg-teal-950/30">
+                <label htmlFor="driver-run-sheet-run" className="text-xs font-medium text-teal-900 dark:text-teal-100">Driver copy:</label>
+                <select id="driver-run-sheet-run" value={driverRun} onChange={(event) => setDriverRun(event.target.value as 'am' | 'pm')} className="h-8 rounded-lg border bg-background px-2 text-xs">
+                  <option value="am">Morning</option>
+                  <option value="pm">Afternoon</option>
+                </select>
+                <button type="button" disabled={busy} onClick={downloadDriverSheet} title="No phone numbers, addresses, class names, family details, notes, or coordinates" className="flex items-center gap-1.5 text-xs font-medium text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                  <Download className="h-3.5 w-3.5" /> Download safe run sheet
+                </button>
+              </div>
+              <button type="button" disabled={busy} onClick={downloadManifest} title="Office copy includes approved pickup contacts" className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                <Download className="h-3.5 w-3.5" /> Office rider manifest
               </button>
               <button type="button" disabled={locked || busy} onClick={() => void duplicate()} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
                 <Copy className="h-3.5 w-3.5" /> Duplicate route

@@ -10,17 +10,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   fetchTransportParentStatus,
+  TransportParentClientError,
   signInTransportParent,
   signOutTransportParent,
   updateTransportParentPreferences,
   type TransportParentArrivalPreferences,
   type TransportParentStatus,
 } from '@/lib/parentPortal/transportParentClient';
+import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import { cn } from '@/lib/utils';
 
-function timeLabel(value: number | null): string {
+function timeLabel(value: number | null, timeZone?: string | null): string {
   if (!value) return 'No recent update';
-  return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  try {
+    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', ...(timeZone ? { timeZone } : {}) }).format(new Date(value));
+  } catch {
+    return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+}
+
+function plannedTimeLabel(value: string | null): string {
+  return value ? formatScheduleTime(value) : 'Not set';
 }
 
 export default function TransportParentPage() {
@@ -35,6 +45,7 @@ export default function TransportParentPage() {
   const [preferences, setPreferences] = useState<TransportParentArrivalPreferences>({ email: false, sms: false, whatsapp: false, updatedAt: 0 });
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [preferencesSaved, setPreferencesSaved] = useState(false);
+  const [preferencesDirty, setPreferencesDirty] = useState(false);
 
   const loadStatus = useCallback(async () => {
     if (!schoolId) return;
@@ -42,8 +53,12 @@ export default function TransportParentPage() {
       setStatus(await fetchTransportParentStatus(schoolId));
       setError(null);
     } catch (cause) {
-      setStatus(null);
-      setError(cause instanceof Error ? cause.message : 'Private bus status is temporarily unavailable.');
+      const message = cause instanceof Error ? cause.message : 'Private bus status is temporarily unavailable.';
+      if (cause instanceof TransportParentClientError && cause.status === 401) {
+        setStatus(null);
+        setPreferencesDirty(false);
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -76,8 +91,8 @@ export default function TransportParentPage() {
   };
 
   useEffect(() => {
-    if (status?.arrivalPreferences) setPreferences(status.arrivalPreferences);
-  }, [status]);
+    if (status?.arrivalPreferences && !preferencesDirty) setPreferences(status.arrivalPreferences);
+  }, [status, preferencesDirty]);
 
   const savePreferences = async () => {
     setSavingPreferences(true);
@@ -90,6 +105,8 @@ export default function TransportParentPage() {
         whatsapp: preferences.whatsapp,
       });
       setPreferences(result.arrivalPreferences);
+      setStatus((current) => current ? { ...current, arrivalPreferences: result.arrivalPreferences } : current);
+      setPreferencesDirty(false);
       setPreferencesSaved(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save bus message choices.');
@@ -103,6 +120,7 @@ export default function TransportParentPage() {
     try {
       await signOutTransportParent();
       setStatus(null);
+      setPreferencesDirty(false);
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not sign out.');
@@ -163,6 +181,22 @@ export default function TransportParentPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <p className="text-sm leading-6">{bus.message}</p>
+                       <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-3 dark:border-teal-900 dark:bg-teal-950/30">
+                         <p className="text-xs font-semibold uppercase tracking-wide text-teal-900 dark:text-teal-100">Today’s plan</p>
+                         {bus.familyStops?.length ? (
+                           <div className="mt-2 space-y-2">
+                             {bus.familyStops.map((stop) => (
+                               <div key={`${stop.name}-${stop.morningTime}-${stop.afternoonTime}`} className="text-sm">
+                                 <p className="font-medium">{stop.name}</p>
+                                 <p className="mt-0.5 text-xs text-muted-foreground">Morning: {plannedTimeLabel(stop.morningTime)} · Afternoon: {plannedTimeLabel(stop.afternoonTime)}</p>
+                               </div>
+                             ))}
+                           </div>
+                         ) : (
+                           <p className="mt-1 text-sm text-muted-foreground">The school has not assigned a family stop yet.</p>
+                         )}
+                         <p className="mt-2 text-xs text-muted-foreground">Planned times are not live confirmations. Please call the school if you need immediate help.</p>
+                       </div>
                       <div className="grid gap-2 text-sm sm:grid-cols-2">
                         <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
                           <p className="text-xs text-muted-foreground">Next stop</p>
@@ -173,7 +207,7 @@ export default function TransportParentPage() {
                           <p className="mt-1 font-semibold">{bus.etaMinutes == null ? 'Not available' : `About ${bus.etaMinutes} minutes`}</p>
                         </div>
                       </div>
-                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" aria-hidden /> Last update: {timeLabel(bus.lastUpdateAt)}</p>
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" aria-hidden /> Last update: {timeLabel(bus.lastUpdateAt, status.timeZone)}</p>
                       {bus.stale ? <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200"><TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> The bus update is old. Please call the school office if you need immediate help.</p> : null}
                     </CardContent>
                   </Card>
@@ -186,12 +220,12 @@ export default function TransportParentPage() {
                 <CardDescription>These choices are off unless you turn them on. The school must also turn on arrival messages for the route and connect its delivery service.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.email} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, email: checked === true }))} disabled={savingPreferences} /> Email arrival messages</label>
-                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.sms} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, sms: checked === true }))} disabled={savingPreferences} /> Text arrival messages</label>
-                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.whatsapp} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, whatsapp: checked === true }))} disabled={savingPreferences} /> WhatsApp arrival messages</label>
+                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.email} onCheckedChange={(checked) => { setPreferencesDirty(true); setPreferencesSaved(false); setPreferences((current) => ({ ...current, email: checked === true })); }} disabled={savingPreferences} /> Email arrival messages</label>
+                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.sms} onCheckedChange={(checked) => { setPreferencesDirty(true); setPreferencesSaved(false); setPreferences((current) => ({ ...current, sms: checked === true })); }} disabled={savingPreferences} /> Text arrival messages</label>
+                <label className="flex cursor-pointer items-center gap-3 text-sm"><Checkbox checked={preferences.whatsapp} onCheckedChange={(checked) => { setPreferencesDirty(true); setPreferencesSaved(false); setPreferences((current) => ({ ...current, whatsapp: checked === true })); }} disabled={savingPreferences} /> WhatsApp arrival messages</label>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button type="button" className="rounded-xl" onClick={() => void savePreferences()} disabled={savingPreferences}>{savingPreferences ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</> : 'Save message choices'}</Button>
-                  {preferencesSaved ? <span className="text-sm text-teal-700 dark:text-teal-300">Choices saved.</span> : null}
+                  {preferencesDirty ? <span className="text-sm text-amber-700 dark:text-amber-300">Choices not saved yet.</span> : preferencesSaved ? <span className="text-sm text-teal-700 dark:text-teal-300">Choices saved.</span> : null}
                 </div>
                 <p className="text-xs text-muted-foreground">Messages are about the bus and stop only. They do not report that a child got on or off.</p>
               </CardContent>

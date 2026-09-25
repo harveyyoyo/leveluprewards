@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash, randomBytes } from 'node:crypto';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
-import { familyUpdateMessage, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, tripDocId } from '@/lib/office/officeTransport';
+import { familyUpdateMessage, isAbandonedRunCandidate, isFreshLocation, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, routeSnapshotForRun, tripDocId } from '@/lib/office/officeTransport';
+import { queueOfficeArrivalNotifications, type ArrivalNotificationStatus } from '@/lib/server/officeArrivalNotifications';
+import { officeArrivalEventId } from '@/lib/server/officeArrivalEvent';
+import { getTransportSchoolTimeZone, transportSchoolToday } from '@/lib/server/transportSchoolTime';
 import type {
   OfficeBusEvent,
   OfficeBusGpsDevice,
   OfficeBusLocation,
   OfficeBusRelease,
   OfficeBusReleaseMethod,
+  OfficeBusRunException,
+  OfficeBusRunExceptionKind,
+  OfficeBusRiderStatus,
   OfficeBusRoute,
   OfficeBusRun,
   OfficeBusStop,
@@ -26,12 +33,18 @@ const MAX_BODY_BYTES = 64 * 1024;
 const MAX_STOPS = 100;
 const MAX_RIDERS = 300;
 const ALERT_KINDS = new Set<OfficeBusTripAlert['kind']>(['delay', 'breakdown', 'accident', 'behavior', 'other']);
+const EXCEPTION_KINDS = new Set<OfficeBusRunExceptionKind>(['closed_stop', 'detour', 'replacement_vehicle', 'pickup_change', 'delay']);
+const MAX_RUN_EXCEPTIONS = 20;
+const MAX_RUN_EXCEPTION_RECORDS = 50;
+const RESERVED_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor', 'toString']);
 const RELEASE_METHODS = new Set<OfficeBusReleaseMethod>(['authorized_contact', 'id_checked', 'office_override']);
 const locationAttempts = new Map<string, { startedAt: number; count: number }>();
+const MAX_FAMILY_UPDATES_PER_TRIP = 20;
 
 type AuthContext = {
   uid: string;
   isAdmin: boolean;
+  isOffice: boolean;
   isDeveloper: boolean;
   db: Firestore;
 };
@@ -58,7 +71,7 @@ function optionalString(value: unknown, label: string, max = 500): string | null
 
 function safeId(value: unknown, label: string): string {
   const clean = stringValue(value, label, 120);
-  if (!/^[A-Za-z0-9_-]+$/.test(clean)) throw new Error(`${label} is invalid.`);
+  if (!/^[A-Za-z0-9_-]+$/.test(clean) || RESERVED_OBJECT_KEYS.has(clean)) throw new Error(`${label} is invalid.`);
   return clean;
 }
 
@@ -66,6 +79,16 @@ function numberInRange(value: unknown, label: string, min: number, max: number):
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n) || n < min || n > max) throw new Error(`${label} is outside the allowed range.`);
   return n;
+}
+
+function familyUpdateQueueId(schoolId: string, tripId: string, message: string): string {
+  const digest = createHash('sha256').update(`${schoolId}|${tripId}|${message.trim()}`).digest('hex').slice(0, 48);
+  return `transport_update_${digest}`;
+}
+
+function familyRecipientQueueId(queueId: string, email: string): string {
+  const digest = createHash('sha256').update(`${queueId}|${email.trim().toLowerCase()}`).digest('hex').slice(0, 32);
+  return `${queueId}_${digest}`;
 }
 
 function assertRun(value: unknown): OfficeBusRun {
@@ -129,6 +152,8 @@ function assertRoute(route: OfficeBusRoute): void {
   if (route.notifyFamiliesOnAlert != null && typeof route.notifyFamiliesOnAlert !== 'boolean') throw new Error('Family notification choice is invalid.');
   if (route.notifyFamiliesOnArrival != null && typeof route.notifyFamiliesOnArrival !== 'boolean') throw new Error('Arrival notification choice is invalid.');
   if (route.requireReleaseConfirmations != null && typeof route.requireReleaseConfirmations !== 'boolean') throw new Error('Release confirmation choice is invalid.');
+  optionalString(route.reliefDriverName, 'Relief driver name', 120);
+  optionalString(route.reliefDriverPhone, 'Relief driver phone', 50);
   assertVehicle(route.vehicle);
   if (!Array.isArray(route.stops) || route.stops.length > MAX_STOPS) throw new Error('This route has too many stops.');
   const ids = new Set<string>();
@@ -141,6 +166,9 @@ function assertRoute(route: OfficeBusRoute): void {
   }
   if (schoolStops > 1 || !route.stops.some((stop) => !stop.isSchool) || schoolStops !== 1) {
     throw new Error('A route needs one school stop and at least one student stop.');
+  }
+  if (route.stops[route.stops.length - 1]?.isSchool !== true) {
+    throw new Error('Keep the school as the last stop so afternoon runs start at school.');
   }
 }
 
@@ -171,10 +199,11 @@ async function authenticate(req: NextRequest, body: Body): Promise<AuthContext> 
     schoolRef.collection('roles_admin').doc(verified.uid).get(),
   ]);
   const isAdmin = adminRole.exists && adminRole.data()?.role === 'admin';
-  if (!isDeveloper && !isAdmin && !(officeRole.exists && officeRole.data()?.role === 'office')) {
+  const isOffice = officeRole.exists && officeRole.data()?.role === 'office';
+  if (!isDeveloper && !isAdmin && !isOffice) {
     throw new AuthError('Only School Office staff can change transportation records.', 403);
   }
-  return { uid: verified.uid, isAdmin, isDeveloper, db };
+  return { uid: verified.uid, isAdmin, isOffice, isDeveloper, db };
 }
 
 class AuthError extends Error {
@@ -213,13 +242,56 @@ async function getTrip(db: Firestore, schoolId: string, tripId: string): Promise
 
 function assertCanOperate(auth: AuthContext, trip: OfficeBusTrip): void {
   const driverId = typeof trip.driverId === 'string' ? trip.driverId : null;
-  if (driverId && driverId !== auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+  if (driverId && driverId !== auth.uid && !auth.isAdmin && !auth.isOffice && !auth.isDeveloper) {
     throw new AuthError('This run belongs to another driver.', 403);
   }
 }
 
 function assertActive(trip: OfficeBusTrip): void {
   if (trip.status !== 'active') throw new AuthError('This bus run has already ended.', 409);
+}
+
+function assertAssignedDriver(auth: AuthContext, trip: OfficeBusTrip): void {
+  if (!trip.driverId || trip.driverId !== auth.uid) {
+    throw new AuthError('Only the assigned driver can acknowledge a route exception.', 403);
+  }
+}
+
+function readRunException(trip: OfficeBusTrip, exceptionId: string): OfficeBusRunException {
+  const map = trip.exceptions;
+  if (!map || !Object.prototype.hasOwnProperty.call(map, exceptionId)) {
+    throw new AuthError('That route exception was not found.', 404);
+  }
+  const value = (map as Record<string, unknown>)[exceptionId];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthError('That route exception record is invalid. Ask an administrator to review it.', 409);
+  }
+  const candidate = value as Partial<OfficeBusRunException>;
+  const validStatus = candidate.status === 'open' || candidate.status === 'acknowledged' || candidate.status === 'resolved';
+  const validOptionalText = (value: unknown) => value == null || typeof value === 'string';
+  const validOptionalTime = (value: unknown) => value == null || (typeof value === 'number' && Number.isFinite(value));
+  if (
+    candidate.id !== exceptionId ||
+    candidate.tripId !== trip.id ||
+    candidate.routeId !== trip.routeId ||
+    typeof candidate.kind !== 'string' ||
+    !EXCEPTION_KINDS.has(candidate.kind as OfficeBusRunExceptionKind) ||
+    !validStatus ||
+    typeof candidate.createdBy !== 'string' ||
+    typeof candidate.createdAt !== 'number' ||
+    !Number.isFinite(candidate.createdAt) ||
+    typeof candidate.expiresAt !== 'number' ||
+    !Number.isFinite(candidate.expiresAt) ||
+    !validOptionalText(candidate.stopId) ||
+    !validOptionalText(candidate.note) ||
+    !validOptionalText(candidate.acknowledgedBy) ||
+    !validOptionalText(candidate.resolvedBy) ||
+    !validOptionalTime(candidate.acknowledgedAt) ||
+    !validOptionalTime(candidate.resolvedAt)
+  ) {
+    throw new AuthError('That route exception record is invalid. Ask an administrator to review it.', 409);
+  }
+  return candidate as OfficeBusRunException;
 }
 
 async function resetDemoTransport(auth: AuthContext, schoolId: string): Promise<{ ok: true }> {
@@ -272,34 +344,62 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
   const requestedId = safeId(body.tripId, 'Trip');
   const date = stringValue(body.date, 'Date', 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Date is invalid.');
+  const timeZone = await getTransportSchoolTimeZone(auth.db, schoolId);
+  const schoolToday = transportSchoolToday(Date.now(), timeZone);
+  if (date !== schoolToday) {
+    throw new AuthError(`The school date is ${schoolToday}. Refresh the driver screen and try again.`, 409);
+  }
   const run = assertRun(body.run);
   const routeSnap = await routeRef(auth.db, schoolId, routeId).get();
   if (!routeSnap.exists) throw new Error('That bus route was not found.');
   const route = { id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute;
   if (route.archived) throw new Error('That bus route has been removed.');
   assertRoute(route);
+  if (body.driverRole != null && body.driverRole !== 'primary' && body.driverRole !== 'relief') throw new Error('Driver role is invalid.');
+  const driverRole = body.driverRole === 'relief' ? 'relief' : 'primary';
+  const selectedDriverName = driverRole === 'relief' ? route.reliefDriverName : route.driverName;
+  const selectedDriverPhone = driverRole === 'relief' ? route.reliefDriverPhone : route.driverPhone;
+  if (driverRole === 'relief' && !selectedDriverName?.trim()) throw new Error('Add a relief driver before starting this run.');
   const baseId = tripDocId(date, routeId, run);
   if (requestedId !== baseId && !requestedId.startsWith(`${baseId}_retry-`)) {
     throw new AuthError('That trip id does not belong to this bus run.', 409);
   }
   const existingActive = await activeTripForRoute(auth.db, schoolId, routeId);
-  if (existingActive && existingActive.id !== baseId && !existingActive.id.startsWith(`${baseId}_retry-`)) {
-    throw new AuthError('This bus is already on a run.', 409);
+  if (existingActive && existingActive.id !== requestedId) {
+    const message = existingActive.date < date
+      ? 'An older run is still open. Close it from Transportation History before starting this one.'
+      : 'This bus is already on a run.';
+    throw new AuthError(message, 409);
   }
 
   const ridersSnap = await auth.db.collection('schools').doc(schoolId).collection('officeStudents').where('busRouteId', '==', routeId).get();
   const riderStudents = ridersSnap.docs.map((doc) => ({ ...(doc.data() as OfficeStudent), id: doc.id }));
   const riderManifest = riderManifestFromStudents(riderStudents);
   const riderSnapshot = riderSnapshotFromStudents(riderStudents);
+  const validStopIds = new Set(route.stops.filter((stop) => !stop.isSchool).map((stop) => stop.id));
+  const ridersWithoutAValidStop = riderManifest.filter((entry) => !entry.busStopId || !validStopIds.has(entry.busStopId));
+  if (ridersWithoutAValidStop.length > 0) {
+    throw new Error(`Assign a valid bus stop to ${ridersWithoutAValidStop.length} rider${ridersWithoutAValidStop.length === 1 ? '' : 's'} before starting this run.`);
+  }
   const gpsDevices = await auth.db.collection('schools').doc(schoolId).collection('officeBusGpsDevices').where('assignedRouteId', '==', routeId).limit(10).get();
   const assignedGpsDevice = gpsDevices.docs.map((doc) => ({ id: doc.id, ...doc.data() } as OfficeBusGpsDevice)).find((device) => device.status === 'active') ?? null;
   const now = Date.now();
   let tripId = baseId;
+  let resolvedTripId = baseId;
   let resumed = false;
   const db = auth.db;
   await db.runTransaction(async (transaction) => {
     tripId = baseId;
     resumed = false;
+    const routeLockRef = routeRef(db, schoolId, routeId);
+    const routeLockSnap = await transaction.get(routeLockRef);
+    const lockedTripId = typeof routeLockSnap.data()?.activeTripId === 'string' ? routeLockSnap.data()?.activeTripId : null;
+    if (lockedTripId && lockedTripId !== requestedId && !lockedTripId.startsWith(`${baseId}_retry-`)) {
+      const lockedTripSnap = await transaction.get(tripRef(db, schoolId, lockedTripId));
+      if (lockedTripSnap.exists && lockedTripSnap.data()?.status === 'active') {
+        throw new AuthError('This bus is already on another run. Only one run can be open at a time.', 409);
+      }
+    }
     const baseRef = tripRef(db, schoolId, baseId);
     const baseSnap = await transaction.get(baseRef);
     let targetRef = baseRef;
@@ -353,17 +453,22 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
       }
     }
 
+    resolvedTripId = targetId;
+    transaction.update(routeLockRef, { activeTripId: targetId, activeTripUpdatedAt: now });
     if (createTarget) {
       transaction.set(targetRef, {
         routeId,
-        routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops },
+        routeSnapshot: routeSnapshotForRun(route),
         riderSnapshot,
         riderManifest,
         date,
         run,
         status: 'active',
         driverId: auth.uid,
-        driverName: route.driverName ?? auth.uid,
+        driverName: selectedDriverName?.trim() || auth.uid,
+        driverPhone: selectedDriverPhone?.trim() || null,
+        driverRole,
+        driverRoleChangedAt: now,
         startedAt: now,
         endedAt: null,
         location: null,
@@ -382,21 +487,26 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
       if (existing.routeId !== routeId || existing.date !== date || existing.run !== run) {
         throw new AuthError('That trip belongs to a different bus run.', 409);
       }
-      if (existing.status === 'active' && existing.driverId && existing.driverId !== auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+      if (existing.status === 'active' && existing.driverId && existing.driverId !== auth.uid && !auth.isAdmin && !auth.isOffice && !auth.isDeveloper) {
         throw new AuthError('This run belongs to another driver.', 403);
       }
       transaction.update(targetRef, {
         status: 'active',
         endedAt: null,
         updatedAt: now,
-        ...(existing.routeSnapshot ? {} : { routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops } }),
+        ...(existing.routeSnapshot ? {} : { routeSnapshot: routeSnapshotForRun(route) }),
         ...(existing.riderSnapshot ? {} : { riderSnapshot }),
         ...(existing.gpsDeviceId ? {} : { gpsDeviceId: assignedGpsDevice?.id ?? null, gpsAssignmentVersion: assignedGpsDevice?.assignmentVersion ?? null, locationSource: existing.locationSource ?? null }),
         driverId: auth.uid,
+        driverName: selectedDriverName?.trim() || auth.uid,
+        driverPhone: selectedDriverPhone?.trim() || null,
+        driverRole,
+        driverRoleChangedAt: existing.driverRole !== driverRole ? now : existing.driverRoleChangedAt ?? now,
       });
       resumed = true;
     }
   });
+  tripId = resolvedTripId;
   await audit(db, schoolId, {
     entityType: 'officeBusTrip',
     entityId: tripId,
@@ -418,7 +528,12 @@ function allowLocationUpdate(uid: string): boolean {
   return current.count <= 120;
 }
 
-async function updateLocation(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true; ignored?: boolean }> {
+async function updateLocation(auth: AuthContext, schoolId: string, body: Body): Promise<{
+  ok: true;
+  ignored?: boolean;
+  arrivalNotificationsQueued?: number;
+  arrivalNotificationStatus?: ArrivalNotificationStatus;
+}> {
   if (!allowLocationUpdate(auth.uid)) throw new AuthError('Too many location updates. Try again in a minute.', 429);
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -431,17 +546,22 @@ async function updateLocation(auth: AuthContext, schoolId: string, body: Body): 
   const lat = numberInRange(location.lat, 'Bus latitude', -90, 90);
   const lng = numberInRange(location.lng, 'Bus longitude', -180, 180);
   const now = Date.now();
+  const accuracy = location.accuracy == null ? null : numberInRange(location.accuracy, 'Location accuracy', 0, 100000);
+  let reachedStopId: string | null = null;
   if (body.reachedStopId) {
-    const reachedStopId = safeId(body.reachedStopId, 'Stop');
-    if (trip.routeSnapshot && !trip.routeSnapshot.stops.some((stop) => stop.id === reachedStopId)) {
+    reachedStopId = safeId(body.reachedStopId, 'Stop');
+    const stop = trip.routeSnapshot?.stops.find((candidate) => candidate.id === reachedStopId);
+    if (trip.routeSnapshot && !stop) {
       throw new Error('That stop is not part of this run.');
     }
+    if (trip.run === 'pm' && stop?.isSchool) reachedStopId = null;
   }
+  if (accuracy == null || accuracy > 100) reachedStopId = null;
   const patch: Record<string, unknown> = {
     location: {
       lat,
       lng,
-      accuracy: location.accuracy == null ? null : numberInRange(location.accuracy, 'Location accuracy', 0, 100000),
+      accuracy,
       speed: location.speed == null ? null : numberInRange(location.speed, 'Bus speed', 0, 200),
       heading: location.heading == null ? null : numberInRange(location.heading, 'Bus heading', 0, 360),
       at: now,
@@ -450,17 +570,88 @@ async function updateLocation(auth: AuthContext, schoolId: string, body: Body): 
     locationSource: 'browser',
     updatedAt: now,
   };
-  if (body.reachedStopId) {
-    const reachedStopId = safeId(body.reachedStopId, 'Stop');
+  if (reachedStopId) {
     patch[`stopArrivals.${reachedStopId}`] = now;
     patch.events = FieldValue.arrayUnion({ kind: 'stop', stopId: reachedStopId, reached: true, at: now, by: auth.uid, source: 'browser' });
     patch[`stopArrivalDetails.${reachedStopId}`] = { at: now, source: 'browser' };
   }
   await tripRef(auth.db, schoolId, tripId).update(patch);
+  if (reachedStopId && accuracy != null && accuracy <= 100) {
+    try {
+      const result = await queueStopArrival(auth, schoolId, trip, reachedStopId, now, 'browser');
+      return { ok: true, arrivalNotificationsQueued: result.queued, arrivalNotificationStatus: result.status };
+    } catch {
+      return { ok: true, arrivalNotificationsQueued: 0, arrivalNotificationStatus: 'failed' };
+    }
+  }
   return { ok: true };
 }
 
-async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+async function queueStopArrival(
+  auth: AuthContext,
+  schoolId: string,
+  trip: OfficeBusTrip,
+  stopId: string,
+  arrivedAt: number,
+  source: 'manual' | 'browser',
+): Promise<{ queued: number; status: ArrivalNotificationStatus }> {
+  const eventId = officeArrivalEventId(schoolId, trip.id, stopId);
+  const schoolRef = auth.db.collection('schools').doc(schoolId);
+  const eventRef = schoolRef.collection('officeBusArrivalEvents').doc(eventId);
+  const existing = await eventRef.get();
+  if (!existing.exists) {
+    await eventRef.set({
+      id: eventId,
+      tripId: trip.id,
+      routeId: trip.routeId,
+      stopId,
+      arrivedAt,
+      source,
+      createdBy: auth.uid,
+      notificationStatus: 'pending',
+      createdAt: arrivedAt,
+    });
+  }
+
+  const routeSnap = await schoolRef.collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? ({ id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute) : undefined;
+  const route = routeForTrip(currentRoute, trip);
+  const stop = route?.stops.find((candidate) => candidate.id === stopId);
+  if (!route || !stop) {
+    const status: ArrivalNotificationStatus = 'not_configured';
+    await eventRef.update({ notificationStatus: status, notificationUpdatedAt: Date.now() });
+    return { queued: 0, status };
+  }
+
+  try {
+    const result = await queueOfficeArrivalNotifications({
+      db: auth.db,
+      schoolId,
+      eventId,
+      tripId: trip.id,
+      route,
+      stop,
+      receivedAt: arrivedAt,
+      riderManifest: trip.riderManifest ?? [],
+    });
+    await eventRef.update({
+      notificationStatus: result.status,
+      notificationsQueued: result.queued,
+      notificationsAlreadyQueued: result.alreadyQueued ?? 0,
+      notificationUpdatedAt: Date.now(),
+    });
+    return result;
+  } catch {
+    await eventRef.update({ notificationStatus: 'failed', notificationUpdatedAt: Date.now() }).catch(() => undefined);
+    return { queued: 0, status: 'failed' };
+  }
+}
+
+async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise<{
+  ok: true;
+  arrivalNotificationsQueued?: number;
+  arrivalNotificationStatus?: ArrivalNotificationStatus;
+}> {
   const tripId = safeId(body.tripId, 'Trip');
   const stopId = safeId(body.stopId, 'Stop');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -475,48 +666,82 @@ async function setStop(auth: AuthContext, schoolId: string, body: Body): Promise
     events: FieldValue.arrayUnion({ kind: 'stop', stopId, reached: body.reached === true, at: now, by: auth.uid, source: 'manual' }),
     updatedAt: now,
   });
+  if (body.reached === true) {
+    try {
+      const result = await queueStopArrival(auth, schoolId, trip, stopId, now, 'manual');
+      return { ok: true, arrivalNotificationsQueued: result.queued, arrivalNotificationStatus: result.status };
+    } catch {
+      return { ok: true, arrivalNotificationsQueued: 0, arrivalNotificationStatus: 'failed' };
+    }
+  }
   return { ok: true };
 }
 
 async function setRiders(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
   const tripId = safeId(body.tripId, 'Trip');
-  const trip = await getTrip(auth.db, schoolId, tripId);
-  assertActive(trip);
-  assertCanOperate(auth, trip);
-  if (!trip.riderSnapshot) throw new Error('This saved run has no rider list. Start a new run before marking riders.');
-  const allowed = new Set(trip.riderSnapshot);
+  const initialTrip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(initialTrip);
+  assertCanOperate(auth, initialTrip);
   const rawChanges = Array.isArray(body.changes) ? body.changes : [];
   if (rawChanges.length > MAX_RIDERS) throw new Error('Too many rider changes at once.');
   if (rawChanges.length === 0) return { ok: true };
-  const now = Date.now();
-  const patch: Record<string, unknown> = { updatedAt: now };
-  const events: OfficeBusEvent[] = [];
-  for (const raw of rawChanges) {
+
+  const seenStudents = new Set<string>();
+  const changes = rawChanges.map((raw) => {
     if (!raw || typeof raw !== 'object') throw new Error('A rider change is invalid.');
     const change = raw as { studentId?: unknown; status?: unknown };
     const studentId = safeId(change.studentId, 'Student');
-    if (!allowed.has(studentId)) throw new Error('That student was not assigned to this run.');
+    if (seenStudents.has(studentId)) throw new Error('Each rider can have only one change in a single update.');
+    seenStudents.add(studentId);
     const status = change.status;
     if (status !== null && status !== 'on' && status !== 'off' && status !== 'absent') throw new Error('Rider status is invalid.');
-    patch[`riders.${studentId}`] = status ? { status, at: now } : FieldValue.delete();
-    events.push({ kind: 'rider', studentId, status, at: now, by: auth.uid });
+    return { studentId, status: status as OfficeBusRiderStatus | null };
+  });
+  const now = Date.now();
+  const recordedEvents: OfficeBusEvent[] = [];
+  const ref = tripRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    recordedEvents.length = 0;
+    const freshSnap = await transaction.get(ref);
+    const current = freshSnap.data() as OfficeBusTrip | undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run has already ended.', 409);
+    assertCanOperate(auth, current);
+    if (!current.riderSnapshot) throw new Error('This saved run has no rider list. Start a new run before marking riders.');
+    const allowed = new Set(current.riderSnapshot);
+    const patch: Record<string, unknown> = { updatedAt: now };
+    for (const { studentId, status } of changes) {
+      if (!allowed.has(studentId)) throw new Error('That student was not assigned to this run.');
+      const previous = current.riders?.[studentId]?.status ?? null;
+      if (previous === 'on' && status === 'absent') {
+        throw new Error('A rider who was marked on the bus cannot be marked absent. Mark the rider off instead.');
+      }
+      if (previous === status) continue;
+      patch[`riders.${studentId}`] = status ? { status, at: now } : FieldValue.delete();
+      if (previous === 'off' || current.releases?.[studentId]) {
+        patch[`releases.${studentId}`] = FieldValue.delete();
+      }
+      recordedEvents.push({ kind: 'rider', studentId, status, at: now, by: auth.uid });
+    }
+    if (recordedEvents.length === 0) return;
+    patch.events = FieldValue.arrayUnion(...recordedEvents);
+    transaction.update(ref, patch);
+  });
+  if (recordedEvents.length > 0) {
+    const auditBatch = auth.db.batch();
+    for (const event of recordedEvents) {
+      if (event.kind !== 'rider') continue;
+      auditBatch.set(auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(), {
+        entityType: 'officeBusTrip',
+        entityId: event.studentId,
+        action: 'update',
+        summary: event.status ? `Bus rider marked ${event.status}` : 'Bus rider mark cleared',
+        after: { tripId, status: event.status, at: event.at },
+        changedBy: auth.uid,
+        changedAt: now,
+      });
+    }
+    await auditBatch.commit();
   }
-  patch.events = FieldValue.arrayUnion(...events);
-  const batch = auth.db.batch();
-  batch.update(tripRef(auth.db, schoolId, tripId), patch);
-  for (const event of events) {
-    if (event.kind !== 'rider') continue;
-    batch.set(auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(), {
-      entityType: 'officeBusTrip',
-      entityId: event.studentId,
-      action: 'update',
-      summary: event.status ? `Bus rider marked ${event.status}` : 'Bus rider mark cleared',
-      after: { tripId, status: event.status, at: event.at },
-      changedBy: auth.uid,
-      changedAt: now,
-    });
-  }
-  await batch.commit();
   return { ok: true };
 }
 
@@ -532,6 +757,15 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
   const method = body.method;
   if (typeof method !== 'string' || !RELEASE_METHODS.has(method as OfficeBusReleaseMethod)) throw new Error('Release confirmation type is invalid.');
   const note = optionalString(body.note, 'Release note', 500);
+  const correctionReason = optionalString(body.correctionReason, 'Correction reason', 300);
+  const existingRelease = trip.releases?.[studentId];
+  if (existingRelease) {
+    const canCorrect = auth.isOffice || auth.isAdmin || auth.isDeveloper;
+    const isOwnRun = trip.driverId === auth.uid && !auth.isAdmin && !auth.isDeveloper;
+    if (!canCorrect || isOwnRun || !correctionReason) {
+      throw new AuthError('This release is already recorded. Ask another School Office staff member to make an explicit correction.', 409);
+    }
+  }
   const manifestEntry = trip.riderManifest?.find((entry) => entry.studentId === studentId);
   const studentSnap = await auth.db.collection('schools').doc(schoolId).collection('officeStudents').doc(studentId).get();
   const student = studentSnap.exists ? (studentSnap.data() as OfficeStudent) : null;
@@ -540,7 +774,15 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
   let contactName = '';
 
   if (method === 'office_override') {
+    if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) {
+      throw new AuthError('Only School Office staff can approve an exception.', 403);
+    }
+    if (trip.driverId === auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+      throw new AuthError('The driver cannot approve their own exception. Ask another School Office staff member to review it.', 403);
+    }
     if (!note) throw new Error('Add a note when the office approves someone who is not on the family list.');
+    contactName = stringValue(body.recipientName, 'Recipient name', 120);
+  } else if (method === 'id_checked') {
     contactName = stringValue(body.recipientName, 'Recipient name', 120);
   } else {
     contactId = safeId(body.contactId, 'Approved contact');
@@ -563,6 +805,7 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
     note,
     occurredAt: now,
     by: auth.uid,
+    ...(existingRelease ? { correctsReleaseAt: existingRelease.occurredAt, correctionReason } : {}),
   };
   const event: OfficeBusEvent = {
     kind: 'release',
@@ -572,6 +815,7 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
     method: release.method,
     at: now,
     by: auth.uid,
+    ...(existingRelease ? { correctsReleaseAt: existingRelease.occurredAt, correctionReason } : {}),
   };
   const ref = tripRef(auth.db, schoolId, tripId);
   await auth.db.runTransaction(async (transaction) => {
@@ -579,6 +823,17 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
     const current = fresh.data() as OfficeBusTrip | undefined;
     if (!current || current.status !== 'active') throw new AuthError('This bus run has already ended.', 409);
     if (current.riders?.[studentId]?.status !== 'off') throw new Error('Mark the rider off before recording who received them.');
+    const currentRelease = current.releases?.[studentId];
+    const releaseUnchanged = Boolean(currentRelease && existingRelease
+      && currentRelease.occurredAt === existingRelease.occurredAt
+      && currentRelease.by === existingRelease.by
+      && currentRelease.method === existingRelease.method
+      && currentRelease.contactId === existingRelease.contactId
+      && currentRelease.contactName === existingRelease.contactName
+      && currentRelease.note === existingRelease.note);
+    if (currentRelease && !releaseUnchanged) {
+      throw new AuthError('This release was recorded by someone else. Ask Office to review it before changing it.', 409);
+    }
     transaction.set(ref, {
       [`releases.${studentId}`]: release,
       events: FieldValue.arrayUnion(event),
@@ -596,12 +851,18 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
   return { release };
 }
 
-async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body): Promise<{ queued: number }> {
+async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body): Promise<{ queued: number; duplicate?: boolean }> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
   const route = routeForTrip(undefined, trip);
   if (!route) throw new Error('This run has no saved route information.');
-  const message = optionalString(body.message, 'Family update', 1000) ?? familyUpdateMessage(route, trip);
+  const timeZone = await getTransportSchoolTimeZone(auth.db, schoolId);
+  const schoolSnap = await auth.db.collection('schools').doc(schoolId).get();
+  const message = optionalString(body.message, 'Family update', 1000) ?? familyUpdateMessage(route, trip, Date.now(), timeZone);
+  const queueId = familyUpdateQueueId(schoolId, tripId, message);
+  if ((trip.familyUpdateCount ?? 0) >= MAX_FAMILY_UPDATES_PER_TRIP) {
+    throw new AuthError('This run has reached the family update limit. Use the delivery report instead of sending more copies.', 429);
+  }
   const studentIds = [...new Set([
     ...(trip.riderManifest?.map((entry) => entry.studentId) ?? []),
     ...(trip.riderSnapshot ?? []),
@@ -633,55 +894,208 @@ async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body
     }
   }
   if (recipients.size === 0) return { queued: 0 };
-  const schoolSnap = await auth.db.collection('schools').doc(schoolId).get();
   const schoolName = typeof schoolSnap.data()?.name === 'string' && schoolSnap.data()?.name.trim() ? schoolSnap.data()!.name.trim() : 'School';
   const fromEmail = `"${schoolName} Transportation" <alerts@levelup-edu.com>`;
   const subject = `Transportation update: ${routeLabel(route)}`;
   const mail = auth.db.collection('mail');
   const recipientList = [...recipients];
+  const queuedAt = Date.now();
+  let queued = 0;
+  let queuedNewMessage = false;
   for (let start = 0; start < recipientList.length; start += 400) {
-    const batch = auth.db.batch();
-    for (const email of recipientList.slice(start, start + 400)) {
-      batch.set(mail.doc(), {
-        to: email,
-        from: fromEmail,
-        message: { subject, text: message },
-        schoolId,
-        tripId,
-        routeId: trip.routeId,
-        kind: 'transportation',
-        queuedAt: Date.now(),
-        queuedBy: auth.uid,
-      });
-    }
-    await batch.commit();
+    const chunk = recipientList.slice(start, start + 400);
+    const refs = chunk.map((email) => mail.doc(familyRecipientQueueId(queueId, email)));
+    let created = 0;
+    await auth.db.runTransaction(async (transaction) => {
+      const snaps = await transaction.getAll(...refs);
+      for (let index = 0; index < refs.length; index += 1) {
+        if (snaps[index].exists) continue;
+        const email = chunk[index];
+        transaction.create(refs[index], {
+          to: email,
+          from: fromEmail,
+          message: { subject, text: message },
+          schoolId,
+          tripId,
+          routeId: trip.routeId,
+          kind: 'transportation',
+          queueId,
+          queuedAt,
+          queuedBy: auth.uid,
+        });
+        created += 1;
+      }
+    });
+    queued += created;
+    if (created > 0) queuedNewMessage = true;
   }
-  await audit(auth.db, schoolId, {
-    entityType: 'officeBusTrip',
-    entityId: tripId,
-    action: 'update',
-    summary: `Queued a family update for ${recipientList.length} recipient${recipientList.length === 1 ? '' : 's'}`,
-    changedBy: auth.uid,
-  });
-  return { queued: recipientList.length };
+  if (queued > 0) {
+    await tripRef(auth.db, schoolId, tripId).update({
+      familyUpdateCount: FieldValue.increment(queuedNewMessage ? 1 : 0),
+      updatedAt: queuedAt,
+    });
+    await audit(auth.db, schoolId, {
+      entityType: 'officeBusTrip',
+      entityId: tripId,
+      action: 'update',
+      summary: `Queued a family update for ${queued} recipient${queued === 1 ? '' : 's'}`,
+      changedBy: auth.uid,
+    });
+  }
+  return { queued, duplicate: queued === 0 };
 }
 
-function alertFamilyMessage(kind: OfficeBusTripAlert['kind'], minutes: number | null, note: string | null, route: OfficeBusRoute): string {
+/** Build a family-safe alert; the driver's free-text note stays in the Office record. */
+function alertFamilyMessage(kind: OfficeBusTripAlert['kind'], minutes: number | null, route: OfficeBusRoute): string {
   const label = kind === 'delay' ? 'a delay' : kind === 'breakdown' ? 'a vehicle problem' : kind === 'accident' ? 'an accident' : kind === 'behavior' ? 'a behavior concern' : 'a transportation problem';
   const timing = minutes == null ? '' : ` (${minutes} minutes late)`;
   return [
     `The office received a report about ${label}${timing} on ${routeLabel(route)}.`,
-    note ? `Driver note: ${note}` : '',
     'Please contact the school office if you need more information.',
   ]
     .filter(Boolean)
     .join('\n\n');
 }
 
+async function createRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(trip);
+  assertCanOperate(auth, trip);
+  const kind = body.kind;
+  if (typeof kind !== 'string' || !EXCEPTION_KINDS.has(kind as OfficeBusRunExceptionKind)) throw new Error('Choose a route exception type.');
+  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? ({ id: routeSnap.id, ...routeSnap.data() } as OfficeBusRoute) : undefined;
+  const effectiveRoute = routeForTrip(currentRoute, trip);
+  const stopId = body.stopId == null || body.stopId === '' ? null : safeId(body.stopId, 'Stop');
+  if (stopId && !effectiveRoute?.stops.some((stop) => stop.id === stopId)) throw new Error('That stop is not part of this run.');
+  const note = optionalString(body.note, 'Exception note', 300);
+  const minutes = body.expiresInMinutes == null ? 120 : numberInRange(body.expiresInMinutes, 'Exception duration', 15, 720);
+  const now = Date.now();
+  const id = `exception-${createHash('sha256').update(`${tripId}|${kind}|${now}|${auth.uid}|${randomBytes(6).toString('hex')}`).digest('hex').slice(0, 16)}`;
+  const exception: OfficeBusRunException = {
+    id,
+    tripId,
+    routeId: trip.routeId,
+    kind: kind as OfficeBusRunExceptionKind,
+    stopId,
+    note,
+    status: 'open',
+    createdAt: now,
+    createdBy: auth.uid,
+    expiresAt: now + minutes * 60_000,
+  };
+  const ref = tripRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run is no longer active.', 409);
+    if (current.routeId !== trip.routeId || current.date !== trip.date || current.run !== trip.run) {
+      throw new AuthError('This bus run changed while the exception was being saved. Refresh and try again.', 409);
+    }
+    assertCanOperate(auth, current);
+    const records = current.exceptions ?? {};
+    const recordCount = Object.keys(records).length;
+    if (recordCount >= MAX_RUN_EXCEPTION_RECORDS) throw new Error('This run has reached its route-exception history limit.');
+    const openCount = Object.values(records).filter((item) => item.status !== 'resolved').length;
+    if (openCount >= MAX_RUN_EXCEPTIONS) throw new Error('This run already has the maximum number of open route exceptions.');
+    transaction.set(ref, { [`exceptions.${id}`]: exception, updatedAt: now }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-exception-create-${id}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: `Added a temporary route exception: ${exception.kind}`,
+        after: { exceptionId: id, kind: exception.kind, expiresAt: exception.expiresAt },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+  });
+  return { exception };
+}
+
+async function acknowledgeRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const exceptionId = safeId(body.exceptionId, 'Exception');
+  const ref = tripRef(auth.db, schoolId, tripId);
+  let result: OfficeBusRunException | null = null;
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current || current.status !== 'active') throw new AuthError('This bus run is no longer active.', 409);
+    assertAssignedDriver(auth, current);
+    const existing = readRunException(current, exceptionId);
+    if (existing.status === 'resolved') throw new AuthError('That route exception is already resolved.', 409);
+    if (existing.status === 'acknowledged') {
+      result = existing;
+      return;
+    }
+    const now = Date.now();
+    if (existing.expiresAt <= now) throw new AuthError('This temporary exception has expired. Ask the School Office to review it.', 409);
+    const updated: OfficeBusRunException = { ...existing, status: 'acknowledged', acknowledgedAt: now, acknowledgedBy: auth.uid };
+    transaction.set(ref, { [`exceptions.${exceptionId}`]: updated, updatedAt: now }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-exception-ack-${tripId}-${exceptionId}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: 'Assigned driver acknowledged a route exception',
+        before: { exceptionId, status: 'open' },
+        after: { exceptionId, status: 'acknowledged', acknowledgedAt: now, acknowledgedBy: auth.uid },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+    result = updated;
+  });
+  if (!result) throw new Error('The route exception could not be saved.');
+  return { exception: result };
+}
+
+async function resolveRunException(auth: AuthContext, schoolId: string, body: Body): Promise<{ exception: OfficeBusRunException }> {
+  if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) throw new AuthError('Only School Office staff can resolve a route exception.', 403);
+  const tripId = safeId(body.tripId, 'Trip');
+  const exceptionId = safeId(body.exceptionId, 'Exception');
+  const ref = tripRef(auth.db, schoolId, tripId);
+  let result: OfficeBusRunException | null = null;
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.exists ? ({ id: fresh.id, ...fresh.data() } as OfficeBusTrip) : undefined;
+    if (!current) throw new AuthError('That bus run was not found.', 404);
+    const existing = readRunException(current, exceptionId);
+    if (existing.status === 'resolved') {
+      result = existing;
+      return;
+    }
+    const now = Date.now();
+    const updated: OfficeBusRunException = { ...existing, status: 'resolved', resolvedAt: now, resolvedBy: auth.uid };
+    transaction.set(ref, { [`exceptions.${exceptionId}`]: updated, updatedAt: now }, { merge: true });
+    transaction.set(
+      auth.db.collection('schools').doc(schoolId).collection('officeAuditLog').doc(`bus-exception-resolve-${tripId}-${exceptionId}`),
+      {
+        entityType: 'officeBusTrip',
+        entityId: tripId,
+        action: 'update',
+        summary: 'School Office resolved a route exception',
+        before: { exceptionId, status: existing.status },
+        after: { exceptionId, status: 'resolved', resolvedAt: now, resolvedBy: auth.uid },
+        changedBy: auth.uid,
+        changedAt: now,
+      },
+    );
+    result = updated;
+  });
+  if (!result) throw new Error('The route exception could not be saved.');
+  return { exception: result };
+}
+
 async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promise<{
   ok: true;
   notificationsQueued: number;
-  notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed';
+  notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' | 'office_only';
 }> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -697,19 +1111,20 @@ async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promis
   await audit(auth.db, schoolId, { entityType: 'officeBusTrip', entityId: tripId, action: 'update', summary: `Driver reported ${kind}`, changedBy: auth.uid });
 
   let notificationsQueued = 0;
-  let notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' = 'not_configured';
+  let notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' | 'office_only' = 'not_configured';
   const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
   const currentRoute = routeSnap.exists ? (routeSnap.data() as OfficeBusRoute) : undefined;
   const route = routeForTrip(currentRoute, trip);
-  if (route?.notifyFamiliesOnAlert) {
+  if (kind === 'behavior') {
+    notificationStatus = 'office_only';
+  } else if (route?.notifyFamiliesOnAlert) {
     try {
-      notificationsQueued = (
-        await queueFamilyUpdate(auth, schoolId, {
-          tripId,
-          message: alertFamilyMessage(kind as OfficeBusTripAlert['kind'], minutes, message, route),
-        })
-      ).queued;
-      notificationStatus = notificationsQueued > 0 ? 'queued' : 'no_recipients';
+      const result = await queueFamilyUpdate(auth, schoolId, {
+        tripId,
+        message: alertFamilyMessage(kind as OfficeBusTripAlert['kind'], minutes, route),
+      });
+      notificationsQueued = result.queued;
+      notificationStatus = result.duplicate || result.queued > 0 ? 'queued' : 'no_recipients';
     } catch {
       // The safety report is already saved. A mail-service problem must not make the driver retry it.
       notificationStatus = 'failed';
@@ -718,27 +1133,125 @@ async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promis
   return { ok: true, notificationsQueued, notificationStatus };
 }
 
-async function endTrip(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+async function closeStaleTrip(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+  if (!auth.isOffice && !auth.isAdmin && !auth.isDeveloper) {
+    throw new AuthError('Only School Office staff can close an old run.', 403);
+  }
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
-  assertActive(trip);
-  assertCanOperate(auth, trip);
-  if (body.childCheckDone !== true) throw new Error('Confirm that you walked the bus before ending the run.');
-  const riderStates = trip.riders ?? {};
-  const unresolved = (trip.riderSnapshot ?? []).filter((studentId) => {
-    const status = riderStates[studentId]?.status;
-    return status !== 'off' && status !== 'absent';
-  });
-  if (unresolved.length > 0) throw new Error('Mark every rider off or not here before ending the run.');
-  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
-  const currentRoute = routeSnap.exists ? (routeSnap.data() as OfficeBusRoute) : undefined;
-  if (currentRoute?.requireReleaseConfirmations === true) {
-    const missingReleases = missingReleaseStudentIds(trip);
-    if (missingReleases.length > 0) throw new Error(`Record who received ${missingReleases.length} rider${missingReleases.length === 1 ? '' : 's'} before ending the run.`);
+  if (trip.status !== 'active') throw new AuthError('That bus run is already closed.', 409);
+  if (trip.driverId === auth.uid && !auth.isAdmin && !auth.isDeveloper) {
+    throw new AuthError('Ask another School Office staff member to close your old run.', 403);
   }
+  const timeZone = await getTransportSchoolTimeZone(auth.db, schoolId);
   const now = Date.now();
-  await tripRef(auth.db, schoolId, tripId).update({ status: 'done', endedAt: now, childCheckDone: true, updatedAt: now });
-  await audit(auth.db, schoolId, { entityType: 'officeBusTrip', entityId: tripId, action: 'update', summary: `Finished the ${trip.run} run · bus checked`, changedBy: auth.uid });
+  const today = transportSchoolToday(now, timeZone);
+  const sameDay = body.sameDay === true;
+  if (trip.date > today) {
+    throw new AuthError('A future bus run cannot be closed.', 409);
+  }
+  if (trip.date === today) {
+    if (!sameDay || body.confirmed !== true) {
+      throw new AuthError('Today’s run can only be closed after Office confirms that no fresh bus update has arrived.', 409);
+    }
+    if (!isAbandonedRunCandidate(trip, now)) {
+      throw new AuthError('This run is still receiving fresh information or has not been open long enough. Ask the driver to finish it from the driver screen.', 409);
+    }
+  }
+  if (isFreshLocation(trip.location, now)) {
+    throw new AuthError('This bus is still sending fresh location updates. Do not close it from Office yet.', 409);
+  }
+  const reason = optionalString(body.reason, 'Reason', 300);
+  if (!reason) throw new Error('Add a reason before closing the run.');
+  const ref = tripRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const current = fresh.data() as OfficeBusTrip | undefined;
+    if (!current || current.status !== 'active') throw new AuthError('That bus run is already closed.', 409);
+    if (sameDay && !isAbandonedRunCandidate(current, now)) throw new AuthError('This run is still receiving fresh information or has not been open long enough. Ask the driver to finish it from the driver screen.', 409);
+    if (isFreshLocation(current.location, now)) throw new AuthError('This bus is still sending fresh location updates. Do not close it from Office yet.', 409);
+    const routeLockRef = routeRef(auth.db, schoolId, current.routeId);
+    const routeLockSnap = await transaction.get(routeLockRef);
+    const lockedTripId = typeof routeLockSnap.data()?.activeTripId === 'string' ? routeLockSnap.data()?.activeTripId : null;
+    if (lockedTripId && lockedTripId !== tripId) {
+      const lockedTripSnap = await transaction.get(tripRef(auth.db, schoolId, lockedTripId));
+      if (lockedTripSnap.exists && lockedTripSnap.data()?.status === 'active') {
+        throw new AuthError('Another run is active on this route. Refresh before closing this run.', 409);
+      }
+    }
+    transaction.update(ref, {
+      status: 'done',
+      endedAt: now,
+      closedAt: now,
+      childCheckDone: false,
+      closedByOffice: true,
+      closeReason: reason,
+      location: FieldValue.delete(),
+      locationSource: FieldValue.delete(),
+      updatedAt: now,
+    });
+    if (routeLockSnap.exists && (!lockedTripId || lockedTripId === tripId)) {
+      transaction.update(routeLockRef, { activeTripId: FieldValue.delete(), activeTripUpdatedAt: now });
+    }
+  });
+  await audit(auth.db, schoolId, {
+    entityType: 'officeBusTrip',
+    entityId: tripId,
+    action: 'update',
+    summary: sameDay ? 'School Office closed an abandoned same-day run' : 'School Office closed an older run left open',
+    after: { reason, closedAt: now },
+    changedBy: auth.uid,
+  });
+  return { ok: true };
+}
+
+async function endTrip(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const initialTrip = await getTrip(auth.db, schoolId, tripId);
+  assertActive(initialTrip);
+  assertCanOperate(auth, initialTrip);
+  if (body.childCheckDone !== true) throw new Error('Confirm that you walked the bus before ending the run.');
+  const now = Date.now();
+  const ref = tripRef(auth.db, schoolId, tripId);
+  await auth.db.runTransaction(async (transaction) => {
+    const fresh = await transaction.get(ref);
+    const trip = fresh.data() as OfficeBusTrip | undefined;
+    if (!trip || trip.status !== 'active') throw new AuthError('This bus run has already ended.', 409);
+    assertCanOperate(auth, trip);
+    const riderStates = trip.riders ?? {};
+    const unresolved = (trip.riderSnapshot ?? []).filter((studentId) => {
+      const status = riderStates[studentId]?.status;
+      return status !== 'off' && status !== 'absent';
+    });
+    if (unresolved.length > 0) throw new Error('Mark every rider off or not here before ending the run.');
+    const routeLockRef = routeRef(auth.db, schoolId, trip.routeId);
+    const routeLockSnap = await transaction.get(routeLockRef);
+    const currentRoute = routeLockSnap.exists ? ({ id: routeLockSnap.id, ...routeLockSnap.data() } as OfficeBusRoute) : undefined;
+    const effectiveRoute = routeForTrip(currentRoute, trip);
+    if (effectiveRoute?.requireReleaseConfirmations === true) {
+      const missingReleases = missingReleaseStudentIds(trip);
+      if (missingReleases.length > 0) throw new Error(`Record who received ${missingReleases.length} rider${missingReleases.length === 1 ? '' : 's'} before ending the run.`);
+    }
+    const lockedTripId = currentRoute?.activeTripId;
+    if (lockedTripId && lockedTripId !== tripId) {
+      const lockedTripSnap = await transaction.get(tripRef(auth.db, schoolId, lockedTripId));
+      if (lockedTripSnap.exists && lockedTripSnap.data()?.status === 'active') {
+        throw new AuthError('Another run is active on this route. Refresh before ending this run.', 409);
+      }
+    }
+    transaction.update(ref, {
+      status: 'done',
+      endedAt: now,
+      childCheckDone: true,
+      location: FieldValue.delete(),
+      locationSource: FieldValue.delete(),
+      updatedAt: now,
+    });
+    if (routeLockSnap.exists && (!lockedTripId || lockedTripId === tripId)) {
+      transaction.update(routeLockRef, { activeTripId: FieldValue.delete(), activeTripUpdatedAt: now });
+    }
+  });
+  await audit(auth.db, schoolId, { entityType: 'officeBusTrip', entityId: tripId, action: 'update', summary: `Finished the ${initialTrip.run} run · bus checked`, changedBy: auth.uid });
   return { ok: true };
 }
 
@@ -774,8 +1287,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await queueFamilyUpdate(auth, schoolId, body));
       case 'alert':
         return NextResponse.json(await addAlert(auth, schoolId, body));
+      case 'exception-create':
+        return NextResponse.json(await createRunException(auth, schoolId, body));
+      case 'exception-acknowledge':
+        return NextResponse.json(await acknowledgeRunException(auth, schoolId, body));
+      case 'exception-resolve':
+        return NextResponse.json(await resolveRunException(auth, schoolId, body));
       case 'end':
         return NextResponse.json(await endTrip(auth, schoolId, body));
+      case 'close-stale':
+        return NextResponse.json(await closeStaleTrip(auth, schoolId, body));
       case 'reset':
         return NextResponse.json(await resetDemoTransport(auth, schoolId));
       default:

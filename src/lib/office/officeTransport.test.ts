@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildDriverRunSheet,
   distanceMeters,
   exampleRoutes,
+  familyStopPlans,
+  familyUpdateMessage,
+  gpsMissedStopWarning,
+  isAbandonedRunCandidate,
+  isFreshLocation,
   latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
@@ -14,6 +20,7 @@ import {
   riderSnapshotFromStudents,
   routeForTrip,
   routeReadiness,
+  routeSnapshotForRun,
   stopMinutesLate,
   transportDaySummary,
   transportDaySummaryText,
@@ -23,7 +30,7 @@ import {
   vehicleDueLabel,
   vehicleLabel,
 } from '@/lib/office/officeTransport';
-import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
+import type { OfficeBusRoute, OfficeBusTrip, OfficeStudent } from '@/lib/office/types';
 
 const route: OfficeBusRoute = {
   id: 'r1',
@@ -61,6 +68,12 @@ function trip(p: Partial<OfficeBusTrip> = {}): OfficeBusTrip {
 }
 
 describe('officeTransport', () => {
+  it('keeps relief-driver details in the saved Office route snapshot', () => {
+    const snapshot = routeSnapshotForRun({ ...route, reliefDriverName: 'Jordan Lee', reliefDriverPhone: '+15550000010' });
+    expect(snapshot.reliefDriverName).toBe('Jordan Lee');
+    expect(snapshot.reliefDriverPhone).toBe('+15550000010');
+  });
+
   it('runs the afternoon in reverse', () => {
     expect(orderedStops(route, 'am').map((s) => s.id)).toEqual(['a', 'b', 's']);
     expect(orderedStops(route, 'pm').map((s) => s.id)).toEqual(['s', 'b', 'a']);
@@ -71,6 +84,55 @@ describe('officeTransport', () => {
     expect(routeReadiness({ stops: [{ id: 'a', name: 'Oak', lat: 40.7, lng: -74.3 }] })).toMatchObject({
       ready: false,
       missing: ['the school stop'],
+    });
+  });
+
+  it('returns only the family assigned stops for a parent plan', () => {
+    expect(familyStopPlans(route, ['b', 'missing', 'b'])).toEqual([
+      { name: 'Maple', morningTime: '07:25', afternoonTime: '15:20' },
+    ]);
+  });
+
+  it('builds a driver sheet without family, contact, class, note, or location details', () => {
+    const student = {
+      id: 's1',
+      firstName: 'Avery',
+      lastName: 'Lee',
+      nickname: '',
+      familyId: 'family-secret',
+      busRouteId: 'r1',
+      busStopId: 'a',
+      transportMode: 'bus',
+      status: 'active',
+      archived: false,
+      phone: '+15550000000',
+      email: 'private@example.com',
+      classId: 'class-secret',
+      medicalNotes: 'private note',
+    } as unknown as OfficeStudent;
+    const sheet = buildDriverRunSheet(route, [student], 'am');
+    expect(sheet).toEqual({
+      routeName: 'North',
+      busNumber: '4',
+      run: 'am',
+      stops: [
+        { order: 1, name: 'Oak', plannedTime: '07:15', riders: ['Avery Lee'] },
+        { order: 2, name: 'Maple', plannedTime: '07:25', riders: [] },
+        { order: 3, name: 'School', plannedTime: '07:40', riders: [] },
+      ],
+    });
+    const serialized = JSON.stringify(sheet);
+    expect(serialized).not.toContain('family-secret');
+    expect(serialized).not.toContain('private@example.com');
+    expect(serialized).not.toContain('+15550000000');
+    expect(serialized).not.toContain('class-secret');
+    expect(serialized).not.toContain('private note');
+  });
+
+  it('flags a school stop that is not last in the morning route', () => {
+    expect(routeReadiness({ ...route, stops: [route.stops[2], route.stops[0], route.stops[1]] })).toMatchObject({
+      ready: false,
+      missing: ['the school as the last stop'],
     });
   });
 
@@ -109,15 +171,48 @@ describe('officeTransport', () => {
     expect(stopMinutesLate(route.stops[0], 'am', null)).toBeNull();
   });
 
+  it('uses the school time zone for stop times', () => {
+    const arrival = Date.UTC(2026, 8, 23, 12, 20);
+    expect(stopMinutesLate(route.stops[0], 'am', arrival, 'America/Chicago')).toBe(5);
+  });
+
+  it('does not call an update on time without a fresh bus location', () => {
+    const message = familyUpdateMessage(route, trip(), at(7, 20), 'America/Chicago');
+    expect(message).toContain('location is not available');
+    expect(message).not.toContain('on time');
+  });
+
+  it('ignores an old delay report in the ready-made family message', () => {
+    const message = familyUpdateMessage(route, trip({
+      location: { lat: 40.72, lng: -74.32, at: at(7, 20) },
+      alerts: [{ id: 'old-delay', kind: 'delay', minutes: 30, at: at(5, 0) }],
+    }), at(7, 20));
+    expect(message).not.toContain('30 minutes late');
+  });
+
   it('measures distance in metres', () => {
     // One thousandth of a degree of latitude is about 111 m.
     expect(Math.round(distanceMeters({ lat: 40, lng: -74 }, { lat: 40.001, lng: -74 }))).toBe(111);
   });
 
   it('says how late a bus is against the next planned stop', () => {
-    const onStop = { lat: 40.72, lng: -74.32, at: at(7, 20) };
+    const onStop = { lat: 40.72, lng: -74.32, at: at(7, 9) };
     expect(minutesLate(route, trip({ location: onStop }), at(7, 10))).toBe(0);
-    expect(minutesLate(route, trip({ location: onStop }), at(7, 24))).toBe(10);
+    expect(minutesLate(route, trip({ location: { ...onStop, at: at(7, 21) } }), at(7, 24))).toBe(10);
+  });
+
+  it('does not call a run late without a fresh location', () => {
+    expect(minutesLate(route, trip(), at(7, 30))).toBeNull();
+    expect(minutesLate(route, trip({ location: { lat: 40.72, lng: -74.32, at: at(7, 0) } }), at(7, 30))).toBeNull();
+    expect(isFreshLocation({ at: at(7, 40) }, at(7, 30))).toBe(false);
+    expect(minutesLate(route, trip({ location: { lat: 40.72, lng: -74.32, at: at(7, 40) } }), at(7, 30))).toBeNull();
+  });
+
+  it('marks only old runs without a fresh update for Office review', () => {
+    expect(isAbandonedRunCandidate({ status: 'active', startedAt: at(7, 0), location: null }, at(7, 29))).toBe(false);
+    expect(isAbandonedRunCandidate({ status: 'active', startedAt: at(7, 0), location: null }, at(7, 30))).toBe(true);
+    expect(isAbandonedRunCandidate({ status: 'active', startedAt: at(7, 0), location: { lat: 40.72, lng: -74.32, at: at(7, 29) } }, at(7, 30))).toBe(false);
+    expect(isAbandonedRunCandidate({ status: 'done', startedAt: at(7, 0), location: null }, at(7, 30))).toBe(false);
   });
 
   it('creates a safe phone status message without exposing coordinates', () => {
@@ -144,13 +239,58 @@ describe('officeTransport', () => {
     expect(stale.some((w) => w.id === 't1-stale')).toBe(true);
   });
 
+  it('surfaces temporary route exceptions for Office review', () => {
+    const names = new Map<string, string>();
+    const exception = {
+      id: 'exception-1',
+      tripId: 't1',
+      routeId: 'r1',
+      kind: 'detour' as const,
+      stopId: 'a',
+      status: 'open' as const,
+      createdAt: at(7, 5),
+      createdBy: 'office',
+      expiresAt: at(9, 5),
+    };
+    const warnings = tripWarnings([route], [trip({ exceptions: { 'exception-1': exception } })], names, at(7, 10));
+    expect(warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 't1-exception-1', tone: 'caution' }),
+    ]));
+    expect(warnings.find((warning) => warning.id === 't1-exception-1')?.text).toContain('Oak');
+  });
+
   it('warns when a new run has a rider release still missing', () => {
     const names = new Map([['kid1', 'Maya Lopez']]);
     const newTrip = trip({
       riderManifest: [{ studentId: 'kid1', displayName: 'Maya Lopez', familyId: 'f1', busStopId: 'a' }],
       riders: { kid1: { status: 'off', at: at(7, 30) } },
     });
-    expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
+    expect(tripWarnings([{ ...route, requireReleaseConfirmations: true }], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
+  });
+
+  it('does not warn about releases when the saved route does not require them', () => {
+    const names = new Map([['kid1', 'Maya Lopez']]);
+    const newTrip = trip({
+      riderManifest: [{ studentId: 'kid1', displayName: 'Maya Lopez', familyId: 'f1', busStopId: 'a' }],
+      riders: { kid1: { status: 'off', at: at(7, 30) } },
+    });
+    expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(false);
+  });
+
+  it('keeps the afternoon school as the first boarding step until the driver confirms it', () => {
+    expect(nextStop(route, trip({ run: 'pm' }))?.id).toBe('s');
+  });
+
+  it('warns about a missed stop only from a fresh trusted tracker update', () => {
+    const trusted = trip({
+      location: { lat: 40.72, lng: -74.32, at: at(7, 27), source: 'gps_device' },
+      locationSource: 'gps_device',
+    });
+    expect(gpsMissedStopWarning(route, trusted, at(7, 30))?.id).toBe('t1-gps-missed');
+    expect(gpsMissedStopWarning(route, trusted, at(7, 16))).toBeNull();
+    expect(gpsMissedStopWarning(route, trip({ ...trusted, location: { ...trusted.location!, at: at(7, 0) } }), at(7, 30))).toBeNull();
+    expect(gpsMissedStopWarning(route, trip({ ...trusted, locationSource: 'browser', location: { ...trusted.location!, source: 'browser' } }), at(7, 30))).toBeNull();
+    expect(gpsMissedStopWarning(route, { ...trusted, id: 'practice-1' }, at(7, 30))).toBeNull();
   });
 
   it('finds riders who are off without a release record', () => {
@@ -233,6 +373,15 @@ describe('officeTransport', () => {
 
   it('keeps route safety choices for the active trip view', () => {
     expect(routeForTrip({ ...route, notifyFamiliesOnAlert: true, requireReleaseConfirmations: true }, trip())).toMatchObject({ notifyFamiliesOnAlert: true, requireReleaseConfirmations: true });
+  });
+
+  it('keeps the release rule from the route saved with the run', () => {
+    const savedRoute = { ...route, requireReleaseConfirmations: true, notifyFamiliesOnArrival: true };
+    const historical = trip({ routeSnapshot: routeSnapshotForRun(savedRoute) });
+    expect(routeForTrip({ ...route, requireReleaseConfirmations: false, notifyFamiliesOnArrival: false }, historical)).toMatchObject({
+      requireReleaseConfirmations: true,
+      notifyFamiliesOnArrival: true,
+    });
   });
 
   it('uses the route saved with a trip for past history', () => {

@@ -1,8 +1,11 @@
 import type {
   OfficeBusAlertKind,
+  OfficeBusLocation,
   OfficeBusReleaseMethod,
+  OfficeBusRunExceptionKind,
   OfficeBusRiderManifestEntry,
   OfficeBusRoute,
+  OfficeBusRouteSnapshot,
   OfficeBusRun,
   OfficeBusStop,
   OfficeBusTrip,
@@ -12,6 +15,7 @@ import type {
   OfficeTransportMode,
 } from '@/lib/office/types';
 import { formatScheduleTime, scheduleMinutes } from '@/lib/office/officeSchedule';
+import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 
 export const TRANSPORT_MODE_LABEL: Record<OfficeTransportMode, string> = {
@@ -22,6 +26,14 @@ export const TRANSPORT_MODE_LABEL: Record<OfficeTransportMode, string> = {
 };
 
 export const BUS_RUN_LABEL: Record<OfficeBusRun, string> = { am: 'Morning', pm: 'Afternoon' };
+
+export const BUS_EXCEPTION_LABEL: Record<OfficeBusRunExceptionKind, string> = {
+  closed_stop: 'Stop temporarily closed',
+  detour: 'Bus taking a detour',
+  replacement_vehicle: 'Replacement vehicle',
+  pickup_change: 'Temporary pickup change',
+  delay: 'Temporary delay',
+};
 
 export const BUS_ALERT_LABEL: Record<OfficeBusAlertKind, string> = {
   delay: 'Running late',
@@ -44,6 +56,18 @@ export const BUS_ROUTE_COLORS = ['#0f766e', '#2563eb', '#c2410c', '#7c3aed', '#b
 export const STOP_ARRIVAL_RADIUS_M = 120;
 /** No location for this long while on the road → "not updating" warning. */
 export const LOCATION_STALE_MS = 3 * 60_000;
+export const ABANDONED_RUN_MIN_AGE_MS = 30 * 60_000;
+
+/** A location is usable only when it is not from the future and is recent enough. */
+export function isFreshLocation(location: Pick<OfficeBusLocation, 'at'> | null | undefined, now = Date.now()): boolean {
+  return Boolean(location && Number.isFinite(location.at) && now >= location.at && now - location.at <= LOCATION_STALE_MS);
+}
+
+/** True when Office may review an active run that has had no fresh location for 30 minutes. */
+export function isAbandonedRunCandidate(trip: Pick<OfficeBusTrip, 'status' | 'startedAt' | 'location'>, now = Date.now()): boolean {
+  return trip.status === 'active' && Number.isFinite(trip.startedAt) && now >= trip.startedAt && now - trip.startedAt >= ABANDONED_RUN_MIN_AGE_MS && !isFreshLocation(trip.location, now);
+}
+
 /** Minutes behind plan before the office sees "late". */
 export const LATE_THRESHOLD_MIN = 5;
 /** Typical in-town bus speed when the phone does not report one (metres per second ≈ 25 km/h). */
@@ -86,14 +110,12 @@ export function stopTime(stop: OfficeBusStop, run: OfficeBusRun): string | null 
 }
 
 /** Difference from a stop's planned time in minutes; negative means early. */
-export function stopMinutesLate(stop: OfficeBusStop, run: OfficeBusRun, arrivedAt: number | null | undefined): number | null {
+export function stopMinutesLate(stop: OfficeBusStop, run: OfficeBusRun, arrivedAt: number | null | undefined, timeZone?: string): number | null {
   const planned = stopTime(stop, run);
   if (!planned || arrivedAt == null || !Number.isFinite(arrivedAt)) return null;
-  const [hours, minutes] = planned.split(':').map(Number);
-  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
-  const plannedAt = new Date(arrivedAt);
-  plannedAt.setHours(hours, minutes, 0, 0);
-  return Math.round((arrivedAt - plannedAt.getTime()) / 60_000);
+  const plannedMinutes = scheduleMinutes(planned);
+  if (Number.isNaN(plannedMinutes)) return null;
+  return Math.round(minutesOfDay(arrivedAt, timeZone) - plannedMinutes);
 }
 
 /** Morning before noon, afternoon after. */
@@ -114,24 +136,23 @@ export function etaMinutes(from: LatLng & { speed?: number | null }, to: LatLng)
   return Math.max(1, Math.round((distanceMeters(from, to) * 1.3) / speed / 60));
 }
 
-function minutesOfDay(ms: number): number {
-  const d = new Date(ms);
-  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+function minutesOfDay(ms: number, timeZone?: string): number {
+  return getSchoolDayClock(ms, timeZone, { whenUnset: 'local' }).minutesSinceMidnight;
 }
 
 /**
  * How many minutes behind plan the bus is (0 when on time or early), from the next stop's
  * planned time versus now + drive time. Null when there is nothing to compare against.
  */
-export function minutesLate(route: OfficeBusRoute, trip: OfficeBusTrip, now = Date.now()): number | null {
-  if (trip.status !== 'active') return null;
+export function minutesLate(route: OfficeBusRoute, trip: OfficeBusTrip, now = Date.now(), timeZone?: string): number | null {
+  if (trip.status !== 'active' || !isFreshLocation(trip.location, now)) return null;
   const stop = nextStop(route, trip);
   const planned = stop ? stopTime(stop, trip.run) : null;
   if (!stop || !planned) return null;
   const plannedMin = scheduleMinutes(planned);
   if (Number.isNaN(plannedMin)) return null;
   const drive = trip.location ? etaMinutes(trip.location, stop) : 0;
-  const expected = minutesOfDay(now) + drive;
+  const expected = minutesOfDay(now, timeZone) + drive;
   const late = Math.round(expected - plannedMin);
   return late > 0 ? late : 0;
 }
@@ -143,6 +164,38 @@ export type TransportWarning = {
   text: string;
 };
 
+export function gpsMissedStopWarning(
+  route: OfficeBusRoute,
+  trip: OfficeBusTrip,
+  now = Date.now(),
+  timeZone?: string,
+): TransportWarning | null {
+  if (trip.status !== 'active' || trip.id.startsWith('practice-')) return null;
+  const location = trip.location;
+  const trustedTracker = trip.locationSource === 'gps_device' || location?.source === 'gps_device';
+  if (!trustedTracker || !isFreshLocation(location, now)) return null;
+  const next = nextStop(route, trip);
+  if (!next || trip.stopArrivalDetails?.[next.id]) return null;
+  const planned = stopTime(next, trip.run);
+  if (!planned) return null;
+  const plannedMinutes = scheduleMinutes(planned);
+  if (Number.isNaN(plannedMinutes)) return null;
+  const lateBy = minutesOfDay(now, timeZone) - plannedMinutes;
+  if (lateBy < LATE_THRESHOLD_MIN) return null;
+  return {
+    id: `${trip.id}-gps-missed`,
+    tone: 'caution',
+    routeId: route.id,
+    text: `${routeLabel(route)}: the GPS tracker is ${Math.round(lateBy)} min past the planned time for ${next.name}, but that stop is not marked reached.`,
+  };
+}
+
+export function trackerSourceLabel(trip: Pick<OfficeBusTrip, 'gpsDeviceId' | 'locationSource' | 'location'>): string {
+  if (trip.locationSource === 'gps_device' || trip.location?.source === 'gps_device' || trip.gpsDeviceId) return 'GPS tracker';
+  if (trip.locationSource === 'browser' || trip.location?.source === 'browser') return "Driver's phone";
+  return 'No tracker assigned';
+}
+
 /** Everything the office should notice about today's runs, most urgent first. */
 export function tripWarnings(
   routes: OfficeBusRoute[],
@@ -153,7 +206,7 @@ export function tripWarnings(
   const routeById = new Map(routes.map((r) => [r.id, r]));
   const out: TransportWarning[] = [];
   for (const trip of trips) {
-    const route = routeById.get(trip.routeId);
+    const route = routeForTrip(routeById.get(trip.routeId), trip);
     if (!route) continue;
     const bus = routeLabel(route);
     const runLabel = BUS_RUN_LABEL[trip.run].toLowerCase();
@@ -175,7 +228,9 @@ export function tripWarnings(
           id: `${trip.id}-no-check`,
           tone: 'caution',
           routeId: route.id,
-          text: `${bus}: the driver did not confirm the end-of-run bus check.`,
+          text: trip.closedByOffice
+            ? `${bus}: School Office closed this older run without a finishing bus check.`
+            : `${bus}: the driver did not confirm the end-of-run bus check.`,
         });
       }
       continue;
@@ -190,16 +245,34 @@ export function tripWarnings(
         text: `${bus}: ${BUS_ALERT_LABEL[alert.kind]}${alert.minutes ? ` (about ${alert.minutes} min)` : ''}${alert.message ? ` — ${alert.message}` : ''}`,
       });
     }
-    if (!trip.location || now - trip.location.at > LOCATION_STALE_MS) {
+    for (const exception of Object.values(trip.exceptions ?? {})) {
+      if (exception.status === 'resolved') continue;
+      const stop = exception.stopId ? route.stops.find((item) => item.id === exception.stopId) : null;
+      const expired = exception.expiresAt <= now;
+      out.push({
+        id: `${trip.id}-${exception.id}`,
+        tone: 'caution',
+        routeId: route.id,
+        text: `${bus}: ${BUS_EXCEPTION_LABEL[exception.kind]}${stop ? ` at ${stop.name}` : ''} is ${expired ? 'expired and needs Office review' : exception.status === 'acknowledged' ? 'acknowledged' : 'waiting for driver acknowledgment'}.`,
+      });
+    }
+    if (!isFreshLocation(trip.location, now)) {
+      const locationAgeMinutes = trip.location ? Math.max(0, Math.round((now - trip.location.at) / 60_000)) : 0;
       out.push({
         id: `${trip.id}-stale`,
         tone: 'caution',
         routeId: route.id,
         text: trip.location
-          ? `${bus} has not sent its location for ${Math.round((now - trip.location.at) / 60_000)} min.`
-          : `${bus} started but has not sent a location yet.`,
+          ? trip.locationSource === 'gps_device' || trip.location.source === 'gps_device'
+            ? `${bus} GPS tracker has not sent a location for ${locationAgeMinutes} min.`
+            : `${bus} driver phone has not sent a location for ${locationAgeMinutes} min.`
+          : trip.locationSource === 'gps_device'
+            ? `${bus} started, but the GPS tracker has not sent a location yet.`
+            : `${bus} started, but the driver's phone has not sent a location yet.`,
       });
     }
+    const missed = gpsMissedStopWarning(route, trip, now);
+    if (missed) out.push(missed);
     const late = minutesLate(route, trip, now);
     if (late !== null && late >= LATE_THRESHOLD_MIN) {
       out.push({ id: `${trip.id}-late`, tone: 'caution', routeId: route.id, text: `${bus} is running about ${late} min behind plan.` });
@@ -216,7 +289,7 @@ export function tripWarnings(
     const missingReleases = Object.entries(trip.riders ?? {})
       .filter(([studentId, rider]) => rider.status === 'off' && !trip.releases?.[studentId])
       .map(([studentId]) => studentNameById.get(studentId) ?? 'A rider');
-    if ((trip.releases != null || trip.riderManifest != null) && missingReleases.length > 0) {
+    if (route.requireReleaseConfirmations === true && (trip.releases != null || trip.riderManifest != null) && missingReleases.length > 0) {
       out.push({
         id: `${trip.id}-release`,
         tone: 'caution',
@@ -253,7 +326,7 @@ export function transportDaySummary(
   const averageMs = durations.length ? durations.reduce((sum, value) => sum + value, 0) / durations.length : null;
   const lateRuns = trips.filter((trip) => {
     if (trip.status !== 'active') return false;
-    const route = routeById.get(trip.routeId);
+    const route = routeForTrip(routeById.get(trip.routeId), trip);
     return route ? (minutesLate(route, trip, now) ?? 0) >= LATE_THRESHOLD_MIN : false;
   }).length;
 
@@ -301,7 +374,12 @@ export function routeReadiness(route: Pick<OfficeBusRoute, 'stops'>): RouteReadi
   const stops = route.stops ?? [];
   const hasPickupStop = stops.some((stop) => !stop.isSchool);
   const hasSchoolStop = stops.some((stop) => stop.isSchool);
-  const missing = [...(!hasPickupStop ? ['a student stop'] : []), ...(!hasSchoolStop ? ['the school stop'] : [])];
+  const schoolIndex = stops.findIndex((stop) => stop.isSchool);
+  const missing = [
+    ...(!hasPickupStop ? ['a student stop'] : []),
+    ...(!hasSchoolStop ? ['the school stop'] : []),
+    ...(schoolIndex >= 0 && schoolIndex !== stops.length - 1 ? ['the school as the last stop'] : []),
+  ];
   return { ready: missing.length === 0, hasPickupStop, hasSchoolStop, missing };
 }
 
@@ -344,6 +422,49 @@ export function routeLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): s
   return bus ? `Bus ${bus} (${route.name})` : route.name;
 }
 
+export type OfficeDriverRunSheet = {
+  routeName: string;
+  busNumber: string;
+  run: OfficeBusRun;
+  stops: Array<{ order: number; name: string; plannedTime: string | null; riders: string[] }>;
+};
+
+/** Build a driver-only sheet with no family, contact, address, class, note, or coordinate fields. */
+export function buildDriverRunSheet(
+  route: Pick<OfficeBusRoute, 'id' | 'name' | 'busNumber' | 'stops'>,
+  students: Array<Pick<OfficeStudent, 'id' | 'firstName' | 'lastName' | 'nickname' | 'busRouteId' | 'busStopId' | 'transportMode' | 'status' | 'archived'>>,
+  run: OfficeBusRun,
+): OfficeDriverRunSheet {
+  const riders = students
+    .filter((student) => student.transportMode === 'bus' && student.busRouteId === route.id && (student.status ?? 'active') === 'active' && student.archived !== true)
+    .sort((a, b) => getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b), undefined, { numeric: true }));
+  return {
+    routeName: route.name,
+    busNumber: route.busNumber?.trim() ?? '',
+    run,
+    stops: orderedStops(route, run).map((stop, index) => ({
+      order: index + 1,
+      name: stop.name,
+      plannedTime: stopTime(stop, run),
+      riders: riders.filter((student) => student.busStopId === stop.id).map((student) => getOfficeStudentFullName(student)),
+    })),
+  };
+}
+
+export type OfficeFamilyStopPlan = {
+  name: string;
+  morningTime: string | null;
+  afternoonTime: string | null;
+};
+
+/** Return only the stops assigned to one family, never the rest of the route. */
+export function familyStopPlans(route: Pick<OfficeBusRoute, 'stops'>, stopIds: Iterable<string>): OfficeFamilyStopPlan[] {
+  const requested = new Set([...stopIds].filter(Boolean));
+  return route.stops
+    .filter((stop) => !stop.isSchool && requested.has(stop.id))
+    .map((stop) => ({ name: stop.name, morningTime: stop.amTime ?? null, afternoonTime: stop.pmTime ?? null }));
+}
+
 /** The newest active trip for a route/run, or the newest completed trip if none is active. */
 export function latestTripForRoute(
   trips: OfficeBusTrip[],
@@ -358,6 +479,26 @@ export function latestTripForRoute(
   }, null);
 }
 
+/** Capture the route choices that must stay fixed for the whole run. */
+export function routeSnapshotForRun(route: OfficeBusRoute): OfficeBusRouteSnapshot {
+  return {
+    name: route.name,
+    busNumber: route.busNumber ?? null,
+    color: route.color,
+    vehicle: route.vehicle ?? null,
+    stops: route.stops,
+    capacity: route.capacity ?? null,
+    driverName: route.driverName ?? null,
+    driverPhone: route.driverPhone ?? null,
+    ...(route.reliefDriverName != null || route.reliefDriverPhone != null
+      ? { reliefDriverName: route.reliefDriverName ?? null, reliefDriverPhone: route.reliefDriverPhone ?? null }
+      : {}),
+    notifyFamiliesOnAlert: route.notifyFamiliesOnAlert === true,
+    notifyFamiliesOnArrival: route.notifyFamiliesOnArrival === true,
+    requireReleaseConfirmations: route.requireReleaseConfirmations === true,
+  };
+}
+
 /** Use the route captured at trip start so old history does not change when a route is edited. */
 export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusTrip): OfficeBusRoute | undefined {
   const snapshot = trip.routeSnapshot;
@@ -367,12 +508,16 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     name: snapshot.name,
     busNumber: snapshot.busNumber ?? null,
     color: snapshot.color,
-    driverName: route?.driverName ?? null,
-    driverPhone: route?.driverPhone ?? null,
-    capacity: route?.capacity ?? null,
+    driverName: snapshot.driverName ?? route?.driverName ?? null,
+    driverPhone: snapshot.driverPhone ?? route?.driverPhone ?? null,
+    ...(snapshot.reliefDriverName != null || snapshot.reliefDriverPhone != null || route?.reliefDriverName != null || route?.reliefDriverPhone != null
+      ? { reliefDriverName: snapshot.reliefDriverName ?? route?.reliefDriverName ?? null, reliefDriverPhone: snapshot.reliefDriverPhone ?? route?.reliefDriverPhone ?? null }
+      : {}),
+    capacity: snapshot.capacity ?? route?.capacity ?? null,
     vehicle: snapshot.vehicle ?? route?.vehicle ?? null,
-    notifyFamiliesOnAlert: route?.notifyFamiliesOnAlert === true,
-    requireReleaseConfirmations: route?.requireReleaseConfirmations === true,
+    notifyFamiliesOnAlert: snapshot.notifyFamiliesOnAlert ?? route?.notifyFamiliesOnAlert === true,
+    notifyFamiliesOnArrival: snapshot.notifyFamiliesOnArrival ?? route?.notifyFamiliesOnArrival === true,
+    requireReleaseConfirmations: snapshot.requireReleaseConfirmations ?? route?.requireReleaseConfirmations === true,
     stops: snapshot.stops ?? [],
     notes: route?.notes ?? null,
     updatedAt: route?.updatedAt ?? trip.updatedAt,
@@ -389,7 +534,7 @@ export type OfficeBusPhoneStatus = {
 };
 
 /** A short, privacy-safe message suitable for a school phone line or preview. */
-export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusTrip | null | undefined, now = Date.now()): OfficeBusPhoneStatus {
+export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusTrip | null | undefined, now = Date.now(), timeZone?: string): OfficeBusPhoneStatus {
   const activeRoute = trip ? routeForTrip(route, trip) ?? route : route;
   const bus = routeLabel(activeRoute);
   const disclaimer = 'This is bus information, not confirmation that a child got off.';
@@ -397,20 +542,23 @@ export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusT
     return { status: 'not_started', asOf: now, text: `${bus} is not on a run right now. Please call the school for help. ${disclaimer}` };
   }
   if (trip.status === 'done') {
-    const ended = trip.endedAt ? ` The run finished at ${clockLabel(trip.endedAt)}.` : ' The run is finished.';
+    if (trip.closedByOffice) {
+      return { status: 'ended', asOf: trip.closedAt ?? trip.endedAt ?? trip.updatedAt, text: `${bus} is not on the road. The School Office closed an older unfinished run. ${disclaimer}` };
+    }
+    const ended = trip.endedAt ? ` The run finished at ${clockLabel(trip.endedAt, timeZone)}.` : ' The run is finished.';
     return { status: 'ended', asOf: now, text: `${bus} is not on the road.${ended} ${disclaimer}` };
   }
   if (!trip.location) {
     return { status: 'unavailable', asOf: now, text: `${bus} started the ${BUS_RUN_LABEL[trip.run].toLowerCase()} run, but its location is not available yet. ${disclaimer}` };
   }
-  if (now - trip.location.at > LOCATION_STALE_MS) {
-    return { status: 'unavailable', asOf: trip.location.at, text: `${bus} tracking is temporarily unavailable. Last update: ${clockLabel(trip.location.at)}. ${disclaimer}` };
+  if (!isFreshLocation(trip.location, now)) {
+    return { status: 'unavailable', asOf: trip.location.at, text: `${bus} tracking is temporarily unavailable. Last update: ${clockLabel(trip.location.at, timeZone)}. ${disclaimer}` };
   }
   const next = nextStop(activeRoute, trip);
   if (!next) {
     return { status: 'arrived', asOf: trip.location.at, text: `${bus} has reached the last stop on this run. ${disclaimer}` };
   }
-  const late = minutesLate(activeRoute, trip, now);
+  const late = minutesLate(activeRoute, trip, now, timeZone);
   const eta = etaMinutes(trip.location, next);
   const planned = stopTime(next, trip.run);
   const plannedText = planned ? ` Planned time: ${formatScheduleTime(planned)}.` : '';
@@ -418,7 +566,7 @@ export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusT
   return {
     status: late != null && late >= LATE_THRESHOLD_MIN ? 'delayed' : 'on_way',
     asOf: trip.location.at,
-    text: `${bus} is expected at ${next.name} in about ${eta} minutes.${lateText}${plannedText} Last update: ${clockLabel(trip.location.at)}. ${disclaimer}`,
+    text: `${bus} is expected at ${next.name} in about ${eta} minutes.${lateText}${plannedText} Last update: ${clockLabel(trip.location.at, timeZone)}. ${disclaimer}`,
   };
 }
 
@@ -476,20 +624,33 @@ export function agoLabel(ms: number, now = Date.now()): string {
   return `${Math.round(m / 60)} hr ago`;
 }
 
-export function clockLabel(ms: number): string {
-  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+export function clockLabel(ms: number, timeZone?: string): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', ...(timeZone ? { timeZone } : {}) }).format(new Date(ms));
+  } catch {
+    return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
 }
 
 /** A plain message staff can paste into a text or email to families. */
-export function familyUpdateMessage(route: OfficeBusRoute, trip: OfficeBusTrip | null, now = Date.now()): string {
+export function familyUpdateMessage(route: OfficeBusRoute, trip: OfficeBusTrip | null, now = Date.now(), timeZone?: string): string {
   const bus = routeLabel(route);
   if (!trip) return `${bus} has not started its run yet.`;
-  if (trip.status === 'done') return `${bus} finished its ${BUS_RUN_LABEL[trip.run].toLowerCase()} run at ${clockLabel(trip.endedAt ?? trip.updatedAt)}.`;
-  const late = minutesLate(route, trip, now) ?? 0;
-  const delay = [...(trip.alerts ?? [])].reverse().find((a) => a.kind === 'delay');
-  const lateText = late >= LATE_THRESHOLD_MIN || delay ? ` It is running about ${Math.max(late, delay?.minutes ?? 0)} minutes late.` : ' It is on time.';
+  if (trip.status === 'done') {
+    return trip.closedByOffice
+      ? `${bus} had an older run closed by the School Office without a finishing check.`
+      : `${bus} finished its ${BUS_RUN_LABEL[trip.run].toLowerCase()} run at ${clockLabel(trip.endedAt ?? trip.updatedAt, timeZone)}.`;
+  }
+  const hasFreshLocation = isFreshLocation(trip.location, now);
+  const late = hasFreshLocation ? minutesLate(route, trip, now, timeZone) ?? 0 : null;
+  const recentDelay = [...(trip.alerts ?? [])].reverse().find((a) => a.kind === 'delay' && a.at <= now && now - a.at <= 2 * 60 * 60_000);
+  const lateText = !hasFreshLocation
+    ? ' The bus location is not available right now.'
+    : late !== null && (late >= LATE_THRESHOLD_MIN || recentDelay)
+      ? ` It is running about ${Math.max(late, recentDelay?.minutes ?? 0)} minutes late.`
+      : ' It is on time.';
   const stop = nextStop(route, trip);
-  const stopText = stop && trip.location ? ` Next stop: ${stop.name}, in about ${etaMinutes(trip.location, stop)} min.` : '';
+  const stopText = stop && trip.location && hasFreshLocation ? ` Next stop: ${stop.name}, in about ${etaMinutes(trip.location, stop)} min.` : '';
   return `${bus} is on the road.${lateText}${stopText} Thank you for your patience.`;
 }
 

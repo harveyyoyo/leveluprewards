@@ -9,11 +9,14 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { useToast } from '@/hooks/use-toast';
 import { OfficeTransportMap, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
 import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
+import { useAppContext } from '@/components/AppProvider';
 import {
   BUS_ALERT_LABEL,
+  BUS_EXCEPTION_LABEL,
   BUS_RUN_LABEL,
   STOP_ARRIVAL_RADIUS_M,
   currentRun,
+  clockLabel,
   distanceMeters,
   formatDistance,
   localIsoDate,
@@ -62,9 +65,11 @@ export function OfficeBusDriverMode({
   onClose: () => void;
 }) {
   const transport = useOfficeTransportApi(schoolId);
+  const { isOffice, isAdmin, userId } = useAppContext();
   const { toast } = useToast();
   const [routeId, setRouteId] = useState(routes[0]?.id ?? '');
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
+  const [driverRole, setDriverRole] = useState<'primary' | 'relief'>('primary');
   const [tripId, setTripId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [offlinePacket, setOfflinePacket] = useState<OfficeDriverOfflinePacket | null>(() => readDriverOfflinePacket(schoolId));
@@ -77,8 +82,12 @@ export function OfficeBusDriverMode({
     ? trips.find((t) => t.routeId === route.id && t.run === run && t.status === 'active')
     : undefined;
   const hasPriorTrip = route ? trips.some((t) => t.routeId === route.id && t.run === run) : false;
+  useEffect(() => {
+    if (existing?.driverRole) setDriverRole(existing.driverRole);
+  }, [existing?.id, existing?.driverRole]);
   const readiness = route ? routeReadiness(route) : { ready: false, missing: ['a route'] };
-  const canDrive = readiness.ready;
+  const reliefMissing = driverRole === 'relief' && !route?.reliefDriverName?.trim();
+  const canDrive = readiness.ready && !reliefMissing;
 
   // Keep the screen on while driving.
   const driving = trip?.status === 'active';
@@ -96,7 +105,7 @@ export function OfficeBusDriverMode({
     try {
       const date = localIsoDate();
       const id = existing?.id ?? tripDocId(date, route.id, run);
-      const { tripId: startedId } = await transport.startOfficeBusTrip(route, { tripId: id, date, run });
+      const { tripId: startedId } = await transport.startOfficeBusTrip(route, { tripId: id, date, run, driverRole });
       setOfflineOpen(false);
       setTripId(startedId);
     } catch (e) {
@@ -143,6 +152,8 @@ export function OfficeBusDriverMode({
           familyById={familyById}
           center={center}
           readOnly={offlineOpen}
+          canApproveOffice={isOffice || isAdmin}
+          currentUserId={userId}
           onOfflineSaved={() => setOfflinePacket(readDriverOfflinePacket(schoolId))}
           onFinished={() => {
             if (offlinePacket?.trip.id === trip.id) {
@@ -196,9 +207,21 @@ export function OfficeBusDriverMode({
               ))}
             </div>
           </div>
-          {route && !canDrive ? (
+                     <div>
+             <p className="text-sm font-semibold">Who is driving?</p>
+             <div className="mt-2 grid grid-cols-2 gap-2">
+               <button type="button" aria-pressed={driverRole === 'primary'} onClick={() => setDriverRole('primary')} className={cn('rounded-2xl border-2 bg-white py-3 font-semibold dark:bg-slate-900', driverRole === 'primary' ? 'border-teal-700' : 'border-transparent')}>
+                 Primary driver
+               </button>
+               <button type="button" aria-pressed={driverRole === 'relief'} onClick={() => setDriverRole('relief')} disabled={!route?.reliefDriverName} className={cn('rounded-2xl border-2 bg-white py-3 font-semibold dark:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50', driverRole === 'relief' ? 'border-teal-700' : 'border-transparent')}>
+                 Relief driver
+               </button>
+             </div>
+             {driverRole === 'relief' && route?.reliefDriverName ? <p className="mt-2 text-xs text-muted-foreground">This run will be recorded for {route.reliefDriverName}.</p> : null}
+           </div>
+           {route && !canDrive ? (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              Add at least one student stop and the school before driving.
+              {reliefMissing ? 'Add a relief driver before starting this run.' : 'Add at least one student stop and the school before driving.'}
             </p>
           ) : null}
           <Button type="button" className="h-14 w-full rounded-2xl text-lg" disabled={!route || starting || !canDrive} onClick={() => void start()}>
@@ -281,6 +304,8 @@ function DrivingScreen({
   familyById,
   center,
   readOnly = false,
+  canApproveOffice = false,
+  currentUserId = null,
   onOfflineSaved,
   onFinished,
 }: {
@@ -291,6 +316,8 @@ function DrivingScreen({
   familyById: Map<string, OfficeFamily>;
   center: LatLng;
   readOnly?: boolean;
+  canApproveOffice?: boolean;
+  currentUserId?: string | null;
   onOfflineSaved?: () => void;
   onFinished: () => void;
 }) {
@@ -299,6 +326,7 @@ function DrivingScreen({
   const [geo, setGeo] = useState<GeoState>('waiting');
   const [lastServerAt, setLastServerAt] = useState<number | null>(trip.location?.at ?? null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [trackerIgnored, setTrackerIgnored] = useState(Boolean(trip.gpsDeviceId));
   const [me, setMe] = useState<(LatLng & { speed?: number | null }) | null>(trip.location ?? null);
   const [showAll, setShowAll] = useState(false);
   const [report, setReport] = useState<OfficeBusAlertKind | null>(null);
@@ -314,12 +342,21 @@ function DrivingScreen({
   const [releaseNote, setReleaseNote] = useState('');
   const [releaseSaving, setReleaseSaving] = useState(false);
   const [offlineSaved, setOfflineSaved] = useState(false);
+  const [acknowledgingExceptionId, setAcknowledgingExceptionId] = useState<string | null>(null);
+  const [exceptionNow, setExceptionNow] = useState<number | null>(null);
 
   useEffect(() => {
     setLastServerAt(trip.location?.at ?? null);
+    setTrackerIgnored(Boolean(trip.gpsDeviceId));
     setSyncError(null);
     // Reset only when the run changes; live location updates should not reset the sync badge.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip.id]);
+
+  useEffect(() => {
+    setExceptionNow(Date.now());
+    const timer = window.setInterval(() => setExceptionNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
   }, [trip.id]);
 
   useEffect(() => {
@@ -371,7 +408,8 @@ function DrivingScreen({
         const prev = lastSent.current;
         // Reaching a stop is sent right away so the office sees it without waiting.
         const upcoming = nextStop(activeRoute, t);
-        const reached = !t.gpsDeviceId && upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
+        const accurateEnough = pos.coords.accuracy != null && pos.coords.accuracy <= 100;
+        const reached = !t.gpsDeviceId && accurateEnough && !(t.run === 'pm' && upcoming?.isSchool) && upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
         if (!reached && prev && now - prev.at < SEND_EVERY_MS && distanceMeters(prev.p, p) < SEND_IF_MOVED_M) return;
         lastSent.current = { at: now, p };
         void transport
@@ -380,7 +418,13 @@ function DrivingScreen({
             { lat: p.lat, lng: p.lng, accuracy: pos.coords.accuracy ?? null, speed: pos.coords.speed ?? null, heading: pos.coords.heading ?? null, at: now },
             reached,
           )
-          .then(() => {
+          .then((result) => {
+            if (result.ignored) {
+              setTrackerIgnored(true);
+              setSyncError(null);
+              return;
+            }
+            setTrackerIgnored(false);
             setLastServerAt(now);
             setSyncError(null);
           })
@@ -408,7 +452,16 @@ function DrivingScreen({
 
   const saveOfflineCopy = () => {
     if (readOnly) return;
-    const saved = saveDriverOfflinePacket(schoolId, trip, activeRoute);
+    const safeRoute = {
+      ...activeRoute,
+      driverName: null,
+      driverPhone: null,
+      reliefDriverName: null,
+      reliefDriverPhone: null,
+      notes: null,
+      vehicle: activeRoute.vehicle ? { ...activeRoute.vehicle, notes: null } : activeRoute.vehicle,
+    };
+    const saved = saveDriverOfflinePacket(schoolId, trip, safeRoute);
     if (!saved) {
       toast({ variant: 'destructive', title: 'Could not save the trip copy', description: 'This browser may be full or may not allow saved information.' });
       return;
@@ -434,7 +487,8 @@ function DrivingScreen({
   const openRelease = (rider: DriverRider) => {
     const contacts = driverFamilyContacts(rider, trip, students, familyById);
     setReleaseRider(rider);
-    setReleaseMethod(contacts.length ? 'authorized_contact' : 'office_override');
+    const canUseOfficeApproval = canApproveOffice && trip.driverId !== currentUserId;
+    setReleaseMethod(contacts.length ? 'authorized_contact' : canUseOfficeApproval ? 'office_override' : 'id_checked');
     setReleaseContactId(contacts[0]?.id ?? '');
     setReleaseRecipientName('');
     setReleaseNote('');
@@ -442,21 +496,36 @@ function DrivingScreen({
 
   const saveRelease = async () => {
     if (!releaseRider) return;
-    if (releaseMethod !== 'office_override' && !releaseContactId) {
+    if (releaseMethod === 'authorized_contact' && !releaseContactId) {
       toast({ variant: 'destructive', title: 'Choose an approved contact' });
       return;
     }
-    if (releaseMethod === 'office_override' && (!releaseRecipientName.trim() || !releaseNote.trim())) {
-      toast({ variant: 'destructive', title: 'Add the recipient name and an office note' });
+    if (releaseMethod !== 'authorized_contact' && !releaseRecipientName.trim()) {
+      toast({ variant: 'destructive', title: 'Add the name of the person who received the rider' });
       return;
+    }
+    if (releaseMethod === 'office_override' && !releaseNote.trim()) {
+      toast({ variant: 'destructive', title: 'Add an office note' });
+      return;
+    }
+    let correctionReason: string | null = null;
+    if (trip.releases?.[releaseRider.id]) {
+      if (!canApproveOffice || trip.driverId === currentUserId) {
+        toast({ variant: 'destructive', title: 'Ask another Office staff member to correct this release' });
+        return;
+      }
+      const enteredReason = window.prompt('Why is the Office correcting this release? This note will stay in the trip record.')?.trim();
+      if (!enteredReason) return;
+      correctionReason = enteredReason;
     }
     setReleaseSaving(true);
     try {
       await transport.recordOfficeBusRelease(trip, releaseRider.id, {
         method: releaseMethod,
-        contactId: releaseMethod === 'office_override' ? null : releaseContactId,
-        recipientName: releaseMethod === 'office_override' ? releaseRecipientName.trim() : null,
+        contactId: releaseMethod === 'authorized_contact' ? releaseContactId : null,
+        recipientName: releaseMethod === 'authorized_contact' ? null : releaseRecipientName.trim(),
         note: releaseNote.trim() || null,
+        correctionReason,
       });
       toast({ title: 'Release recorded', description: 'The office can now see who received this rider.' });
       setReleaseRider(null);
@@ -489,9 +558,11 @@ function DrivingScreen({
         description:
           result.notificationStatus === 'failed'
             ? 'The report is safe, but the family update could not be queued. Please tell the office.'
-            : result.notificationStatus === 'no_recipients'
-              ? 'The report is safe, but no opted-in family email was found.'
-              : result.notificationsQueued > 0
+            : result.notificationStatus === 'office_only'
+              ? 'The report is safe and stays with the School Office. No family message was sent.'
+              : result.notificationStatus === 'no_recipients'
+                ? 'The report is safe, but no opted-in family email was found.'
+                : result.notificationsQueued > 0
                 ? `It will appear on the live page, and ${result.notificationsQueued} family update${result.notificationsQueued === 1 ? '' : 's'} will be queued.`
                 : 'It will appear on the live Transportation page.',
       });
@@ -502,6 +573,20 @@ function DrivingScreen({
     }
   };
 
+  const acknowledgeException = async (exceptionId: string) => {
+    if (!ensureOnline() || acknowledgingExceptionId) return;
+    setAcknowledgingExceptionId(exceptionId);
+    try {
+      await transport.acknowledgeOfficeBusRunException(trip.id, exceptionId);
+      toast({ title: 'Exception acknowledged', description: 'The School Office can see that you received it.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not acknowledge the exception', description: (error as Error).message });
+    } finally {
+      setAcknowledgingExceptionId(null);
+    }
+  };
+
+  const exceptions = Object.values(trip.exceptions ?? {}).sort((a, b) => b.createdAt - a.createdAt);
   const unresolved = riders.filter((k) => status[k.id]?.status !== 'off' && status[k.id]?.status !== 'absent');
   const missingReleaseRiders = useMemo(() => {
     const ids = new Set(missingReleaseStudentIds(trip));
@@ -565,7 +650,7 @@ function DrivingScreen({
             ? 'bg-blue-800 text-white'
             : !isOnline
               ? 'bg-slate-700 text-white'
-              : geo === 'on' && !syncError
+              : geo === 'on' && !syncError && !trackerIgnored
               ? 'bg-teal-700 text-white'
             : geo === 'waiting'
               ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
@@ -578,7 +663,9 @@ function DrivingScreen({
           ? 'Saved copy. Reopen the live run before making changes.'
           : !isOnline
             ? 'No internet connection. Reconnect before saving rider changes or ending this run.'
-            : geo === 'on' && syncError
+            : geo === 'on' && trackerIgnored
+              ? 'A GPS tracker is assigned to this bus. The driver phone will not send location.'
+              : geo === 'on' && syncError
             ? 'Location found, but the office has not received it yet. Trying again…'
             : geo === 'on' && lastServerAt
               ? 'Sharing bus location with the office'
@@ -726,6 +813,26 @@ function DrivingScreen({
             </Button>
           </div>
 
+          {exceptions.length > 0 ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm dark:border-amber-900 dark:bg-amber-950/30">
+              <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Temporary route exceptions</h2>
+              <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">Acknowledge anything the Office needs you to know. This does not message families.</p>
+              <ul className="mt-3 space-y-2">
+                {exceptions.map((exception) => (
+                  <li key={exception.id} className="rounded-xl border border-amber-200/80 bg-white/80 p-3 text-sm dark:border-amber-900 dark:bg-slate-900/60">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium">{BUS_EXCEPTION_LABEL[exception.kind]}{exception.stopId ? ` · ${activeRoute.stops.find((stop) => stop.id === exception.stopId)?.name ?? 'Stop'}` : ''}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{exception.status === 'resolved' ? 'Resolved' : exceptionNow == null ? 'Checking…' : exception.expiresAt <= exceptionNow ? 'Expired' : exception.status === 'acknowledged' ? 'Acknowledged' : 'Needs acknowledgment'}</span>
+                    </div>
+                    {exception.note ? <p className="mt-1 text-sm">{exception.note}</p> : null}
+                    <p className="mt-1 text-xs text-muted-foreground">Added {clockLabel(exception.createdAt)} · expires {clockLabel(exception.expiresAt)}</p>
+                    {exception.status === 'open' && exceptionNow != null && exception.expiresAt > exceptionNow ? <Button type="button" variant="outline" className="mt-3 h-10 w-full rounded-lg" disabled={readOnly || acknowledgingExceptionId === exception.id} onClick={() => void acknowledgeException(exception.id)}>{acknowledgingExceptionId === exception.id ? 'Saving…' : 'Acknowledge'}</Button> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {Object.keys(trip.stopArrivals ?? {}).length > 0 ? (
             <details className="rounded-2xl bg-white p-4 text-sm shadow-sm dark:bg-slate-900">
               <summary className="cursor-pointer font-medium">Stops done ({Object.keys(trip.stopArrivals ?? {}).length})</summary>
@@ -849,7 +956,6 @@ function DrivingScreen({
                 {([
                   ['authorized_contact', 'Family contact'],
                   ['id_checked', 'ID checked'],
-                  ['office_override', 'Office approved'],
                 ] as const).map(([value, label]) => (
                   <button
                     key={value}
@@ -864,8 +970,21 @@ function DrivingScreen({
                     {label}
                   </button>
                 ))}
+                {canApproveOffice && trip.driverId !== currentUserId ? (
+                  <button
+                    type="button"
+                    aria-pressed={releaseMethod === 'office_override'}
+                    onClick={() => setReleaseMethod('office_override')}
+                    className={cn(
+                      'rounded-lg border px-2 py-2 text-xs font-medium',
+                      releaseMethod === 'office_override' ? 'border-teal-700 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-100' : 'border-slate-200 dark:border-slate-700',
+                    )}
+                  >
+                    Office approved
+                  </button>
+                ) : null}
               </div>
-              {releaseMethod === 'office_override' ? (
+              {releaseMethod !== 'authorized_contact' ? (
                 <Input value={releaseRecipientName} onChange={(e) => setReleaseRecipientName(e.target.value)} placeholder="Recipient's name" className="rounded-xl" />
               ) : (
                 <select
