@@ -54,6 +54,14 @@ export function schoolPathAllowedByGate(
   if (section === 'reports') {
     return scopes.has('reports') || scopes.has('admin');
   }
+  // Full-screen attendance workspace (admins; school passcode reaches its admin sign-in prompt).
+  if (section === 'attendance') {
+    return scopes.has('portal') || scopes.has('admin');
+  }
+  // Shareable headcount roster: staff only (school passcode reaches the page's own staff sign-in prompt).
+  if (section === 'attendance-roster') {
+    return scopes.has('portal') || scopes.has('admin') || scopes.has('teacher') || scopes.has('reports');
+  }
   if (section === 'librarian') {
     if (pathname === prefix + 'librarian' || pathname === prefix + 'librarian/') {
       return true;

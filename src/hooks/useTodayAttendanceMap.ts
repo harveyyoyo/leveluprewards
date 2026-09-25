@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, limit, orderBy, query } from 'firebase/firestore';
+import { collection, orderBy, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { startOfLocalDayMs, useMinuteClock } from '@/hooks/useMinuteClock';
 import type { AttendanceLogEntry } from '@/lib/types';
 
 export type TodayAttendanceStatus = 'unknown' | 'absent' | 'on-time' | 'late';
@@ -10,13 +11,8 @@ export type TodayAttendanceStatus = 'unknown' | 'absent' | 'on-time' | 'late';
 export type TodayAttendanceRecord = {
   status: TodayAttendanceStatus;
   logId: string;
+  signedInAt: number;
 };
-
-function startOfLocalDayMs(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
 
 /** Latest sign-in per student for today (when Attendance pillar is in use). */
 export function useTodayAttendanceRecords(
@@ -24,14 +20,20 @@ export function useTodayAttendanceRecords(
   enabled: boolean,
 ): Map<string, TodayAttendanceRecord> {
   const firestore = useFirestore();
-  const dayStart = useMemo(() => startOfLocalDayMs(), []);
+  // Moves to the next day at midnight, so a screen left on overnight starts fresh.
+  const dayStart = startOfLocalDayMs(useMinuteClock());
 
+  // Every check-in since midnight (no cap), so early arrivals at a big school aren't dropped.
   const logQuery = useMemoFirebase(
     () =>
       enabled && schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'attendanceLog'), orderBy('signedInAt', 'desc'), limit(250))
+        ? query(
+            collection(firestore, 'schools', schoolId, 'attendanceLog'),
+            where('signedInAt', '>=', dayStart),
+            orderBy('signedInAt', 'desc'),
+          )
         : null,
-    [enabled, firestore, schoolId],
+    [enabled, firestore, schoolId, dayStart],
   );
   const { data: logs } = useCollection<AttendanceLogEntry>(logQuery);
 
@@ -45,6 +47,7 @@ export function useTodayAttendanceRecords(
       map.set(entry.studentId, {
         status: entry.onTime === false ? 'late' : 'on-time',
         logId,
+        signedInAt: Number(entry.signedInAt || 0),
       });
     }
     return map;

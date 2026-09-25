@@ -326,10 +326,18 @@ async function isDeveloper(context: functions.https.CallableContext): Promise<bo
   if (!context.auth?.uid) return false;
   const db = admin.firestore();
   try {
-    const doc = await db.collection("appConfig").doc("developerAllowlist").get();
-    if (!doc.exists) return false;
-    const data = doc.data();
-    return Array.isArray(data?.uids) && data!.uids.includes(context.auth.uid);
+    const uid = context.auth.uid;
+    // Two allow-lists exist; sign-in reads `global.developerUids`, older code used `developerAllowlist.uids`.
+    const [legacy, global] = await Promise.all([
+      db.collection("appConfig").doc("developerAllowlist").get(),
+      db.collection("appConfig").doc("global").get(),
+    ]);
+    const legacyUids = legacy.data()?.uids;
+    const globalUids = global.data()?.developerUids;
+    return (
+      (Array.isArray(legacyUids) && legacyUids.includes(uid)) ||
+      (Array.isArray(globalUids) && globalUids.includes(uid))
+    );
   } catch (e) {
     return false;
   }
@@ -398,12 +406,30 @@ exports.setAttendanceConfig = functions.https.onCall(
       if (typeof config.categoryId === "string" && config.categoryId.length > 0) {
         payload.categoryId = config.categoryId;
       }
-      if (typeof config.attendanceTimeZone === "string" && String(config.attendanceTimeZone).trim().length > 0) {
-        payload.attendanceTimeZone = String(config.attendanceTimeZone).trim();
+      // Time zone has its own control that saves on its own: leave it alone when not sent,
+      // clear it when sent empty.
+      if (typeof config.attendanceTimeZone === "string") {
+        const tz = String(config.attendanceTimeZone).trim();
+        payload.attendanceTimeZone = tz.length > 0 ? tz : FieldValue.delete();
+      }
+      if (config.attendanceQuietAfterMinutes !== undefined && config.attendanceQuietAfterMinutes !== null) {
+        payload.attendanceQuietAfterMinutes = toFiniteNumber(config.attendanceQuietAfterMinutes, -1);
+      }
+
+      // Merge so fields this form doesn't manage (e.g. set by other screens) survive a save,
+      // but clear the optional fields this form owns when they were left empty.
+      const OWNED_OPTIONAL_FIELDS = [
+        "classPeriodAssignments",
+        "classPeriodAssignmentsByDay",
+        "enabledClassIds",
+        "categoryId",
+      ];
+      for (const key of OWNED_OPTIONAL_FIELDS) {
+        if (!(key in payload)) payload[key] = FieldValue.delete();
       }
 
       const configRef = db.collection("schools").doc(schoolId).collection("attendance").doc("config");
-      await configRef.set(payload);
+      await configRef.set(payload, { merge: true });
       return { success: true };
     } catch (err: any) {
       if (err?.code && err.code.startsWith("functions/")) {
@@ -738,6 +764,37 @@ function queueContactAlerts(args: {
 
 
 
+/**
+ * Sign-in time on the school's clock. The server runs on UTC, so a bare
+ * toLocaleTimeString() would tell parents 1:05 PM for an 8:05 AM sign-in.
+ */
+async function formatSignInTime(
+  db: admin.firestore.Firestore,
+  schoolId: string,
+  logData: admin.firestore.DocumentData
+): Promise<string> {
+  const at = new Date(Number(logData.signedInAt) || Date.now());
+  let tz = typeof logData.timeZone === "string" ? logData.timeZone.trim() : "";
+  if (!tz) {
+    try {
+      const cfg = await db.collection("schools").doc(schoolId).collection("attendance").doc("config").get();
+      const raw = cfg.data()?.attendanceTimeZone;
+      tz = typeof raw === "string" ? raw.trim() : "";
+    } catch {
+      tz = "";
+    }
+  }
+  const opts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
+  if (tz) {
+    try {
+      return at.toLocaleTimeString("en-US", { ...opts, timeZone: tz });
+    } catch {
+      // Unknown zone name — fall through to a clearly labelled UTC time.
+    }
+  }
+  return at.toLocaleTimeString("en-US", { ...opts, timeZone: "UTC", timeZoneName: "short" });
+}
+
 /** Triggered when a student signs in via the attendance kiosk. */
 export const onAttendanceLogCreated = functions.firestore
   .document("schools/{schoolId}/attendanceLog/{logId}")
@@ -771,7 +828,7 @@ export const onAttendanceLogCreated = functions.firestore
     const studentName = logData.studentName || "A student";
     const status = logData.onTime ? "on time" : "signed in";
     const period = logData.periodLabel ? ` for ${logData.periodLabel}` : "";
-    const message = `${studentName} ${status}${period} at ${new Date(logData.signedInAt).toLocaleTimeString()}.`;
+    const message = `${studentName} ${status}${period} at ${await formatSignInTime(db, schoolId, logData)}.`;
 
     const alerts: Promise<any>[] = [];
 

@@ -1,55 +1,27 @@
 'use client';
 
 import React from 'react';
-import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ClipboardList, Clock3, ExternalLink } from 'lucide-react';
 import {
   StaffPortalSectionCard,
   StaffPortalSectionCardContent,
 } from '@/components/staff/StaffPortalSection';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
-import { AttendanceHeadcountPrintDialog } from '@/components/attendance/AttendanceHeadcountPrintDialog';
-import { RecessAttendanceSection } from '@/components/recess/RecessAttendanceSection';
+import { AttendanceClockBar } from '@/components/attendance/AttendanceClockBar';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
-import { AttendanceTodayBoard } from '@/components/attendance/AttendanceTodayBoard';
-import { AttendanceScheduleManager } from '@/components/attendance/AttendanceScheduleManager';
-import { AttendanceRulesSection } from '@/components/attendance/AttendanceRulesSection';
-import { AttendanceHistorySection } from '@/components/attendance/AttendanceHistorySection';
+import { Button } from '@/components/ui/button';
+import { openStandalonePage } from '@/lib/openStandalonePage';
 
+/**
+ * Attendance runs as its own full-screen page (like Classroom and Library).
+ * This tab is the launcher, with the clock and class period for a quick look.
+ */
 export function AdminAttendanceTab(props: any) {
-  const {
-    schoolId,
-    students = [],
-    teachers = [],
-    selectedAttendanceTeacherId,
-    setSelectedAttendanceTeacherId,
-    teacherAttendanceConfig,
-    teacherAttendanceRewardsLoading,
-    teacherAttendanceRewards,
-    ruleDrafts,
-    setRuleDrafts,
-    savingRuleId,
-    saveTeacherRewardRule,
-    deleteTeacherRewardRule,
-    classes = [],
-    attendancePeriodsLoading,
-    attendancePeriods = [],
-    categories = [],
-    handleSaveTeacherAttendanceConfig,
-    teacherAttendanceSaving,
-    setTeacherAttendanceConfigState,
-    attendanceConfig,
-    setAttendanceConfigState,
-    attendanceConfigSaving,
-    handleSaveAttendanceConfig,
-    getAttendanceConfig,
-    setAttendanceConfig,
-    schoolName,
-    settings,
-    updateSettings,
-  } = props;
-
-  const [mainSection, setMainSection] = React.useState<'today' | 'periods' | 'rules' | 'recess' | 'history'>('today');
+  const { schoolId, attendancePeriods, attendanceConfig } = props;
+  const attendanceUrl = `/${schoolId}/attendance`;
 
   return (
     <StaffPortalTabPanel
@@ -57,107 +29,53 @@ export function AdminAttendanceTab(props: any) {
       trailing={
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <TabWalkthroughHeaderAction />
-          <AttendanceHeadcountPrintDialog
-            schoolName={schoolName || 'School'}
-            students={students || []}
-            classes={classes || []}
-          />
+          {/* Opens in its own tab so the link can be shared with other staff and printed. */}
+          <Button asChild variant="outline" size="sm" className="h-10 shrink-0 gap-2 rounded-xl px-3.5 font-bold">
+            <Link href={`/${schoolId}/attendance-roster`} target="_blank" rel="noopener">
+              <ClipboardList className="h-4 w-4 text-primary" aria-hidden="true" />
+              Daily Headcount
+            </Link>
+          </Button>
           <AttendanceSetupWizard variant="admin" />
         </div>
       }
     >
       <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
-        <StaffPortalSectionCardContent className="p-4 md:p-6 space-y-6">
-          <ContentSectionTreeNav
-            items={[
-              { id: 'today', label: "Today's Board" },
-              { id: 'periods', label: 'Bell Schedule' },
-              { id: 'rules', label: 'Points & Rules' },
-              { id: 'recess', label: 'Room Passes' },
-              { id: 'history', label: 'History & Reports' },
-            ]}
-            value={mainSection}
-            onValueChange={(id) =>
-              setMainSection(id as 'today' | 'periods' | 'rules' | 'recess' | 'history')
-            }
-            className="mb-2"
-          />
-
-          {/* 1. Today's Live Board */}
-          {mainSection === 'today' && (
-            <div className="animate-in fade-in-50 duration-200">
-              <AttendanceTodayBoard
-                schoolId={schoolId}
-                students={students}
-                classes={classes}
-                teachers={teachers}
-                periods={attendancePeriods}
-                attendanceConfig={attendanceConfig}
-                variant="admin"
-              />
-            </div>
+        <StaffPortalSectionCardContent className="space-y-6 p-4 md:p-6">
+          {schoolId && (
+            <AttendanceClockBar
+              schoolId={schoolId}
+              periods={attendancePeriods}
+              timeZone={attendanceConfig ? attendanceConfig.attendanceTimeZone ?? null : undefined}
+            />
           )}
-
-          {/* 2. Bell Schedule & Periods */}
-          {mainSection === 'periods' && schoolId && (
-            <div className="animate-in fade-in-50 duration-200">
-              <AttendanceScheduleManager schoolId={schoolId} />
+          <div className="flex min-h-[min(50vh,480px)] flex-col items-center justify-center gap-7 px-6 py-10 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-sky-600 shadow-2xl shadow-emerald-900/20"
+            >
+              <Clock3 className="h-10 w-10 text-white" aria-hidden />
+            </motion.div>
+            <div className="max-w-md space-y-3">
+              <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Attendance</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Today&apos;s board, bell schedule, points, room passes, and history — on a full screen.
+              </p>
             </div>
-          )}
-
-          {/* 3. Points & Rules */}
-          {mainSection === 'rules' && (
-            <div className="animate-in fade-in-50 duration-200">
-              <AttendanceRulesSection
-                schoolId={schoolId}
-                teachers={teachers}
-                selectedAttendanceTeacherId={selectedAttendanceTeacherId}
-                setSelectedAttendanceTeacherId={setSelectedAttendanceTeacherId}
-                teacherAttendanceConfig={teacherAttendanceConfig}
-                teacherAttendanceRewardsLoading={teacherAttendanceRewardsLoading}
-                teacherAttendanceRewards={teacherAttendanceRewards}
-                ruleDrafts={ruleDrafts}
-                setRuleDrafts={setRuleDrafts}
-                savingRuleId={savingRuleId}
-                saveTeacherRewardRule={saveTeacherRewardRule}
-                deleteTeacherRewardRule={deleteTeacherRewardRule}
-                classes={classes}
-                attendancePeriodsLoading={attendancePeriodsLoading}
-                attendancePeriods={attendancePeriods}
-                categories={categories}
-                handleSaveTeacherAttendanceConfig={handleSaveTeacherAttendanceConfig}
-                teacherAttendanceSaving={teacherAttendanceSaving}
-                setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
-                attendanceConfig={attendanceConfig}
-                setAttendanceConfigState={setAttendanceConfigState}
-                attendanceConfigSaving={attendanceConfigSaving}
-                handleSaveAttendanceConfig={handleSaveAttendanceConfig}
-                getAttendanceConfig={getAttendanceConfig}
-                setAttendanceConfig={setAttendanceConfig}
-                settings={settings}
-                updateSettings={updateSettings}
-              />
-            </div>
-          )}
-
-          {/* 4. Room Passes */}
-          {mainSection === 'recess' && schoolId && (
-            <div className="animate-in fade-in-50 duration-200">
-              <RecessAttendanceSection schoolId={schoolId} variant="admin" />
-            </div>
-          )}
-
-          {/* 5. History & Reports */}
-          {mainSection === 'history' && schoolId && (
-            <div className="animate-in fade-in-50 duration-200">
-              <AttendanceHistorySection
-                schoolId={schoolId}
-                students={students}
-                classes={classes}
-                teachers={teachers}
-              />
-            </div>
-          )}
+            <Button
+              asChild
+              size="lg"
+              className="min-w-[14rem] rounded-full bg-gradient-to-r from-emerald-600 to-sky-600 px-8 text-base font-bold shadow-lg hover:from-emerald-500 hover:to-sky-500"
+            >
+              <a href={attendanceUrl} onClick={(event) => openStandalonePage(attendanceUrl, event)}>
+                <ExternalLink className="mr-2 h-5 w-5" aria-hidden />
+                Open Attendance
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground">Opens as its own page</p>
+          </div>
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
     </StaffPortalTabPanel>

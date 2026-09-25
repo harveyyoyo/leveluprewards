@@ -868,6 +868,8 @@ export type ClassroomSessionData = {
   groups?: ClassroomSessionGroups;
   randomPick?: ClassroomSessionRandomPick;
   rollMarks?: Record<string, 'present' | 'absent' | 'late'>;
+  /** "Start new class" time: check-ins before it are ignored on this class screen. */
+  attendanceSince?: number;
   raffleProjector?: ClassroomSessionRaffleProjector;
 };
 
@@ -916,7 +918,11 @@ function normalizeSessionPayload(parsed: unknown): ClassroomSessionData {
     const randomPick = normalizeSessionRandomPick(record.randomPick);
     const rollMarks = normalizeSessionRollMarks(record.rollMarks);
     const raffleProjector = normalizeSessionRaffleProjector(record.raffleProjector);
-    return { totals, lastAward, activity, groups, randomPick, rollMarks, raffleProjector };
+    const attendanceSince =
+      typeof record.attendanceSince === 'number' && Number.isFinite(record.attendanceSince)
+        ? record.attendanceSince
+        : undefined;
+    return { totals, lastAward, activity, groups, randomPick, rollMarks, attendanceSince, raffleProjector };
   }
   return { totals: record as ClassroomSessionTotals, lastAward: {}, activity: [] };
 }
@@ -1122,6 +1128,20 @@ export function setClassroomSessionRollMarks(
   const current = loadClassroomSession(schoolId, scope, classId);
   const next: ClassroomSessionData = { ...current, rollMarks: rollMarks ?? undefined };
   if (!rollMarks || !Object.keys(rollMarks).length) delete next.rollMarks;
+  saveClassroomSession(schoolId, scope, classId, next);
+  return next;
+}
+
+/** Clears teacher marks and ignores earlier check-ins on this class screen from `at` on. */
+export function startClassroomSessionAttendance(
+  schoolId: string,
+  scope: string,
+  classId: string,
+  at: number,
+): ClassroomSessionData {
+  const current = loadClassroomSession(schoolId, scope, classId);
+  const next: ClassroomSessionData = { ...current, attendanceSince: at };
+  delete next.rollMarks;
   saveClassroomSession(schoolId, scope, classId, next);
   return next;
 }

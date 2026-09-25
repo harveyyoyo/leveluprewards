@@ -34,13 +34,23 @@ import {
   recessReasonBadgeClasses,
   type RecessReasonMeta,
 } from '@/lib/recess/recessReasons';
-import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import { recessReasonHasOwnLimit, resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { recessPassScanCodeFor } from '@/lib/recess/recessPassScanCode';
 import { PrintBarcode } from '@/components/print/PrintBarcode';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { usePrint } from '@/components/providers/PrintProvider';
 
-const LIMIT_OPTIONS = [5, 10, 15] as const;
+const LIMIT_OPTIONS = [5, 10, 15, 20] as const;
+/** Choices for one pass's own limit. */
+const PASS_LIMIT_OPTIONS = [2, 3, 5, 7, 10, 15, 20, 30, 45, 60] as const;
+const SAME_AS_DEFAULT = 'default';
 
 function formatClock(ts: number): string {
   if (!Number.isFinite(ts)) return '';
@@ -63,6 +73,14 @@ export function RecessAttendanceSection({
   const { settings, updateSettings } = useSettings();
   const { setRecessPassesToPrint } = usePrint();
   const maxMinutes = resolveRecessMaxMinutes(settings);
+  const limitFor = (reason: RecessReason) => resolveRecessMaxMinutes(settings, reason);
+
+  const setPassLimit = (reason: RecessReason, value: string) => {
+    const next = { ...(settings.recessMaxMinutesByReason ?? {}) };
+    if (value === SAME_AS_DEFAULT) delete next[reason];
+    else next[reason] = Number(value);
+    updateSettings({ recessMaxMinutesByReason: next });
+  };
 
   const [passPrintJob, setPassPrintJob] = useState<RecessReasonMeta[] | null>(null);
   const [selectedPassReasons, setSelectedPassReasons] = useState<Set<RecessReason>>(
@@ -149,7 +167,8 @@ export function RecessAttendanceSection({
             <ul className="space-y-2">
               {outNow.map((pass) => {
                 const elapsed = now - (pass.startedAt || now);
-                const over = isBathroomOverLimit(elapsed, maxMinutes);
+                const passLimit = limitFor(pass.reason);
+                const over = isBathroomOverLimit(elapsed, passLimit);
                 const meta = RECESS_REASON_BY_VALUE.get(pass.reason);
                 const Icon = meta?.icon ?? DoorOpen;
                 return (
@@ -175,7 +194,8 @@ export function RecessAttendanceSection({
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {meta?.label ?? pass.reason}
-                          {pass.note ? ` · ${pass.note}` : ''} · out since {formatClock(pass.startedAt)}
+                          {pass.note ? ` · ${pass.note}` : ''} · out since {formatClock(pass.startedAt)} ·{' '}
+                          {passLimit} min limit
                         </p>
                       </div>
                     </div>
@@ -331,33 +351,89 @@ export function RecessAttendanceSection({
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Time limit before over-limit alert</Label>
-              <div className="flex gap-2">
-                {LIMIT_OPTIONS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => updateSettings({ recessMaxMinutes: m })}
-                    aria-pressed={maxMinutes === m}
-                    className={cn(
-                      'flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors sm:max-w-[6rem]',
-                      maxMinutes === m
-                        ? 'border-primary bg-ring/10 text-ring'
-                        : 'border-border bg-background text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    {m} min
-                  </button>
-                ))}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs font-semibold">Time limits</Label>
+                <p className="text-xs text-muted-foreground">
+                  A student out longer than their pass&apos;s limit turns red. Give each pass its own limit, or let it
+                  use the default.
+                </p>
               </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground">Default for every pass</p>
+                <div className="flex gap-2" role="group" aria-label="Default time limit">
+                  {LIMIT_OPTIONS.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => updateSettings({ recessMaxMinutes: m })}
+                      aria-pressed={maxMinutes === m}
+                      className={cn(
+                        'flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors sm:max-w-[6rem]',
+                        maxMinutes === m
+                          ? 'border-primary bg-ring/10 text-ring'
+                          : 'border-border bg-background text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      {m} min
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ul className="divide-y overflow-hidden rounded-xl border bg-background">
+                {RECESS_REASONS.map((r) => {
+                  const Icon = r.icon;
+                  const own = recessReasonHasOwnLimit(settings, r.value);
+                  const current = limitFor(r.value);
+                  // Keep an unusual saved value selectable even if it isn't in the usual list.
+                  const options = PASS_LIMIT_OPTIONS.includes(current as (typeof PASS_LIMIT_OPTIONS)[number])
+                    ? PASS_LIMIT_OPTIONS
+                    : [...PASS_LIMIT_OPTIONS, current].sort((a, b) => a - b);
+                  return (
+                    <li key={r.value} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={cn(
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+                            recessReasonBadgeClasses(r.value),
+                          )}
+                        >
+                          <Icon className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{r.label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {own ? `Own limit: ${current} min` : `Uses the default (${maxMinutes} min)`}
+                          </p>
+                        </div>
+                      </div>
+                      <Select
+                        value={own ? String(current) : SAME_AS_DEFAULT}
+                        onValueChange={(v) => setPassLimit(r.value, v)}
+                      >
+                        <SelectTrigger className="h-10 w-40 rounded-xl" aria-label={`${r.label} time limit`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={SAME_AS_DEFAULT}>Default ({maxMinutes} min)</SelectItem>
+                          {options.map((m) => (
+                            <SelectItem key={m} value={String(m)}>
+                              {m} min
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </StaffPortalSectionCardContent>
         </StaffPortalSectionCard>
       ) : (
         <p className="rounded-xl border bg-muted/30 px-4 py-3 text-sm text-muted-foreground leading-relaxed">
-          Kiosk scanning and the {maxMinutes}-minute over-limit alert are school-wide settings. Your school admin
-          can change them under Attendance → Room passes.
+          Kiosk scanning and the time limit for each pass are school-wide settings. Your school admin
+          can change them under Attendance → Room Passes.
         </p>
       )}
 

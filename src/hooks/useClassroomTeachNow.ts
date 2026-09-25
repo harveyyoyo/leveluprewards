@@ -9,7 +9,7 @@ import { useActiveRecessPasses } from '@/hooks/useActiveRecessPasses';
 import { useToast } from '@/hooks/use-toast';
 import { endBathroomPass } from '@/lib/db/bathroom';
 import { endRecessCheckout } from '@/lib/db/recess';
-import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import { recessLimitFor } from '@/lib/recess/recessKioskSettings';
 import {
   classroomWhosOutPassLabel,
   mergeClassroomWhosOutPasses,
@@ -49,7 +49,11 @@ export function useClassroomTeachNow({
   const attendanceOn = isPillarOn(settings, 'payAttendance');
   const seatingScope = variant === 'admin' ? 'admin' : activeTeacherId || 'staff';
   const bathroomMaxMinutes = Math.min(30, Math.max(1, settings.bathroomMaxMinutes ?? 5));
-  const recessMaxMinutes = resolveRecessMaxMinutes(settings);
+  // Each pass type can have its own limit.
+  const recessMaxMinutes = useMemo(
+    () => recessLimitFor({ recessMaxMinutes: settings.recessMaxMinutes, recessMaxMinutesByReason: settings.recessMaxMinutesByReason }),
+    [settings.recessMaxMinutes, settings.recessMaxMinutesByReason],
+  );
 
   const availableClasses = useMemo(
     () => classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),

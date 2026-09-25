@@ -287,4 +287,86 @@ describe('resolveAttendanceSettingsForSignIn', () => {
       expect(r.settings.onTimeWindowMinutes).toBe(DEFAULT_ATTENDANCE_SETTINGS.onTimeWindowMinutes);
     }
   });
+
+  it('uses a co-teacher reward rule when the class has more than one teacher', () => {
+    const nowMs = new Date('2026-01-05T08:30:00Z').getTime();
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes: [{ id: 'c1', primaryTeacherId: 't1', teacherIds: ['t1', 't2'] }],
+      periods,
+      teacherRewards: [
+        {
+          id: 'r2',
+          teacherId: 't2',
+          enabled: true,
+          classId: 'c1',
+          periodId: 'p1',
+          pointsForSignIn: 4,
+          pointsForOnTime: 1,
+        },
+      ],
+      teacherConfigRaw: null,
+      schoolConfigRaw: null,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('reward_rule');
+      expect(r.settings.pointsForSignIn).toBe(4);
+      expect(r.settings.teacherId).toBe('t2');
+    }
+  });
+
+  it('uses a co-teacher settings when the primary teacher has none', () => {
+    const nowMs = new Date('2026-01-05T12:00:00Z').getTime();
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes: [{ id: 'c1', teacherIds: ['t1', 't2'] }],
+      periods,
+      teacherRewards: [],
+      teacherConfigRaw: null,
+      teacherConfigsRaw: { t1: null, t2: { pointsForSignIn: 3, pointsForOnTime: 2 } },
+      schoolConfigRaw: { pointsForSignIn: 7, pointsForOnTime: 3 },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('teacher_legacy');
+      expect(r.settings.pointsForSignIn).toBe(3);
+      expect(r.settings.teacherId).toBe('t2');
+    }
+  });
+
+  it('uses the sign-in screen time zone only when the school never picked one', () => {
+    // 13:30 UTC is 08:30 in New York — inside Period 1 there, but not in UTC.
+    const nowMs = new Date('2026-01-05T13:30:00Z').getTime();
+    const rule = {
+      id: 'r1',
+      enabled: true,
+      classId: 'c1',
+      periodId: 'p1',
+      pointsForSignIn: 5,
+      pointsForOnTime: 2,
+    };
+    const base = { nowMs, student, classes, periods, teacherRewards: [rule], teacherConfigRaw: null };
+
+    const unset = resolveAttendanceSettingsForSignIn({
+      ...base,
+      schoolConfigRaw: null,
+      fallbackTimeZone: 'America/New_York',
+    });
+    expect(unset.ok && unset.source).toBe('reward_rule');
+    expect(unset.ok && unset.settings.attendanceTimeZone).toBe('America/New_York');
+
+    const picked = resolveAttendanceSettingsForSignIn({
+      ...base,
+      schoolConfigRaw: { attendanceTimeZone: 'UTC' },
+      fallbackTimeZone: 'America/New_York',
+    });
+    expect(picked.ok && picked.source).not.toBe('reward_rule');
+    expect(picked.ok && picked.settings.attendanceTimeZone).toBe('UTC');
+
+    const junk = resolveAttendanceSettingsForSignIn({ ...base, schoolConfigRaw: null, fallbackTimeZone: 'Not/AZone' });
+    expect(junk.ok && junk.source).not.toBe('reward_rule');
+  });
 });
