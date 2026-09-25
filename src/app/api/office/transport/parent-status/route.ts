@@ -12,6 +12,7 @@ import {
   familyStopPlans,
   latestTripForRoute,
   nextStop,
+  orderedStops,
   routeForTrip,
   routeLabel,
   transportPhoneStatusText,
@@ -86,6 +87,11 @@ export async function GET(req: NextRequest) {
       const stop = trip ? nextStop(activeRoute, trip) : null;
       const location = trip?.location as OfficeBusLocation | null | undefined;
       const eta = trip && location && stop ? etaMinutes(location, stop) : null;
+      const routeStops = trip ? orderedStops(activeRoute, trip.run) : [];
+      const completedStops = trip ? routeStops.filter((routeStop) => trip.stopArrivals?.[routeStop.id] != null).length : 0;
+      const routeProgress = routeStops.length > 0
+        ? { completed: completedStops, total: routeStops.length, percent: Math.round((completedStops / routeStops.length) * 100) }
+        : null;
       return {
         routeId,
         busLabel: routeLabel(activeRoute),
@@ -95,6 +101,7 @@ export async function GET(req: NextRequest) {
         nextStopName: stop?.name ?? null,
         etaMinutes: eta,
         familyStops: familyStopPlans(activeRoute, familyStopIdsByRoute.get(routeId) ?? []),
+        routeProgress,
         lastUpdateAt: safeNumber(location?.at),
         stale: Boolean(location && !isFreshLocation(location, now)),
       };

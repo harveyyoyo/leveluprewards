@@ -14,6 +14,7 @@ export type TransportParentBus = {
   nextStopName: string | null;
   etaMinutes: number | null;
   familyStops: Array<{ name: string; morningTime: string | null; afternoonTime: string | null }>;
+  routeProgress: { completed: number; total: number; percent: number } | null;
   lastUpdateAt: number | null;
   stale: boolean;
 };
