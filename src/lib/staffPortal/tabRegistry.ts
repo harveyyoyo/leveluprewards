@@ -60,7 +60,6 @@ export const STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES = [
 export const STAFF_PORTAL_WELCOME_PILLAR_TABS = [
   'prizes',
   'categories',
-  'bonuspoints',
   'houses',
   'classroom',
   'attendance',
