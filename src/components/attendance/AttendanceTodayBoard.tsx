@@ -1,30 +1,41 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Clock,
-  Filter,
+  ClipboardCopy,
   Loader2,
   PlusCircle,
+  Radio,
   Search,
+  ShieldCheck,
   UserCheck,
   Users,
-  AlertCircle,
   UserX,
-  ListFilter,
-  Sparkles,
-  ChevronDown,
+  X,
 } from 'lucide-react';
-import { collection, limit, orderBy, query } from 'firebase/firestore';
+import { collection, orderBy, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { AttendanceLogEntry, AttendanceScheduleSlot, AttendanceSettings, Class, Student, Teacher } from '@/lib/types';
-import { recordManualAttendance } from '@/lib/db/attendance';
+import { getAttendanceConfig, recordManualAttendance, updateAttendanceStatus } from '@/lib/db/attendance';
+import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
+import {
+  ATTENDANCE_MARK_LABEL,
+  attendanceMarkOf,
+  classesForTeacher,
+  latestLogByStudent,
+  studentDisplayName,
+  studentsForTeacher,
+  type AttendanceMark,
+} from '@/lib/attendance/attendanceStatus';
+import { useMinuteClock } from '@/hooks/useMinuteClock';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -40,6 +51,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 
 export interface AttendanceTodayBoardProps {
@@ -48,705 +78,995 @@ export interface AttendanceTodayBoardProps {
   classes: Class[];
   teachers?: Teacher[];
   periods?: AttendanceScheduleSlot[];
+  /** School attendance settings. Loaded here when the page doesn't pass them (teacher portal). */
   attendanceConfig?: AttendanceSettings | null;
   teacherIdScope?: string;
   variant?: 'admin' | 'teacher';
+  /** The page already shows the clock and class period above (attendance workspace). */
+  hidePeriodInfo?: boolean;
 }
 
-function getStartOfTodayMs(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
+type StatusFilter = 'all' | 'absent' | AttendanceMark;
+
+/** Shared columns for the student list heading and rows (wider screens only). */
+const ROW_GRID = 'md:grid-cols-[minmax(0,1fr)_7.5rem_5.5rem_8rem_3.5rem_14rem] md:gap-x-4';
+
+const MARK_STYLES: Record<AttendanceMark | 'absent', { chip: string; dot: string; icon: React.ElementType }> = {
+  'on-time': {
+    chip: 'bg-emerald-500/12 text-emerald-700 ring-emerald-500/25 dark:text-emerald-300',
+    dot: 'bg-emerald-500',
+    icon: CheckCircle2,
+  },
+  late: {
+    chip: 'bg-amber-500/12 text-amber-800 ring-amber-500/30 dark:text-amber-300',
+    dot: 'bg-amber-500',
+    icon: Clock,
+  },
+  excused: {
+    chip: 'bg-sky-500/12 text-sky-700 ring-sky-500/25 dark:text-sky-300',
+    dot: 'bg-sky-500',
+    icon: ShieldCheck,
+  },
+  absent: {
+    chip: 'bg-muted text-muted-foreground ring-border',
+    dot: 'bg-muted-foreground/40',
+    icon: UserX,
+  },
+};
 
 function parseTimeToMinutes(hhmm: string): number | null {
-  const s = (hhmm || '').trim();
-  const m = s.match(/^(\d{1,2}):(\d{2})$/);
+  const m = (hhmm || '').trim().match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return null;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
-  return h * 60 + min;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/** "8:05 AM" from "08:05". */
+function formatClockTime(hhmm: string): string {
+  const mins = parseTimeToMinutes(hhmm);
+  if (mins == null) return hhmm;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+function initials(s: Student): string {
+  const a = (s.firstName || s.nickname || '?').trim()[0] ?? '?';
+  const b = (s.lastName || '').trim()[0] ?? '';
+  return (a + b).toUpperCase();
+}
+
+function StatusChip({ mark }: { mark: AttendanceMark | 'absent' }) {
+  const style = MARK_STYLES[mark];
+  const Icon = style.icon;
+  return (
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset', style.chip)}>
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {ATTENDANCE_MARK_LABEL[mark]}
+    </span>
+  );
+}
+
+/** Ring showing the share of students in so far. */
+function ProgressRing({ value, size = 88 }: { value: number; size?: number }) {
+  const stroke = 9;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, value));
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} className="fill-none stroke-muted" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c - (clamped / 100) * c}
+          className="fill-none stroke-emerald-500 transition-[stroke-dashoffset] duration-700"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xl font-black leading-none">{clamped}%</span>
+        <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">here</span>
+      </div>
+    </div>
+  );
 }
 
 export function AttendanceTodayBoard({
   schoolId,
-  students,
-  classes,
-  teachers = [],
-  periods = [],
-  attendanceConfig,
+  students: studentsProp,
+  classes: classesProp,
+  periods: periodsProp,
+  attendanceConfig: attendanceConfigProp,
   teacherIdScope,
   variant = 'admin',
+  hidePeriodInfo = false,
 }: AttendanceTodayBoardProps) {
+  // Pages pass null while their lists are still loading; treat that as empty.
+  const students = useMemo(() => studentsProp ?? [], [studentsProp]);
+  const classes = useMemo(() => classesProp ?? [], [classesProp]);
+  const periods = useMemo(() => periodsProp ?? [], [periodsProp]);
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // The teacher portal doesn't pass school settings; load them so points and time zone match the school.
+  const [loadedConfig, setLoadedConfig] = useState<AttendanceSettings | null>(null);
+  useEffect(() => {
+    if (attendanceConfigProp !== undefined || !schoolId || !firestore) return;
+    let cancelled = false;
+    getAttendanceConfig(firestore, schoolId)
+      .then((c) => {
+        if (!cancelled) setLoadedConfig(c);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [attendanceConfigProp, firestore, schoolId]);
+  const attendanceConfig = attendanceConfigProp !== undefined ? attendanceConfigProp : loadedConfig;
+  const timeZone = attendanceConfig?.attendanceTimeZone;
+  const pointsForSignIn = attendanceConfig?.pointsForSignIn ?? 1;
+  const pointsForOnTime = attendanceConfig?.pointsForOnTime ?? 5;
+  const defaultPointsFor = (mark: AttendanceMark) =>
+    mark === 'on-time' ? pointsForSignIn + pointsForOnTime : pointsForSignIn;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'present' | 'on-time' | 'late' | 'absent'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
   const [viewMode, setViewMode] = useState<'roster' | 'feed'>('roster');
 
-  // Manual Check-in Dialog State
+  // Manual check-in dialog
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [checkInStudentId, setCheckInStudentId] = useState<string>('');
-  const [checkInStatus, setCheckInStatus] = useState<'on-time' | 'late' | 'excused'>('on-time');
+  const [checkInStatus, setCheckInStatus] = useState<AttendanceMark>('on-time');
   const [checkInPeriod, setCheckInPeriod] = useState<string>('auto');
   const [checkInCustomPoints, setCheckInCustomPoints] = useState<string>('');
   const [checkInNote, setCheckInNote] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Quick Action row loading ID
-  const [quickActionStudentId, setQuickActionStudentId] = useState<string | null>(null);
+  const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
-  // Realtime live attendance logs today
+  // Ticks every minute so the current period and "today" keep up on a board left open all day.
+  // Uses the school's time zone when one is set, otherwise this screen's clock.
+  const nowMs = useMinuteClock();
+  const schoolClock = getSchoolDayClock(nowMs, timeZone, { whenUnset: 'local' });
+  const nowMin = schoolClock.minutesSinceMidnight;
+  const startOfDay = nowMs - nowMin * 60_000;
+
+  const formatLogTime = (ms: number) => {
+    try {
+      return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(timeZone ? { timeZone } : {}) });
+    } catch {
+      return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+  };
+
+  // Every check-in since midnight, live.
   const logQuery = useMemoFirebase(
     () =>
       schoolId
         ? query(
             collection(firestore, 'schools', schoolId, 'attendanceLog'),
-            orderBy('signedInAt', 'desc'),
-            limit(500)
+            where('signedInAt', '>=', startOfDay),
+            orderBy('signedInAt', 'desc')
           )
         : null,
-    [firestore, schoolId]
+    [firestore, schoolId, startOfDay]
   );
-  const { data: allLogs } = useCollection<AttendanceLogEntry>(logQuery);
+  const { data: todayLogsRaw, isLoading: logsLoading, error: logsError } = useCollection<AttendanceLogEntry>(logQuery);
+  const todayLogs = useMemo(() => todayLogsRaw || [], [todayLogsRaw]);
+  const todayStudentLogMap = useMemo(() => latestLogByStudent(todayLogs), [todayLogs]);
 
-  const startOfDay = useMemo(() => getStartOfTodayMs(), []);
+  const sortedPeriods = useMemo(
+    () =>
+      periods
+        .map((p) => ({ p, start: parseTimeToMinutes(p.startTime), end: parseTimeToMinutes(p.endTime) }))
+        .filter((x): x is { p: AttendanceScheduleSlot; start: number; end: number } => x.start != null && x.end != null)
+        .sort((a, b) => a.start - b.start),
+    [periods]
+  );
+  const activePeriod = useMemo(
+    () => sortedPeriods.find((x) => nowMin >= x.start && nowMin <= x.end)?.p,
+    [sortedPeriods, nowMin]
+  );
+  const nextPeriod = useMemo(() => sortedPeriods.find((x) => x.start > nowMin), [sortedPeriods, nowMin]);
 
-  // Filter logs for today
-  const todayLogs = useMemo(() => {
-    return (allLogs || []).filter((log) => Number(log.signedInAt || 0) >= startOfDay);
-  }, [allLogs, startOfDay]);
+  const teacherScope = variant === 'teacher' ? teacherIdScope : undefined;
+  const scopedClasses = useMemo(
+    () => classesForTeacher(classes, teacherScope).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [classes, teacherScope]
+  );
+  const scopedStudents = useMemo(
+    () => studentsForTeacher(students, classes, teacherScope),
+    [students, classes, teacherScope]
+  );
+  const classNameById = useMemo(() => new Map(classes.map((c) => [c.id, c.name || 'Class'])), [classes]);
 
-  // Map studentId -> most recent log entry today
-  const todayStudentLogMap = useMemo(() => {
-    const map = new Map<string, AttendanceLogEntry>();
-    for (const log of todayLogs) {
-      if (!log.studentId || map.has(log.studentId)) continue;
-      map.set(log.studentId, log);
-    }
-    return map;
-  }, [todayLogs]);
+  const markFor = (studentId: string): AttendanceMark | 'absent' => {
+    const log = todayStudentLogMap.get(studentId);
+    return log ? attendanceMarkOf(log) : 'absent';
+  };
 
-  // Determine current active period
-  const activePeriod = useMemo(() => {
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    return periods.find((p) => {
-      const start = parseTimeToMinutes(p.startTime);
-      const end = parseTimeToMinutes(p.endTime);
-      if (start == null || end == null) return false;
-      return nowMin >= start && nowMin <= end;
-    });
-  }, [periods]);
+  // Students in the chosen class (before the status filter), used for stats and the bulk action.
+  const classStudents = useMemo(
+    () => (selectedClassId === 'all' ? scopedStudents : scopedStudents.filter((s) => s.classId === selectedClassId)),
+    [scopedStudents, selectedClassId]
+  );
 
-  // Filter students based on teacher scope and class list
-  const scopedStudents = useMemo(() => {
-    let list = students || [];
-    if (teacherIdScope && variant === 'teacher') {
-      const teacherClassIds = new Set(
-        classes.filter((c) => c.primaryTeacherId === teacherIdScope || c.teacherIds?.includes(teacherIdScope)).map((c) => c.id)
-      );
-      list = list.filter((s) => s.classId && teacherClassIds.has(s.classId));
-    }
-    return list;
-  }, [students, classes, teacherIdScope, variant]);
-
-  // Stats calculation
   const stats = useMemo(() => {
-    const total = scopedStudents.length;
-    let presentCount = 0;
-    let onTimeCount = 0;
-    let lateCount = 0;
-
-    for (const student of scopedStudents) {
-      const log = todayStudentLogMap.get(student.id);
-      if (log) {
-        presentCount++;
-        if (log.onTime !== false && log.status !== 'late') {
-          onTimeCount++;
-        } else {
-          lateCount++;
-        }
+    const out = { total: classStudents.length, present: 0, 'on-time': 0, late: 0, excused: 0, absent: 0 };
+    for (const s of classStudents) {
+      const log = todayStudentLogMap.get(s.id);
+      if (!log) {
+        out.absent += 1;
+        continue;
       }
+      out.present += 1;
+      out[attendanceMarkOf(log)] += 1;
     }
+    const rate = out.total > 0 ? Math.round((out.present / out.total) * 100) : 0;
+    return { ...out, rate };
+  }, [classStudents, todayStudentLogMap]);
 
-    const absentCount = Math.max(0, total - presentCount);
-    const rate = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+  const perClass = useMemo(
+    () =>
+      scopedClasses.map((c) => {
+        const inClass = scopedStudents.filter((s) => s.classId === c.id);
+        const here = inClass.filter((s) => todayStudentLogMap.has(s.id)).length;
+        return { cls: c, here, total: inClass.length };
+      }),
+    [scopedClasses, scopedStudents, todayStudentLogMap]
+  );
 
-    return { total, presentCount, onTimeCount, lateCount, absentCount, rate };
-  }, [scopedStudents, todayStudentLogMap]);
-
-  // Filtered students for Roster display
   const displayedStudents = useMemo(() => {
-    return scopedStudents.filter((student) => {
-      const name = `${student.firstName || ''} ${student.lastName || ''} ${student.nickname || ''}`.toLowerCase();
-      if (searchQuery.trim() && !name.includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-
-      if (selectedClassId !== 'all' && student.classId !== selectedClassId) {
-        return false;
-      }
-
-      const log = todayStudentLogMap.get(student.id);
-      const isPresent = Boolean(log);
-      const isOnTime = isPresent && log?.onTime !== false && log?.status !== 'late';
-      const isLate = isPresent && (log?.onTime === false || log?.status === 'late');
-
-      if (selectedStatus === 'present' && !isPresent) return false;
-      if (selectedStatus === 'on-time' && !isOnTime) return false;
-      if (selectedStatus === 'late' && !isLate) return false;
-      if (selectedStatus === 'absent' && isPresent) return false;
-
-      return true;
-    });
-  }, [scopedStudents, searchQuery, selectedClassId, selectedStatus, todayStudentLogMap]);
-
-  // Quick mark present or late directly from the row
-  const handleQuickCheckIn = async (student: Student, status: 'on-time' | 'late') => {
-    if (!schoolId) return;
-    setQuickActionStudentId(student.id);
-    try {
-      const defaultOnTime = attendanceConfig?.pointsForOnTime ?? 5;
-      const defaultSignIn = attendanceConfig?.pointsForSignIn ?? 1;
-      const points = status === 'on-time' ? defaultSignIn + defaultOnTime : defaultSignIn;
-
-      const res = await recordManualAttendance(firestore, schoolId, student.id, student, {
-        status,
-        points,
-        periodLabel: activePeriod?.label || 'Homeroom',
-        teacherId: teacherIdScope,
-        attendanceTimeZone: attendanceConfig?.attendanceTimeZone,
-        categoryId: attendanceConfig?.categoryId,
+    const q = searchQuery.trim().toLowerCase();
+    return classStudents
+      .filter((student) => {
+        if (q) {
+          const name = `${student.firstName || ''} ${student.lastName || ''} ${student.nickname || ''}`.toLowerCase();
+          if (!name.includes(q)) return false;
+        }
+        if (selectedStatus === 'all') return true;
+        return markFor(student.id) === selectedStatus;
+      })
+      .sort((a, b) => {
+        // Not-yet-in first so the people who still need attention are on top.
+        const ai = todayStudentLogMap.has(a.id) ? 1 : 0;
+        const bi = todayStudentLogMap.has(b.id) ? 1 : 0;
+        if (ai !== bi) return ai - bi;
+        return studentDisplayName(a).localeCompare(studentDisplayName(b));
       });
+    // markFor reads todayStudentLogMap, which is in the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classStudents, searchQuery, selectedStatus, todayStudentLogMap]);
 
+  // The class period on right now, if any. Between periods a check-in counts for the whole day.
+  const periodLabelNow: string | undefined = activePeriod?.label;
+
+  const recordCheckIn = async (student: Student, status: AttendanceMark, opts?: { points?: number; periodLabel?: string; note?: string }) => {
+    return recordManualAttendance(firestore, schoolId, student.id, student, {
+      status,
+      points: opts?.points ?? defaultPointsFor(status),
+      // An explicit "Whole day" choice (undefined) must not fall back to the current period.
+      periodLabel: opts && 'periodLabel' in opts ? opts.periodLabel : periodLabelNow,
+      teacherId: teacherIdScope,
+      note: opts?.note,
+      attendanceTimeZone: timeZone,
+      categoryId: attendanceConfig?.categoryId,
+    });
+  };
+
+  const handleQuickCheckIn = async (student: Student, status: AttendanceMark) => {
+    if (!schoolId) return;
+    setBusyStudentId(student.id);
+    try {
+      const res = await recordCheckIn(student, status);
+      const first = student.firstName || 'Student';
       if (!res.success && res.reason === 'already_checked_in') {
-        toast({
-          title: 'Already marked present',
-          description: `${student.firstName || 'Student'} is already checked in for this session.`,
-        });
+        toast({ title: 'Already checked in', description: `${first} is already checked in for this class period.` });
       } else {
         toast({
-          title: status === 'on-time' ? 'Marked on-time!' : 'Marked late!',
-          description: `${student.firstName || 'Student'} received +${points} attendance points.`,
+          title: `${first}: ${ATTENDANCE_MARK_LABEL[status].toLowerCase()}`,
+          description: `+${res.pointsAwarded} attendance points.`,
         });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         variant: 'destructive',
         title: 'Check-in failed',
-        description: e?.message || 'Could not record attendance.',
+        description: e instanceof Error ? e.message : 'Could not record attendance.',
       });
     } finally {
-      setQuickActionStudentId(null);
+      setBusyStudentId(null);
     }
   };
 
-  // Submit from full manual check-in dialog
+  const handleChangeStatus = async (student: Student, status: AttendanceMark) => {
+    const log = todayStudentLogMap.get(student.id);
+    if (!log?.id) return;
+    setBusyStudentId(student.id);
+    try {
+      await updateAttendanceStatus(firestore, schoolId, log.id, status);
+      toast({
+        title: `${student.firstName || 'Student'} changed to ${ATTENDANCE_MARK_LABEL[status].toLowerCase()}`,
+        description: 'Points already given stay the same.',
+      });
+    } catch (e: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not change that',
+        description: e instanceof Error ? e.message : 'Try again in a moment.',
+      });
+    } finally {
+      setBusyStudentId(null);
+    }
+  };
+
   const handleSubmitManualCheckIn = async () => {
-    if (!schoolId || !checkInStudentId) {
+    const student = scopedStudents.find((s) => s.id === checkInStudentId);
+    if (!schoolId || !student) {
       toast({ variant: 'destructive', title: 'Pick a student first' });
       return;
     }
-    const student = scopedStudents.find((s) => s.id === checkInStudentId);
-    if (!student) return;
-
     setIsSubmitting(true);
     try {
-      let pts = parseInt(checkInCustomPoints, 10);
-      if (Number.isNaN(pts)) {
-        const defaultOnTime = attendanceConfig?.pointsForOnTime ?? 5;
-        const defaultSignIn = attendanceConfig?.pointsForSignIn ?? 1;
-        pts = checkInStatus === 'on-time' ? defaultSignIn + defaultOnTime : defaultSignIn;
-      }
-
+      const parsed = parseInt(checkInCustomPoints, 10);
+      const points = Number.isNaN(parsed) ? defaultPointsFor(checkInStatus) : Math.max(0, parsed);
       const periodLabel =
-        checkInPeriod === 'auto'
-          ? activePeriod?.label || 'General Attendance'
-          : checkInPeriod === 'none'
-          ? undefined
-          : checkInPeriod;
-
-      const res = await recordManualAttendance(firestore, schoolId, student.id, student, {
-        status: checkInStatus,
-        points: pts,
+        checkInPeriod === 'auto' ? periodLabelNow : checkInPeriod === 'none' ? undefined : checkInPeriod;
+      const res = await recordCheckIn(student, checkInStatus, {
+        points,
         periodLabel,
-        teacherId: teacherIdScope,
         note: checkInNote.trim() || undefined,
-        attendanceTimeZone: attendanceConfig?.attendanceTimeZone,
-        categoryId: attendanceConfig?.categoryId,
       });
-
       if (!res.success && res.reason === 'already_checked_in') {
         toast({
           title: 'Already recorded',
-          description: `${student.firstName || 'Student'} was already marked for this session.`,
+          description: `${student.firstName || 'Student'} was already checked in for that class period.`,
         });
-      } else {
-        toast({
-          title: 'Attendance recorded!',
-          description: `${student.firstName || 'Student'} recorded with +${pts} points.`,
-        });
-        setIsCheckInOpen(false);
-        setCheckInStudentId('');
-        setCheckInNote('');
-        setCheckInCustomPoints('');
+        return;
       }
-    } catch (e: any) {
+      toast({ title: 'Checked in', description: `${studentDisplayName(student)} · +${points} points.` });
+      setIsCheckInOpen(false);
+    } catch (e: unknown) {
       toast({
         variant: 'destructive',
-        title: 'Failed to record',
-        description: e?.message || 'Could not save check-in.',
+        title: 'Could not check in',
+        description: e instanceof Error ? e.message : 'Could not save check-in.',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const openManualCheckInFor = (studentId?: string) => {
-    if (studentId) setCheckInStudentId(studentId);
+  const openManualCheckIn = (studentId?: string) => {
+    setCheckInStudentId(studentId ?? '');
     setCheckInStatus('on-time');
     setCheckInPeriod('auto');
-    const defaultOnTime = attendanceConfig?.pointsForOnTime ?? 5;
-    const defaultSignIn = attendanceConfig?.pointsForSignIn ?? 1;
-    setCheckInCustomPoints(String(defaultSignIn + defaultOnTime));
+    setCheckInCustomPoints(String(defaultPointsFor('on-time')));
     setCheckInNote('');
     setIsCheckInOpen(true);
   };
 
+  const notInYet = classStudents.filter((s) => !todayStudentLogMap.has(s.id));
+
+  const handleMarkRestPresent = async () => {
+    setBulkConfirmOpen(false);
+    const list = notInYet.slice();
+    if (!list.length) return;
+    setBulkProgress({ done: 0, total: list.length });
+    let failed = 0;
+    for (let i = 0; i < list.length; i += 1) {
+      try {
+        await recordCheckIn(list[i], 'on-time');
+      } catch {
+        failed += 1;
+      }
+      setBulkProgress({ done: i + 1, total: list.length });
+    }
+    setBulkProgress(null);
+    toast({
+      variant: failed ? 'destructive' : undefined,
+      title: failed ? `${list.length - failed} checked in, ${failed} did not save` : `${list.length} students checked in`,
+      description: failed ? 'Try the missing ones again from their rows.' : 'Everyone left in this class is marked on time.',
+    });
+  };
+
+  const handleCopyNames = async () => {
+    const lines = displayedStudents.map((s) => {
+      const cls = s.classId ? classNameById.get(s.classId) : undefined;
+      return cls ? `${studentDisplayName(s)} (${cls})` : studentDisplayName(s);
+    });
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      toast({ title: `Copied ${lines.length} names`, description: 'Paste them into an email or message.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not copy', description: 'Your browser blocked copying.' });
+    }
+  };
+
+  const selectedClassName = selectedClassId === 'all' ? null : classNameById.get(selectedClassId);
+  const statusFilters: { id: StatusFilter; label: string; count: number }[] = [
+    { id: 'all', label: 'Everyone', count: stats.total },
+    { id: 'absent', label: 'Not in yet', count: stats.absent },
+    { id: 'on-time', label: 'On time', count: stats['on-time'] },
+    { id: 'late', label: 'Late', count: stats.late },
+    { id: 'excused', label: 'Excused', count: stats.excused },
+  ];
+  const checkInStudent = scopedStudents.find((s) => s.id === checkInStudentId);
+  const checkInStudentAlreadyIn = checkInStudent ? todayStudentLogMap.has(checkInStudent.id) : false;
+
   return (
-    <div className="space-y-6">
-      {/* Active Period Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-muted/20">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-            <Clock className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-black">
-                {activePeriod ? `Active Period: ${activePeriod.label}` : 'No active period right now'}
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-emerald-500/[0.08] via-background to-primary/[0.06] p-5">
+          <div className="flex flex-wrap items-center gap-5">
+            <ProgressRing value={stats.rate} />
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {selectedClassName ? selectedClassName : variant === 'teacher' ? 'My classes' : 'Whole school'} · today
               </p>
-              {activePeriod && (
-                <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              )}
+              <p className="text-2xl font-black leading-tight sm:text-3xl">
+                {stats.present} <span className="text-muted-foreground font-bold">of</span> {stats.total}{' '}
+                <span className="text-base font-bold text-muted-foreground sm:text-lg">checked in</span>
+              </p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm">
+                {(['on-time', 'late', 'excused'] as const).map((m) => (
+                  <span key={m} className="inline-flex items-center gap-1.5 font-semibold">
+                    <span className={cn('h-2.5 w-2.5 rounded-full', MARK_STYLES[m].dot)} aria-hidden="true" />
+                    {stats[m]} {ATTENDANCE_MARK_LABEL[m].toLowerCase()}
+                  </span>
+                ))}
+                <span className="inline-flex items-center gap-1.5 font-semibold text-muted-foreground">
+                  <span className={cn('h-2.5 w-2.5 rounded-full', MARK_STYLES.absent.dot)} aria-hidden="true" />
+                  {stats.absent} not in yet
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {activePeriod
-                ? `${activePeriod.startTime} – ${activePeriod.endTime} · Sign-ins earn period attendance points`
-                : 'Sign-ins outside periods earn daily baseline attendance'}
-            </p>
           </div>
         </div>
 
-        <Button
-          onClick={() => openManualCheckInFor()}
-          className="rounded-xl font-black gap-2 shrink-0 shadow-sm"
-        >
-          <PlusCircle className="w-4 h-4" />
-          Check In Student
-        </Button>
+        <div className="flex flex-col justify-between gap-4 rounded-3xl border bg-card p-5">
+          {hidePeriodInfo ? (
+            <div>
+              <p className="text-base font-black leading-tight">Quick check-in</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                For a forgotten card or a late arrival. Or tap Here or Late next to a name below.
+              </p>
+            </div>
+          ) : (
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+                activePeriod ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {activePeriod ? <Radio className="h-5 w-5" aria-hidden="true" /> : <Clock className="h-5 w-5" aria-hidden="true" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-base font-black leading-tight">
+                {activePeriod ? activePeriod.label : 'Between class periods'}
+                {activePeriod && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 align-middle text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Now
+                  </span>
+                )}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {activePeriod
+                  ? `${formatClockTime(activePeriod.startTime)} – ${formatClockTime(activePeriod.endTime)}`
+                  : nextPeriod
+                    ? `Next: ${nextPeriod.p.label} at ${formatClockTime(nextPeriod.p.startTime)}`
+                    : periods.length
+                      ? 'No more class periods today'
+                      : 'No bell schedule set up yet'}
+              </p>
+            </div>
+          </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => openManualCheckIn()} className="flex-1 gap-2 rounded-xl font-black shadow-sm">
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              Check in a student
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-1.5 rounded-xl font-bold">
+                  More <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-xs">
+                  {selectedClassName ? selectedClassName : 'Pick a class below for class actions'}
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  disabled={!selectedClassName || notInYet.length === 0 || !!bulkProgress}
+                  onSelect={() => setBulkConfirmOpen(true)}
+                >
+                  <UserCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Mark everyone else here ({selectedClassName ? notInYet.length : 0})
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={displayedStudents.length === 0} onSelect={() => void handleCopyNames()}>
+                  <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Copy names in this list ({displayedStudents.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {bulkProgress && (
+            <div className="space-y-1" role="status">
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Checking in {bulkProgress.done} of {bulkProgress.total}…
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* High-Level Stat Counters */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-bold uppercase tracking-wider">Total</span>
-            <Users className="w-4 h-4" />
-          </div>
-          <p className="text-2xl font-black mt-2 text-foreground">{stats.total}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Enrolled students</p>
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-muted/20 p-3">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Find a student"
+            aria-label="Find a student"
+            className="h-10 rounded-xl bg-background pl-9 pr-8"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        <div className="rounded-2xl border bg-emerald-500/[0.06] border-emerald-500/20 p-4 shadow-sm">
-          <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
-            <span className="text-xs font-bold uppercase tracking-wider">Present</span>
-            <UserCheck className="w-4 h-4" />
-          </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
-              {stats.presentCount}
-            </p>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              ({stats.rate}%)
-            </span>
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Checked in today</p>
-        </div>
-
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-bold uppercase tracking-wider">On-Time</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </div>
-          <p className="text-2xl font-black mt-2 text-foreground">{stats.onTimeCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Earned bonus</p>
-        </div>
-
-        <div className="rounded-2xl border bg-amber-500/[0.06] border-amber-500/20 p-4 shadow-sm">
-          <div className="flex items-center justify-between text-amber-700 dark:text-amber-300">
-            <span className="text-xs font-bold uppercase tracking-wider">Late / Tardy</span>
-            <Clock className="w-4 h-4" />
-          </div>
-          <p className="text-2xl font-black mt-2 text-amber-700 dark:text-amber-300">
-            {stats.lateCount}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">After start window</p>
-        </div>
-
-        <div className="col-span-2 md:col-span-1 rounded-2xl border bg-rose-500/[0.06] border-rose-500/20 p-4 shadow-sm">
-          <div className="flex items-center justify-between text-rose-700 dark:text-rose-300">
-            <span className="text-xs font-bold uppercase tracking-wider">Absent</span>
-            <UserX className="w-4 h-4" />
-          </div>
-          <p className="text-2xl font-black mt-2 text-rose-700 dark:text-rose-300">
-            {stats.absentCount}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Not yet checked in</p>
-        </div>
-      </div>
-
-      {/* Filter and View Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-2xl border bg-muted/20">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search student name..."
-              className="pl-9 h-10 rounded-xl bg-background"
-            />
-          </div>
-
+        {scopedClasses.length > 0 && (
           <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-            <SelectTrigger className="w-[170px] h-10 rounded-xl bg-background">
+            <SelectTrigger className="h-10 w-full rounded-xl bg-background sm:w-56" aria-label="Class">
               <SelectValue placeholder="All classes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Classes</SelectItem>
-              {classes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+              <SelectItem value="all">All classes · {scopedStudents.length} students</SelectItem>
+              {perClass.map(({ cls, here, total }) => (
+                <SelectItem key={cls.id} value={cls.id}>
+                  {cls.name} · {here}/{total} in
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        )}
 
-          <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as any)}>
-            <SelectTrigger className="w-[140px] h-10 rounded-xl bg-background">
-              <SelectValue placeholder="All status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="present">Present ({stats.presentCount})</SelectItem>
-              <SelectItem value="on-time">On-Time ({stats.onTimeCount})</SelectItem>
-              <SelectItem value="late">Late ({stats.lateCount})</SelectItem>
-              <SelectItem value="absent">Absent ({stats.absentCount})</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Wraps onto its own line when there isn't room — no side-scrolling strip. */}
+        <div className="order-last flex w-full flex-wrap gap-1 border-t pt-3" role="group" aria-label="Filter by status">
+          {statusFilters.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setSelectedStatus(f.id)}
+              aria-pressed={selectedStatus === f.id}
+              className={cn(
+                'shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition-colors',
+                selectedStatus === f.id
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:bg-background hover:text-foreground'
+              )}
+            >
+              {f.label} <span className="opacity-70">{f.count}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto bg-background p-1 rounded-xl border">
-          <Button
-            type="button"
-            variant={viewMode === 'roster' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('roster')}
-            className="rounded-lg text-xs font-bold h-8"
-          >
-            Roster ({displayedStudents.length})
-          </Button>
-          <Button
-            type="button"
-            variant={viewMode === 'feed' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('feed')}
-            className="rounded-lg text-xs font-bold h-8"
-          >
-            Live Feed ({todayLogs.length})
-          </Button>
+        <div className="ml-auto flex shrink-0 gap-1 rounded-xl border bg-background p-1">
+          {(['roster', 'feed'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              aria-pressed={viewMode === mode}
+              className={cn(
+                'rounded-lg px-3 py-1.5 text-xs font-bold transition-colors',
+                viewMode === mode ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {mode === 'roster' ? 'Students' : `Live feed · ${todayLogs.length}`}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Roster View */}
+      {logsError && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4 text-sm" role="alert">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+          <div>
+            <p className="font-bold">Couldn&apos;t load today&apos;s check-ins</p>
+            <p className="text-xs text-muted-foreground">
+              Everyone may look &quot;not in yet&quot; until it loads. Check the internet connection, then reload the page.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Students */}
       {viewMode === 'roster' && (
-        <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
-          {displayedStudents.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground space-y-2">
-              <UserX className="w-8 h-8 mx-auto opacity-40" />
-              <p className="font-bold text-base">No students found</p>
-              <p className="text-xs">Try clearing your search or changing the class filter.</p>
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          {logsLoading && !todayLogsRaw ? (
+            <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading today&apos;s check-ins…
+            </div>
+          ) : displayedStudents.length === 0 ? (
+            <div className="space-y-2 p-12 text-center text-muted-foreground">
+              {selectedStatus === 'absent' && classStudents.length > 0 ? (
+                <>
+                  <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" aria-hidden="true" />
+                  <p className="text-base font-bold text-foreground">Everyone is in!</p>
+                  <p className="text-xs">No one is missing{selectedClassName ? ` from ${selectedClassName}` : ''} right now.</p>
+                </>
+              ) : (
+                <>
+                  <Users className="mx-auto h-8 w-8 opacity-40" aria-hidden="true" />
+                  <p className="text-base font-bold">No students match</p>
+                  <p className="text-xs">Try clearing the search or picking a different class.</p>
+                </>
+              )}
             </div>
           ) : (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/40 text-left text-xs font-black uppercase tracking-wider text-muted-foreground">
-                    <th className="py-3 px-4">Student</th>
-                    <th className="py-3 px-4">Class</th>
-                    <th className="py-3 px-4">Status Today</th>
-                    <th className="py-3 px-4">Check-In Time</th>
-                    <th className="py-3 px-4">Period</th>
-                    <th className="py-3 px-4">Points</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {displayedStudents.map((student) => {
-                    const log = todayStudentLogMap.get(student.id);
-                    const isPresent = Boolean(log);
-                    const isOnTime = isPresent && log?.onTime !== false && log?.status !== 'late';
-                    const isLate = isPresent && (log?.onTime === false || log?.status === 'late');
-                    const className = classes.find((c) => c.id === student.classId)?.name || 'Unassigned';
-                    const studentName =
-                      [student.firstName, student.lastName].filter(Boolean).join(' ') ||
-                      student.nickname ||
-                      'Student';
-
-                    const isRowBusy = quickActionStudentId === student.id;
-
-                    return (
-                      <tr key={student.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="py-3 px-4 font-bold text-foreground">
-                          {studentName}
-                        </td>
-                        <td className="py-3 px-4 text-muted-foreground text-xs font-semibold">
-                          {className}
-                        </td>
-                        <td className="py-3 px-4">
-                          {isOnTime && (
-                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> On-Time
-                            </Badge>
-                          )}
-                          {isLate && (
-                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold gap-1">
-                              <Clock className="w-3 h-3" /> Late / Tardy
-                            </Badge>
-                          )}
-                          {!isPresent && (
-                            <Badge variant="outline" className="text-muted-foreground font-semibold">
-                              Not Checked In
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-xs text-muted-foreground">
-                          {log ? new Date(log.signedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
-                        </td>
-                        <td className="py-3 px-4 text-xs font-medium text-muted-foreground">
-                          {log?.periodLabel || '—'}
-                        </td>
-                        <td className="py-3 px-4 text-xs font-black">
-                          {log ? (
-                            <span className="text-primary">+{log.pointsAwarded ?? 0} pts</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {!isPresent ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 rounded-lg text-xs font-bold hover:bg-emerald-500/10 hover:text-emerald-700 hover:border-emerald-500/40"
-                                onClick={() => handleQuickCheckIn(student, 'on-time')}
-                                disabled={isRowBusy}
-                              >
-                                {isRowBusy ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  'Present'
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
-                                onClick={() => handleQuickCheckIn(student, 'late')}
-                                disabled={isRowBusy}
-                              >
-                                Late
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground"
-                              onClick={() => openManualCheckInFor(student.id)}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <>
+            {/* Column headings line up with the rows on wider screens. */}
+            <div className={cn(ROW_GRID, 'hidden border-b bg-muted/40 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-muted-foreground md:grid')}>
+              <span>Student</span>
+              <span>Status</span>
+              <span>Time</span>
+              <span>Class period</span>
+              <span className="text-right">Points</span>
+              <span className="text-right">Mark</span>
             </div>
+            <ul className="divide-y divide-border/60">
+              {displayedStudents.map((student) => {
+                const log = todayStudentLogMap.get(student.id);
+                const mark = markFor(student.id);
+                const isBusy = busyStudentId === student.id;
+                const cls = student.classId ? classNameById.get(student.classId) : undefined;
+                return (
+                  <li
+                    key={student.id}
+                    className={cn(
+                      ROW_GRID,
+                      'flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 transition-colors hover:bg-muted/20 md:grid'
+                    )}
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div
+                        className={cn(
+                          'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black',
+                          log ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground'
+                        )}
+                        aria-hidden="true"
+                      >
+                        {initials(student)}
+                        <span
+                          className={cn('absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-card', MARK_STYLES[mark].dot)}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-foreground">{studentDisplayName(student)}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {cls || 'No class'}
+                          {/* On phones the time sits under the name; wider screens have its own column. */}
+                          {log && <span className="md:hidden"> · {formatLogTime(log.signedInAt)}</span>}
+                          {log?.manual ? ' · by staff' : ''}
+                        </p>
+                        {log?.note && <p className="truncate text-xs italic text-muted-foreground">“{log.note}”</p>}
+                      </div>
+                    </div>
+
+                    <div className={cn(!log && 'hidden md:block')}>
+                      <StatusChip mark={mark} />
+                    </div>
+                    <span className="hidden text-xs text-muted-foreground md:block">{log ? formatLogTime(log.signedInAt) : '—'}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground md:block">{log?.periodLabel || '—'}</span>
+                    <span className={cn('text-right text-xs font-black', log ? 'text-primary' : 'hidden text-muted-foreground md:block')}>
+                      {log ? `+${log.pointsAwarded ?? 0}` : '—'}
+                    </span>
+
+                    <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto md:w-full">
+                      {isBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Saving" />
+                      ) : !log ? (
+                        <>
+                          <Button
+                            size="sm"
+                            className="h-9 rounded-xl bg-emerald-600 px-4 text-xs font-black text-white hover:bg-emerald-700"
+                            onClick={() => void handleQuickCheckIn(student, 'on-time')}
+                          >
+                            Here
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 rounded-xl border-amber-500/40 text-xs font-bold text-amber-800 hover:bg-amber-500/10 dark:text-amber-300"
+                            onClick={() => void handleQuickCheckIn(student, 'late')}
+                          >
+                            Late
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-9 rounded-xl text-xs font-semibold text-muted-foreground"
+                            onClick={() => openManualCheckIn(student.id)}
+                          >
+                            More…
+                          </Button>
+                        </>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-9 gap-1 rounded-xl text-xs font-semibold text-muted-foreground">
+                              Change <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel className="text-xs">Change today&apos;s status</DropdownMenuLabel>
+                            {(['on-time', 'late', 'excused'] as const).map((m) => (
+                              <DropdownMenuItem
+                                key={m}
+                                disabled={m === mark}
+                                onSelect={() => void handleChangeStatus(student, m)}
+                              >
+                                <span className={cn('mr-2 h-2.5 w-2.5 rounded-full', MARK_STYLES[m].dot)} aria-hidden="true" />
+                                {ATTENDANCE_MARK_LABEL[m]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            </>
           )}
         </div>
       )}
 
-      {/* Live Feed View */}
+      {/* Live feed */}
       {viewMode === 'feed' && (
-        <div className="rounded-2xl border bg-card p-4 shadow-sm space-y-3">
+        <div className="space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
           <div className="flex items-center justify-between border-b pb-3">
-            <h4 className="font-bold text-sm">Today&apos;s Sign-in Feed ({todayLogs.length})</h4>
-            <span className="text-xs text-muted-foreground">Latest sign-ins at the top</span>
+            <h4 className="flex items-center gap-2 text-sm font-bold">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
+              Check-ins today
+            </h4>
+            <span className="text-xs text-muted-foreground">Newest first</span>
           </div>
-
           {todayLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No sign-ins recorded yet today. When students scan their badge, they will appear here live.
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No check-ins yet today. They show up here the moment students sign in.
             </p>
           ) : (
-            <ul className="divide-y divide-border/60">
-              {todayLogs.map((entry) => (
-                <li key={entry.id ?? `${entry.studentId}_${entry.signedInAt}`} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-bold text-sm text-foreground truncate">{entry.studentName || entry.studentId}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(entry.signedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {entry.periodLabel ? ` · ${entry.periodLabel}` : ''}
-                      {entry.manual ? ' · Manual Entry' : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {entry.onTime !== false && entry.status !== 'late' ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[11px] font-bold">
-                        On-Time
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[11px] font-bold">
-                        Late
-                      </Badge>
-                    )}
-                    <span className="font-black text-primary text-sm">+{entry.pointsAwarded ?? 0} pts</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <ol className="relative space-y-1 border-l border-border/70 pl-5">
+              {todayLogs.map((entry) => {
+                const mark = attendanceMarkOf(entry);
+                return (
+                  <li key={entry.id ?? `${entry.studentId}_${entry.signedInAt}`} className="relative py-2">
+                    <span
+                      className={cn('absolute -left-[26px] top-3.5 h-3 w-3 rounded-full ring-4 ring-card', MARK_STYLES[mark].dot)}
+                      aria-hidden="true"
+                    />
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold">{entry.studentName || entry.studentId}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatLogTime(entry.signedInAt)}
+                          {entry.periodLabel ? ` · ${entry.periodLabel}` : ''}
+                          {entry.manual ? ' · by staff' : ' · signed in'}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <StatusChip mark={mark} />
+                        <span className="w-10 text-right text-xs font-black text-primary">+{entry.pointsAwarded ?? 0}</span>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </div>
       )}
 
-      {/* Manual Check-in Dialog */}
+      {/* Mark everyone else present */}
+      <AlertDialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark everyone else in {selectedClassName} as here?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {notInYet.length} {notInYet.length === 1 ? 'student' : 'students'} who haven&apos;t checked in will be
+              marked on time for {periodLabelNow ?? 'today'} and get {defaultPointsFor('on-time')} points each. You can change
+              anyone afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleMarkRestPresent()}>Mark {notInYet.length} here</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Manual check-in */}
       <Dialog open={isCheckInOpen} onOpenChange={setIsCheckInOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black">Check In Student</DialogTitle>
+            <DialogTitle className="text-lg font-black">Check in a student</DialogTitle>
             <DialogDescription className="text-xs">
-              Record attendance manually for late arrivals, forgotten badges, or office passes.
+              For a forgotten card, a late arrival with a note, or a student sent from the office.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-1">
             <div className="space-y-1.5">
               <Label className="text-xs font-bold">Student</Label>
-              <Select value={checkInStudentId} onValueChange={setCheckInStudentId}>
-                <SelectTrigger className="rounded-xl h-11">
-                  <SelectValue placeholder="Select student..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {scopedStudents.map((s) => {
-                    const c = classes.find((cls) => cls.id === s.classId);
-                    return (
-                      <SelectItem key={s.id} value={s.id}>
-                        {[s.firstName, s.lastName].filter(Boolean).join(' ') || s.nickname || s.id}
-                        {c ? ` (${c.name})` : ''}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              {checkInStudent ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary">
+                      {initials(checkInStudent)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">{studentDisplayName(checkInStudent)}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {checkInStudent.classId ? classNameById.get(checkInStudent.classId) : 'No class'}
+                        {checkInStudentAlreadyIn ? ' · already checked in today' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" className="rounded-lg text-xs" onClick={() => setCheckInStudentId('')}>
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <Command className="rounded-xl border">
+                  <CommandInput placeholder="Type a name…" autoFocus />
+                  <CommandList className="max-h-56">
+                    <CommandEmpty>No student with that name.</CommandEmpty>
+                    {scopedStudents
+                      .slice()
+                      .sort((a, b) => studentDisplayName(a).localeCompare(studentDisplayName(b)))
+                      .map((s) => {
+                        const cls = s.classId ? classNameById.get(s.classId) : '';
+                        const inAlready = todayStudentLogMap.has(s.id);
+                        return (
+                          <CommandItem
+                            key={s.id}
+                            value={`${studentDisplayName(s)} ${cls} ${s.id}`}
+                            onSelect={() => setCheckInStudentId(s.id)}
+                          >
+                            <span className="flex-1 truncate">{studentDisplayName(s)}</span>
+                            <span className="text-xs text-muted-foreground">{cls}</span>
+                            {inAlready && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-label="Already in" />}
+                          </CommandItem>
+                        );
+                      })}
+                  </CommandList>
+                </Command>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Status</Label>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Status">
+                {(['on-time', 'late', 'excused'] as const).map((m) => {
+                  const Icon = MARK_STYLES[m].icon;
+                  const selected = checkInStatus === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => {
+                        setCheckInStatus(m);
+                        setCheckInCustomPoints(String(defaultPointsFor(m)));
+                      }}
+                      className={cn(
+                        'flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-bold transition-colors',
+                        selected ? cn('ring-2 ring-inset', MARK_STYLES[m].chip) : 'hover:bg-muted/50'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {ATTENDANCE_MARK_LABEL[m]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold">Attendance Status</Label>
-                <Select value={checkInStatus} onValueChange={(v: any) => setCheckInStatus(v)}>
-                  <SelectTrigger className="rounded-xl h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="on-time">On-Time</SelectItem>
-                    <SelectItem value="late">Late / Tardy</SelectItem>
-                    <SelectItem value="excused">Excused</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold">Class Period</Label>
+                <Label className="text-xs font-bold">Class period</Label>
                 <Select value={checkInPeriod} onValueChange={setCheckInPeriod}>
-                  <SelectTrigger className="rounded-xl h-10">
+                  <SelectTrigger className="h-10 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Current Period {activePeriod ? `(${activePeriod.label})` : ''}</SelectItem>
+                    <SelectItem value="auto">
+                      {periodLabelNow ? `Right now (${periodLabelNow})` : 'Right now (whole day)'}
+                    </SelectItem>
                     {periods.map((p) => (
                       <SelectItem key={p.id} value={p.label}>
                         {p.label}
                       </SelectItem>
                     ))}
-                    <SelectItem value="none">General / Daily</SelectItem>
+                    <SelectItem value="none">Whole day</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  A time block from the bell schedule, like Period 1. It&apos;s what this check-in counts for.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold" htmlFor="attendance-checkin-points">
+                  Points
+                </Label>
+                <Input
+                  id="attendance-checkin-points"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={checkInCustomPoints}
+                  onChange={(e) => setCheckInCustomPoints(e.target.value)}
+                  className="h-10 rounded-xl font-bold"
+                />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">Points Awarded</Label>
+              <Label className="text-xs font-bold" htmlFor="attendance-checkin-note">
+                Note <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Input
-                type="number"
-                min={0}
-                value={checkInCustomPoints}
-                onChange={(e) => setCheckInCustomPoints(e.target.value)}
-                placeholder="5"
-                className="rounded-xl h-10 font-bold"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Leave as-is to use standard school points for this status.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">Note (Optional)</Label>
-              <Input
+                id="attendance-checkin-note"
                 value={checkInNote}
                 onChange={(e) => setCheckInNote(e.target.value)}
-                placeholder="e.g. Doctor appointment note"
-                className="rounded-xl h-10"
+                placeholder="e.g. Doctor's note, bus was late"
+                className="h-10 rounded-xl"
               />
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsCheckInOpen(false)}
-              className="rounded-xl"
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => setIsCheckInOpen(false)} className="rounded-xl" disabled={isSubmitting}>
               Cancel
             </Button>
             <Button
               type="button"
-              onClick={handleSubmitManualCheckIn}
+              onClick={() => void handleSubmitManualCheckIn()}
               disabled={!checkInStudentId || isSubmitting}
               className="rounded-xl font-bold"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Confirm Check-In
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+              Check in
             </Button>
           </DialogFooter>
         </DialogContent>

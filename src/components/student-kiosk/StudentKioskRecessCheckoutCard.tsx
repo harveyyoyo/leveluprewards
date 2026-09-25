@@ -7,6 +7,7 @@ import { RECESS_REASON_BY_VALUE, recessReasonBadgeClasses } from '@/lib/recess/r
 import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { recessLimitMinutes, type RecessLimit } from '@/lib/recess/recessKioskSettings';
 
 /**
  * Shown on the signed-in student kiosk only while the student is checked out
@@ -22,7 +23,8 @@ export function StudentKioskRecessCheckoutCard({
   student: Student;
   themed?: boolean;
   primaryForeground?: string;
-  maxMinutes: number;
+  /** One limit, or a lookup so each pass type (water, nurse…) can have its own. */
+  maxMinutes: RecessLimit;
   onActivity?: () => void;
 }) {
   const activePass = useStudentRecessPass(schoolId, student.id, true);
@@ -32,7 +34,7 @@ export function StudentKioskRecessCheckoutCard({
 
   const now = Date.now();
   const elapsed = now - (activePass!.startedAt || now);
-  const over = isBathroomOverLimit(elapsed, maxMinutes);
+  const over = isBathroomOverLimit(elapsed, recessLimitMinutes(maxMinutes, activePass?.reason));
   const activeMeta = activePass?.reason ? RECESS_REASON_BY_VALUE.get(activePass.reason) : null;
   const ActiveIcon = activeMeta?.icon ?? DoorOpen;
 

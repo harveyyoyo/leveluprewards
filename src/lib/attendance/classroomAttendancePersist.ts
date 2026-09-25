@@ -1,4 +1,4 @@
-import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import type { Functions } from 'firebase/functions';
 import type { Student } from '@/lib/types';
@@ -28,7 +28,11 @@ export async function persistClassroomRollMark(params: {
   if (mark === 'late') {
     if (existingLogId) {
       try {
-        await updateDoc(attendanceLogRef(firestore, schoolId, existingLogId), { onTime: false });
+        await updateDoc(attendanceLogRef(firestore, schoolId, existingLogId), {
+          onTime: false,
+          status: 'late',
+          updatedAt: Date.now(),
+        });
       } catch (err) {
         return {
           ok: false,
@@ -44,33 +48,19 @@ export async function persistClassroomRollMark(params: {
   return { ok: true, message: 'Marked absent.' };
 }
 
-export function classroomAttendanceLogIdsForStudents(
-  records: Map<string, { logId: string }>,
-  studentIds: readonly string[],
-): string[] {
-  const want = new Set(studentIds.filter(Boolean));
-  const ids: string[] = [];
-  want.forEach((studentId) => {
-    const logId = records.get(studentId)?.logId;
-    if (logId) ids.push(logId);
+/**
+ * Check-ins made after `since` only. "Start new class" moves `since` forward on this
+ * class screen instead of erasing the school's attendance records, which other
+ * screens, reports and parent alerts still rely on.
+ */
+export function attendanceRecordsSince<T extends { signedInAt: number }>(
+  records: Map<string, T>,
+  since: number | undefined,
+): Map<string, T> {
+  if (!since) return records;
+  const next = new Map<string, T>();
+  records.forEach((record, studentId) => {
+    if (record.signedInAt >= since) next.set(studentId, record);
   });
-  return ids;
-}
-
-export async function resetClassroomAttendanceLogs(params: {
-  firestore: Firestore;
-  schoolId: string;
-  logIds: string[];
-}): Promise<{ cleared: number; failed: number }> {
-  let cleared = 0;
-  let failed = 0;
-  for (const logId of params.logIds) {
-    try {
-      await deleteDoc(attendanceLogRef(params.firestore, params.schoolId, logId));
-      cleared += 1;
-    } catch {
-      failed += 1;
-    }
-  }
-  return { cleared, failed };
+  return next;
 }

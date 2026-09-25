@@ -87,7 +87,8 @@ export function AttendanceTimeZoneField({
         await setAttendanceConfig({
           ...c,
           schedule: Array.isArray(c.schedule) ? c.schedule : [],
-          attendanceTimeZone: next && next.trim() ? next.trim() : undefined,
+          // Empty string (not undefined) so the save clears a zone the school had picked.
+          attendanceTimeZone: next && next.trim() ? next.trim() : '',
         });
         setRaw(next?.trim() ?? '');
         if (next && !ATTENDANCE_TIMEZONE_OPTIONS.some((o) => o.id === next)) {

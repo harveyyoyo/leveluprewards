@@ -45,6 +45,8 @@ export function headerProductHref(
     case 'classroom':
       return classroomRealmHref(school);
     case 'attendance':
+      // Admins get the full-screen Attendance workspace; other staff keep their portal tab.
+      if (loginState === 'admin' || loginState === 'developer') return `${root}/attendance`;
       return staffPortalTabHref(school, loginState, 'attendance');
     case 'homework':
       return `${root}/teacher?tab=homework`;

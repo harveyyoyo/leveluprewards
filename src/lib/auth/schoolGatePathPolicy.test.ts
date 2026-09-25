@@ -23,6 +23,14 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/teacher/print`, sid, new Set(['teacher']))).toBe(true);
   });
 
+  it('attendance roster link is for staff; kiosk and office accounts are kept out', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/attendance-roster`, sid, new Set(['admin']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/attendance-roster`, sid, new Set(['teacher']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/attendance-roster`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/attendance-roster`, sid, new Set(['kiosk']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/attendance-roster`, sid, new Set(['office']))).toBe(false);
+  });
+
   it('office routes allow portal scope; OfficePortalGate handles staff sign-in', () => {
     expect(schoolPathAllowedByGate(`/${sid}/office`, sid, new Set(['portal']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/office/grades`, sid, new Set(['portal']))).toBe(true);

@@ -86,6 +86,18 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     return loginState === 'prizeClerk' || loginState === 'admin' || loginState === 'school';
   }
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
+  if (section === 'attendance') {
+    return loginState === 'admin' || loginState === 'developer' || loginState === 'school';
+  }
+  if (section === 'attendance-roster') {
+    return (
+      loginState === 'admin' ||
+      loginState === 'teacher' ||
+      loginState === 'reports' ||
+      loginState === 'developer' ||
+      loginState === 'school'
+    );
+  }
   if (section === 'librarian') {
     if (pathname === `/${routeSchoolId}/librarian` || pathname === `/${routeSchoolId}/librarian/`) return true;
     return (

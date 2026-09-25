@@ -192,7 +192,10 @@ function LayoutClientWrapperInner({
       typeof pathname === 'string' &&
       (pathname.includes('/library') || pathname.includes('/librarian'));
     const isPresentationPage = isPresentationRoute(pathname);
+    /** Full-screen Attendance workspace and its shareable headcount page. */
+    const isAttendancePage = typeof pathname === 'string' && /\/attendance(?:-roster)?(?:\/|$)/.test(pathname);
     const isFullscreenSpecialPage =
+      isAttendancePage ||
       isClassroomScreenPage ||
       isSmartScreenPage ||
       isHouseSortingPage ||

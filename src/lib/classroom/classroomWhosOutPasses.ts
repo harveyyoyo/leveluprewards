@@ -1,5 +1,6 @@
 import { RECESS_REASON_BY_VALUE } from '@/lib/recess/recessReasons';
 import type { BathroomPassActive, RecessPassActive, RecessReason } from '@/lib/types';
+import { recessLimitMinutes, type RecessLimit } from '@/lib/recess/recessKioskSettings';
 
 export type ClassroomWhosOutPassSource = 'recess' | 'bathroom';
 
@@ -44,7 +45,8 @@ export function mergeClassroomWhosOutPasses({
   recess: Iterable<[string, RecessPassActive]> | Map<string, RecessPassActive>;
   bathroom: Iterable<[string, BathroomPassActive]> | Map<string, BathroomPassActive>;
   nameFor: (studentId: string, fallbackName?: string) => string;
-  recessMaxMinutes: number;
+  /** One limit for every pass, or a lookup so each pass type can have its own. */
+  recessMaxMinutes: RecessLimit;
   bathroomMaxMinutes: number;
 }): ClassroomWhosOutPass[] {
   const recessMap = recess instanceof Map ? recess : new Map(recess);
@@ -62,7 +64,7 @@ export function mergeClassroomWhosOutPasses({
         startedAt: recessPass.startedAt,
         passLabel: classroomWhosOutPassLabel(recessPass.reason),
         source: 'recess',
-        maxMinutes: recessMaxMinutes,
+        maxMinutes: recessLimitMinutes(recessMaxMinutes, recessPass.reason),
       });
       continue;
     }

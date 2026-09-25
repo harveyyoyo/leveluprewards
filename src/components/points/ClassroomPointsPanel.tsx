@@ -40,7 +40,7 @@ import {
   classroomStudentCanTakeHallPass,
   seatedStudentsIncludedInClassAwards,
 } from '@/lib/classroom/classroomAttendanceRoll';
-import { persistClassroomRollMark, classroomAttendanceLogIdsForStudents, resetClassroomAttendanceLogs } from '@/lib/attendance/classroomAttendancePersist';
+import { persistClassroomRollMark, attendanceRecordsSince } from '@/lib/attendance/classroomAttendancePersist';
 import {
   assignClassroomGroups,
   parseClassroomGroups,
@@ -71,7 +71,7 @@ import { useActiveRecessPasses } from '@/hooks/useActiveRecessPasses';
 import { BathroomPassesBar } from '@/components/attendance/BathroomPassesBar';
 import { startBathroomPass, endBathroomPass } from '@/lib/db/bathroom';
 import { formatBathroomElapsed } from '@/lib/bathroom/formatBathroomElapsed';
-import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import { recessLimitFor } from '@/lib/recess/recessKioskSettings';
 import {
   classroomHallPassByStudent,
   mergeClassroomWhosOutPasses,
@@ -135,6 +135,7 @@ import {
   setClassroomSessionRandomPick,
   setClassroomSessionGroups,
   setClassroomSessionRollMarks,
+  startClassroomSessionAttendance,
   changeClassroomGridSize,
   classroomLayoutsEqual,
   cloneClassroomLayout,
@@ -343,13 +344,12 @@ function ClassroomPointsPanelInner({
   const attendanceEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
   const bathroomTimerOn = attendanceEnabled && (settings.enableBathroomTimer ?? true);
   const bathroomMaxMinutes = Math.min(30, Math.max(1, settings.bathroomMaxMinutes ?? 5));
-  const recessMaxMinutes = resolveRecessMaxMinutes(settings);
-  const todayAttendanceRecords = useTodayAttendanceRecords(schoolId, attendanceEnabled);
-  const todayAttendance = useMemo(() => {
-    const map = new Map<string, 'unknown' | 'absent' | 'on-time' | 'late'>();
-    todayAttendanceRecords.forEach((record, studentId) => map.set(studentId, record.status));
-    return map;
-  }, [todayAttendanceRecords]);
+  // Each pass type can have its own limit.
+  const recessMaxMinutes = useMemo(
+    () => recessLimitFor({ recessMaxMinutes: settings.recessMaxMinutes, recessMaxMinutesByReason: settings.recessMaxMinutesByReason }),
+    [settings.recessMaxMinutes, settings.recessMaxMinutesByReason],
+  );
+  const schoolTodayAttendanceRecords = useTodayAttendanceRecords(schoolId, attendanceEnabled);
   const [liveTool, setLiveTool] = useState<'raffle' | 'behavior' | 'setup' | null>(null);
   const [setupTab, setSetupTab] = useState<ClassroomLiveSetupTab>('setup');
   const [behaviorPickKey, setBehaviorPickKey] = useState<ClassroomNoteShortcutKey | null>(null);
@@ -546,6 +546,15 @@ function ClassroomPointsPanelInner({
   const [sessionData, setSessionData] = useState<ClassroomSessionData>({ totals: {}, lastAward: {} });
   const sessionDataRef = useRef(sessionData);
   sessionDataRef.current = sessionData;
+  const todayAttendanceRecords = useMemo(
+    () => attendanceRecordsSince(schoolTodayAttendanceRecords, sessionData.attendanceSince),
+    [schoolTodayAttendanceRecords, sessionData.attendanceSince],
+  );
+  const todayAttendance = useMemo(() => {
+    const map = new Map<string, 'unknown' | 'absent' | 'on-time' | 'late'>();
+    todayAttendanceRecords.forEach((record, studentId) => map.set(studentId, record.status));
+    return map;
+  }, [todayAttendanceRecords]);
   const attendanceSource = normalizeClassroomAttendanceSource(prefs.attendanceSource);
   const displayAttendance = useMemo(() => {
     const map = new Map(todayAttendance);
@@ -1559,7 +1568,7 @@ function ClassroomPointsPanelInner({
       playClassroomSound(CLASSROOM_TAP_SOUND);
       const existingLogId = todayAttendanceRecords.get(studentId)?.logId;
       try {
-        await persistClassroomRollMark({
+        const saved = await persistClassroomRollMark({
           functions,
           firestore,
           schoolId,
@@ -1567,6 +1576,10 @@ function ClassroomPointsPanelInner({
           mark,
           existingLogId,
         });
+        if (!saved.ok) {
+          toast({ variant: 'destructive', title: 'Could not save that mark', description: saved.message });
+          return;
+        }
         const nextMarks = { ...(sessionDataRef.current.rollMarks ?? {}), [studentId]: mark };
         saveRollMarks(nextMarks);
       } finally {
@@ -1581,6 +1594,7 @@ function ClassroomPointsPanelInner({
       saveRollMarks,
       schoolId,
       studentById,
+      toast,
       todayAttendanceRecords,
     ],
   );
@@ -1614,35 +1628,18 @@ function ClassroomPointsPanelInner({
     saveRollMarks(nextMarks);
   }, [classStudents, placedStudentIds, playClassroomSound, saveRollMarks]);
 
-  const handleStartNewClass = useCallback(async () => {
-    if (!effectiveClassId || attendanceBusyRef.current) return;
-    attendanceBusyRef.current = true;
+  const handleStartNewClass = useCallback(() => {
+    if (!effectiveClassId) return;
     setLatePickArmed(false);
-    try {
-      const logIds = classroomAttendanceLogIdsForStudents(
-        todayAttendanceRecords,
-        classStudents.map((student) => student.id),
-      );
-      const result = await resetClassroomAttendanceLogs({ firestore, schoolId, logIds });
-      const next = setClassroomSessionRollMarks(schoolId, storageScope, effectiveClassId, null);
-      setSessionData(next);
-      if (result.failed > 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Some check-ins could not be cleared',
-          description: 'Teacher marks were reset. Try Start new class again if desks still look checked in.',
-        });
-        return;
-      }
-      toast({
-        title: 'Ready for a new class',
-        description: 'Attendance is cleared. Every desk is waiting again.',
-      });
-    } finally {
-      attendanceBusyRef.current = false;
-      setRestartAttendanceOpen(false);
-    }
-  }, [classStudents, effectiveClassId, firestore, schoolId, storageScope, todayAttendanceRecords, toast]);
+    // Check-ins stay saved for the school; this class screen just starts counting from now.
+    const next = startClassroomSessionAttendance(schoolId, storageScope, effectiveClassId, Date.now());
+    setSessionData(next);
+    setRestartAttendanceOpen(false);
+    toast({
+      title: 'Ready for a new class',
+      description: 'Every desk is waiting again.',
+    });
+  }, [effectiveClassId, schoolId, storageScope, toast]);
 
   const handleDeskTap = (studentId: string, cellIndex: number) => {
     if (editMode) return;
@@ -3009,7 +3006,7 @@ function ClassroomPointsPanelInner({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep this roll</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void handleStartNewClass()}>Start new class</AlertDialogAction>
+            <AlertDialogAction onClick={handleStartNewClass}>Start new class</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

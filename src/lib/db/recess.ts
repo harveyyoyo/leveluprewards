@@ -10,6 +10,7 @@ import {
 import type { RecessLogEntry, RecessPassActive, RecessReason, Student } from '@/lib/types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
+import { recessLimitMinutes, type RecessLimit } from '@/lib/recess/recessKioskSettings';
 
 /**
  * Recess / break checkout helpers.
@@ -58,13 +59,15 @@ export async function endRecessCheckout(
   firestore: Firestore,
   schoolId: string,
   studentId: string,
-  maxMinutes: number,
+  /** Minutes before the trip counts as over limit: one number, or a lookup by pass type. */
+  limit: RecessLimit,
 ): Promise<RecessLogEntry | null> {
   const activeRef = doc(firestore, 'schools', schoolId, 'recessActive', studentId);
   const snap = await getDoc(activeRef);
   if (!snap.exists()) return null;
 
   const active = snap.data() as RecessPassActive;
+  const maxMinutes = recessLimitMinutes(limit, active.reason);
   const returnedAt = Date.now();
   const durationMs = Math.max(0, returnedAt - (active.startedAt || returnedAt));
   const overLimit = maxMinutes > 0 && durationMs > maxMinutes * 60 * 1000;

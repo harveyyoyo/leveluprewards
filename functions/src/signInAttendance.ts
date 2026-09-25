@@ -2,12 +2,15 @@ import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import {
   EARLY_SIGN_IN_WINDOW_MINUTES,
+  isValidTimeZone,
   resolveAttendanceSettingsForSignIn,
+  teacherIdsForClass,
   type AttendanceRewardRuleLike,
   type AttendanceSettingsLike,
   type StudentLike,
 } from "./attendanceResolveCore";
 import { getSchoolDayClock } from "./schoolDayClock";
+import { applyCategoryPointsByPeriod, applyPointsByPeriod } from "./pointsByPeriod";
 
 const HOT_KIOSK_FUNCTION_OPTIONS = {
   timeoutSeconds: 30,
@@ -181,12 +184,47 @@ function applyRecordClassSignIn(
     if (!studentSnap.exists) {
       throw new functions.https.HttpsError("not-found", "Student not found");
     }
-    const data = studentSnap.data() as { points?: number; lifetimePoints?: number };
+    const data = studentSnap.data() as {
+      points?: number;
+      lifetimePoints?: number;
+      pointsByPeriod?: Record<string, number>;
+      categoryPoints?: Record<string, number>;
+      categoryPointsByPeriod?: Record<string, Record<string, number>>;
+    };
 
-    tx.update(studentRef, {
+    // Resolve the configured category before any writes — transaction reads
+    // must precede writes. A deleted category degrades to an uncategorized award.
+    let categoryName: string | undefined;
+    if (computedPoints > 0 && config.categoryId) {
+      const categorySnap = await tx.get(
+        db.collection("schools").doc(schoolId).collection("categories").doc(config.categoryId)
+      );
+      const name = categorySnap.exists ? String(categorySnap.data()?.name ?? "").trim() : "";
+      if (name) categoryName = name;
+    }
+
+    // Weekly / monthly / category totals, matching points given anywhere else in the app.
+    const schoolDate = { year: clock.year, month: clock.month, day: clock.day };
+    const studentPatch: Record<string, unknown> = {
       points: (data.points || 0) + computedPoints,
       lifetimePoints: (data.lifetimePoints ?? 0) + computedPoints,
-    });
+      updatedAt: now,
+    };
+    if (computedPoints > 0) {
+      studentPatch.pointsByPeriod = applyPointsByPeriod(data.pointsByPeriod, computedPoints, schoolDate);
+    }
+    if (categoryName) {
+      const categoryPoints = { ...(data.categoryPoints || {}) };
+      categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + computedPoints;
+      studentPatch.categoryPoints = categoryPoints;
+      studentPatch.categoryPointsByPeriod = applyCategoryPointsByPeriod(
+        data.categoryPointsByPeriod,
+        categoryName,
+        computedPoints,
+        schoolDate
+      );
+    }
+    tx.update(studentRef, studentPatch);
 
     const activityRef = studentRef.collection("activities").doc();
     let desc = "Attendance";
@@ -208,6 +246,8 @@ function applyRecordClassSignIn(
       periodLabel: periodLabel ?? null,
       sessionId,
       teacherId: config.teacherId ?? null,
+      // Lets alerts show the sign-in time on the school's clock.
+      timeZone: config.attendanceTimeZone ?? null,
     });
 
     return { pointsAwarded: computedPoints, onTime, periodLabel, reason: "recorded" as const };
@@ -219,7 +259,7 @@ export const signInAttendance = functions
   .https.onCall(
   async (data: unknown, context: functions.https.CallableContext) => {
     requireAuth(context);
-    const payload = data as { schoolId?: string; studentId?: string; warmup?: boolean };
+    const payload = data as { schoolId?: string; studentId?: string; warmup?: boolean; deviceTimeZone?: string };
     requireString(payload.schoolId, "schoolId");
     // Firestore document IDs are case-sensitive; do NOT normalize casing here.
     // The client passes the canonical `schoolId` used for document paths.
@@ -269,11 +309,16 @@ export const signInAttendance = functions
         db.collection("schools").doc(schoolId).collection("attendance").doc("config").get(),
       ]);
 
-      const classes = classesSnap.docs.map((d) => ({
-        id: d.id,
-        primaryTeacherId:
-          typeof d.data().primaryTeacherId === "string" ? d.data().primaryTeacherId : d.data().primaryTeacherId ?? null,
-      }));
+      const classes = classesSnap.docs.map((d) => {
+        const x = d.data();
+        return {
+          id: d.id,
+          primaryTeacherId: typeof x.primaryTeacherId === "string" ? x.primaryTeacherId : null,
+          teacherIds: Array.isArray(x.teacherIds)
+            ? x.teacherIds.filter((t: unknown): t is string => typeof t === "string")
+            : null,
+        };
+      });
 
       const periods = periodsSnap.docs.map((d) => {
         const x = d.data();
@@ -287,35 +332,44 @@ export const signInAttendance = functions
 
       const studentClassId = (student.classId || "").trim();
       const classForStudent = studentClassId ? classes.find((c) => c.id === studentClassId) : undefined;
-      const teacherId = (classForStudent?.primaryTeacherId || "").trim();
+      // Primary teacher first, then co-teachers — any of them may own the class's reward rules.
+      const classTeacherIds = teacherIdsForClass(classForStudent);
 
-      let teacherRewards: AttendanceRewardRuleLike[] = [];
-      let teacherConfigRaw: Record<string, unknown> | null = null;
+      const teacherRewards: AttendanceRewardRuleLike[] = [];
+      const teacherConfigsRaw: Record<string, Record<string, unknown> | null> = {};
 
-      if (teacherId) {
-        const [rewardsSnap, tCfgSnap] = await Promise.all([
-          db.collection("schools").doc(schoolId).collection("teachers").doc(teacherId).collection("attendanceRewards").get(),
-          db.collection("schools").doc(schoolId).collection("teachers").doc(teacherId).collection("attendanceConfig").doc("config").get(),
-        ]);
-        teacherRewards = rewardsSnap.docs.map((d) => {
-          const r = d.data();
-          return {
-            id: d.id,
-            enabled: !!r.enabled,
-            classId: String(r.classId ?? ""),
-            periodId: typeof r.periodId === "string" ? r.periodId : undefined,
-            customPeriod:
-              r.customPeriod && typeof r.customPeriod === "object"
-                ? (r.customPeriod as { label: string; startTime: string; endTime: string })
-                : undefined,
-            pointsForSignIn: toFiniteNumber(r.pointsForSignIn, 0),
-            pointsForOnTime: toFiniteNumber(r.pointsForOnTime, 0),
-            onTimeWindowMinutes: toFiniteNumber(r.onTimeWindowMinutes, 15),
-            categoryId: typeof r.categoryId === "string" ? r.categoryId : undefined,
-          };
-        });
-        teacherConfigRaw = tCfgSnap.exists ? (tCfgSnap.data() as Record<string, unknown>) : null;
-      }
+      await Promise.all(
+        classTeacherIds.map(async (teacherId) => {
+          const teacherRef = db.collection("schools").doc(schoolId).collection("teachers").doc(teacherId);
+          const [rewardsSnap, tCfgSnap] = await Promise.all([
+            teacherRef.collection("attendanceRewards").get(),
+            teacherRef.collection("attendanceConfig").doc("config").get(),
+          ]);
+          teacherConfigsRaw[teacherId] = tCfgSnap.exists ? (tCfgSnap.data() as Record<string, unknown>) : null;
+          rewardsSnap.docs.forEach((d) => {
+            const r = d.data();
+            teacherRewards.push({
+              id: d.id,
+              teacherId,
+              enabled: !!r.enabled,
+              classId: String(r.classId ?? ""),
+              periodId: typeof r.periodId === "string" ? r.periodId : undefined,
+              customPeriod:
+                r.customPeriod && typeof r.customPeriod === "object"
+                  ? (r.customPeriod as { label: string; startTime: string; endTime: string })
+                  : undefined,
+              pointsForSignIn: toFiniteNumber(r.pointsForSignIn, 0),
+              pointsForOnTime: toFiniteNumber(r.pointsForOnTime, 0),
+              onTimeWindowMinutes: toFiniteNumber(r.onTimeWindowMinutes, 15),
+              categoryId: typeof r.categoryId === "string" ? r.categoryId : undefined,
+            });
+          });
+        })
+      );
+      // Keep rule order stable (primary teacher's rules first) regardless of which read finished first.
+      teacherRewards.sort(
+        (a, b) => classTeacherIds.indexOf(a.teacherId ?? "") - classTeacherIds.indexOf(b.teacherId ?? "")
+      );
 
       const schoolConfigRaw = schoolCfgSnap.exists ? (schoolCfgSnap.data() as Record<string, unknown>) : null;
 
@@ -325,8 +379,12 @@ export const signInAttendance = functions
         classes,
         periods,
         teacherRewards,
-        teacherConfigRaw,
+        teacherConfigRaw: classTeacherIds[0] ? teacherConfigsRaw[classTeacherIds[0]] : null,
+        teacherConfigsRaw,
         schoolConfigRaw,
+        // The sign-in screen sits in the school, so its clock is the best guess
+        // when the school never picked a time zone (the server itself runs on UTC).
+        fallbackTimeZone: isValidTimeZone(payload.deviceTimeZone) ? payload.deviceTimeZone : null,
       });
 
       if (!resolved.ok) {

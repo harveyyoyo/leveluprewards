@@ -29,8 +29,8 @@ describe('headerProductHref', () => {
     expect(headerProductHref('library', 'yeshiva', 'houseCoordinator')).toBe('/yeshiva/library');
   });
 
-  it('opens attendance and homework in the matching staff portal', () => {
-    expect(headerProductHref('attendance', 'yeshiva', 'admin')).toBe('/yeshiva/admin?tab=attendance');
+  it('opens full-screen attendance for admins; other staff use their portal tab', () => {
+    expect(headerProductHref('attendance', 'yeshiva', 'admin')).toBe('/yeshiva/attendance');
     expect(headerProductHref('attendance', 'yeshiva', 'teacher')).toBe(
       '/yeshiva/teacher?tab=attendance',
     );
