@@ -78,7 +78,10 @@ export function ClassroomGroupsTool({
                   selected ? 'ring-2 ring-white/70' : 'opacity-80 hover:opacity-100',
                 )}
                 style={{
-                  backgroundColor: selected ? teal.border : teal.fill,
+                  // `teal.fill` is too light for the fixed white label (~2.2:1) —
+                  // use `teal.border` for both states and rely on opacity/ring
+                  // (below) for the selected/unselected distinction instead.
+                  backgroundColor: teal.border,
                   borderColor: teal.ring,
                 }}
                 onClick={() => setCount(value)}

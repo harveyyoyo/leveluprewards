@@ -22,6 +22,10 @@ export function ClassroomTapBurstSwitch({
   const active = classroomSidebarToolAppearance(design, 'instant');
   const tray = classroomSidebarToolTint(design, 'instant');
   const night = design === 'midnight';
+  // `active.ink` already accounts for the desk token behind the moving thumb —
+  // in the 'minimal' design that background is the light `blue.fill` (~2.5:1
+  // against fixed white), so the selected label needs to follow it too.
+  const activeInk = active.ink === 'dark' ? 'text-slate-900' : 'text-white';
 
   return (
     <div className="w-full space-y-1">
@@ -63,7 +67,7 @@ export function ClassroomTapBurstSwitch({
           className={cn(
             'relative z-[1] inline-flex items-center justify-center rounded-lg px-1.5 text-[11px] leading-tight tracking-normal',
             mode === 'one-tap'
-              ? 'font-semibold text-white'
+              ? cn('font-semibold', activeInk)
               : night
                 ? 'font-medium text-indigo-950 hover:text-indigo-900'
                 : 'font-medium text-slate-800 hover:text-slate-950',
@@ -81,7 +85,7 @@ export function ClassroomTapBurstSwitch({
           className={cn(
             'relative z-[1] inline-flex items-center justify-center rounded-lg px-1.5 text-[11px] leading-tight tracking-normal',
             mode === 'show-menu'
-              ? 'font-semibold text-white'
+              ? cn('font-semibold', activeInk)
               : night
                 ? 'font-medium text-indigo-950 hover:text-indigo-900'
                 : 'font-medium text-slate-800 hover:text-slate-950',

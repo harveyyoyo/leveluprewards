@@ -397,7 +397,9 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
             type="button"
             size="sm"
             onClick={handleApplyToClassroom}
-            className="h-11 shrink-0 gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500"
+            // `emerald-600`/`emerald-500` only read ~3.8:1 / ~2.5:1 against
+            // white text — `emerald-700`/`emerald-800` clear AA.
+            className="h-11 shrink-0 gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-bold text-white shadow-md hover:bg-emerald-800"
           >
             <Check className="h-3.5 w-3.5 stroke-[3]" />
             <span>{applied ? '✓ Applied to Classroom!' : 'Apply to Classroom'}</span>

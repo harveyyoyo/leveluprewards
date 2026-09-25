@@ -343,7 +343,9 @@ export function ClassroomThemeChooserModal({
             type="button"
             size="sm"
             onClick={handleApply}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 shadow-md px-3.5 h-8 rounded-lg"
+            // `emerald-600`/`emerald-500` only read ~3.8:1 / ~2.5:1 against
+            // white text — `emerald-700`/`emerald-800` clear AA.
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs gap-1.5 shadow-md px-3.5 h-8 rounded-lg"
           >
             <Check className="h-3.5 w-3.5 stroke-[3]" />
             <span>Apply to Classroom</span>

@@ -26,8 +26,10 @@ const chipClass =
 const gridStepClass =
   'h-8 w-8 shrink-0 rounded-lg border-2 border-[#102033] bg-white text-[#102033] hover:bg-white';
 
+// `emerald-600`/`emerald-500` only read ~3.8:1 / ~2.5:1 against the fixed
+// white text — `emerald-700`/`emerald-800` clear AA (~5.5:1 / ~7.7:1).
 const arrangeActionClass =
-  'h-8 rounded-lg border-2 border-emerald-700 bg-emerald-600 px-3 text-xs font-black text-white hover:!bg-emerald-500 hover:!text-white focus-visible:!bg-emerald-500 focus-visible:!text-white active:!bg-emerald-600 active:!text-white';
+  'h-8 rounded-lg border-2 border-emerald-800 bg-emerald-700 px-3 text-xs font-black text-white hover:!bg-emerald-800 hover:!text-white focus-visible:!bg-emerald-800 focus-visible:!text-white active:!bg-emerald-700 active:!text-white';
 
 export function ClassroomArrangeToolbar({
   design,

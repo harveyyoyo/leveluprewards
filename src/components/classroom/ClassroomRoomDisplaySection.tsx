@@ -239,8 +239,10 @@ export function ClassroomRoomDisplaySection({
       <div className="space-y-4">
         {classPicker}
         {preview}
-        <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <summary className="cursor-pointer text-sm font-bold text-white">
+        {/* Rendered inside the light `ClassroomLiveToolSheet` (bg-white / bg-rose-50),
+            not the dark realm stage — so this needs dark-on-light ink, not white. */}
+        <details className="rounded-2xl border border-border bg-muted/40 p-4">
+          <summary className="cursor-pointer text-sm font-bold text-foreground">
             Tune this screen
           </summary>
           <div className="classroom-realm-paper mt-4 rounded-xl p-1">{settingsForm}</div>

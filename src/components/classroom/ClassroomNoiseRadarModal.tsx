@@ -255,7 +255,8 @@ export function ClassroomNoiseRadarModal({ open, onOpenChange }: ClassroomNoiseR
                   !isListening
                     ? 'bg-slate-800 text-slate-400'
                     : isOverLimit
-                    ? 'bg-rose-500 text-white animate-bounce'
+                    // `rose-500` only reads ~3.7:1 against white text — `rose-600` clears AA (~4.7:1).
+                    ? 'bg-rose-600 text-white animate-bounce'
                     : 'bg-emerald-500/20 text-emerald-300',
                 )}
               >

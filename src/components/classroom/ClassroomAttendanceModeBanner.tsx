@@ -25,7 +25,9 @@ export function ClassroomAttendanceModeBanner({
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
-      className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border-2 border-[#0F172A] bg-emerald-500 px-5 py-4 shadow-md"
+      // `bg-emerald-500` only reads ~2.5:1 against the fixed white text below —
+      // `emerald-700` clears AA (~5.5:1) while staying on-brand.
+      className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border-2 border-[#0F172A] bg-emerald-700 px-5 py-4 shadow-md"
       role="status"
       aria-label="Attendance mode. Tap a desk for present or absent. Hold a desk for late."
     >

@@ -444,7 +444,9 @@ export function ClassroomCommandCenter({
             <Button
               asChild
               size="sm"
-              className="h-9 rounded-xl font-bold text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow"
+              // `emerald-600`/`emerald-500` only read ~3.8:1 / ~2.5:1 against
+              // white text — `emerald-700`/`emerald-800` clear AA.
+              className="h-9 rounded-xl font-bold text-xs gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white shadow"
             >
               <a href={liveSmartboardUrl} target="_blank" rel="noopener noreferrer">
                 <Laptop className="h-3.5 w-3.5" />

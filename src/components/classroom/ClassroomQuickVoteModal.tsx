@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { playClassroomSound } from '@/lib/classroom/classroomSoundSynth';
+import { pickReadableOn } from '@/lib/themeContrast';
 
 export interface ClassroomQuickVoteProps {
   open: boolean;
@@ -182,8 +183,11 @@ export function ClassroomQuickVoteModal({
                 <div className="relative z-10 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
                     <span
-                      className="flex h-8 w-8 items-center justify-center rounded-xl font-black text-sm text-white shadow-sm"
-                      style={{ backgroundColor: opt.color }}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl font-black text-sm shadow-sm"
+                      // Fixed white text failed AA on every option color here
+                      // (e.g. cyan/amber/yellow read ~1.9–2.4:1) — pick
+                      // whichever of black/white actually contrasts.
+                      style={{ backgroundColor: opt.color, color: pickReadableOn(opt.color) }}
                     >
                       {opt.icon || opt.key}
                     </span>
@@ -210,8 +214,8 @@ export function ClassroomQuickVoteModal({
                       type="button"
                       size="sm"
                       onClick={() => handleVote(opt.key, 1)}
-                      className="h-8 px-3 rounded-lg font-black text-xs text-white shadow"
-                      style={{ backgroundColor: opt.color }}
+                      className="h-8 px-3 rounded-lg font-black text-xs shadow"
+                      style={{ backgroundColor: opt.color, color: pickReadableOn(opt.color) }}
                     >
                       + Vote
                     </Button>

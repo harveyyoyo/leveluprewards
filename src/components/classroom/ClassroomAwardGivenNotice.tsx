@@ -42,7 +42,9 @@ export function ClassroomAwardGivenNotice({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -8, scale: 0.96 }}
           transition={spring}
-          className="pointer-events-none absolute left-1/2 top-2 z-40 w-[min(22rem,calc(100%-1rem))] -translate-x-1/2 rounded-2xl border-2 border-emerald-700 bg-emerald-500 px-3 py-2 text-center shadow-lg shadow-emerald-900/20"
+          // `bg-emerald-500` reads ~2.4:1 against the emerald-50/white text
+          // below — `emerald-700` (already the border color) clears AA.
+          className="pointer-events-none absolute left-1/2 top-2 z-40 w-[min(22rem,calc(100%-1rem))] -translate-x-1/2 rounded-2xl border-2 border-emerald-800 bg-emerald-700 px-3 py-2 text-center shadow-lg shadow-emerald-900/20"
         >
           <p className="text-[11px] font-black uppercase tracking-wide text-emerald-50">Points awarded</p>
           <p className="text-sm font-bold leading-snug tracking-normal text-white">{message}</p>

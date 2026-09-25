@@ -67,7 +67,9 @@ export function ClassroomAwardPicker({
         {defaultAward ? (
           <button
             type="button"
-            className="mx-auto mb-3 inline-flex h-8 items-center gap-1 rounded-full bg-emerald-500 px-3 text-xs font-black text-white shadow-sm shadow-emerald-700/20 hover:bg-emerald-600"
+            // `bg-emerald-500` reads ~2.5:1 against the fixed white text —
+            // `emerald-700` clears AA (~5.5:1); `emerald-800` on hover stays readable too.
+            className="mx-auto mb-3 inline-flex h-8 items-center gap-1 rounded-full bg-emerald-700 px-3 text-xs font-black text-white shadow-sm shadow-emerald-700/20 hover:bg-emerald-800"
             onClick={(event) => {
               event.stopPropagation();
               onPick(defaultAward.points, defaultAward.description);

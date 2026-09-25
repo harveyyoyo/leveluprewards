@@ -79,7 +79,9 @@ export const CLASSROOM_REALM_THEMES: ClassroomRealmTheme[] = [
       accentFrom: '#6366f1',
       accentTo: '#14b8a6',
       accentText: '#a5b4fc',
-      onAccent: '#ffffff',
+      // White onAccent read ~2.5:1 against accentTo (teal) — nearly
+      // invisible. Black clears ~4.7:1 there and ~8.4:1 on accentFrom.
+      onAccent: '#000000',
     },
   },
   {
@@ -99,7 +101,9 @@ export const CLASSROOM_REALM_THEMES: ClassroomRealmTheme[] = [
       accentFrom: '#fb923c',
       accentTo: '#e11d48',
       accentText: '#fed7aa',
-      onAccent: '#2a1610',
+      // Was ~3.7:1 against accentTo (crimson) — under AA. Pure black clears
+      // ~4.5:1 there and ~9.3:1 on the orange accentFrom end.
+      onAccent: '#000000',
     },
   },
   {
@@ -119,7 +123,11 @@ export const CLASSROOM_REALM_THEMES: ClassroomRealmTheme[] = [
       accentFrom: '#d97706',
       accentTo: '#92400e',
       accentText: '#fde68a',
-      onAccent: '#1a1410',
+      // Near-black onAccent read ~2.6:1 against accentTo (dark walnut) —
+      // this orange-to-brown gradient can't clear AA with either black or
+      // white on both ends; white gives the best achievable worst-case
+      // (~3.2:1 vs ~3.0:1 for black).
+      onAccent: '#ffffff',
     },
   },
   {
@@ -199,7 +207,9 @@ export const CLASSROOM_REALM_THEMES: ClassroomRealmTheme[] = [
       accentFrom: '#f59e0b',
       accentTo: '#78716c',
       accentText: '#fde68a',
-      onAccent: '#1c1814',
+      // Was ~3.7:1 against accentTo (stone gray) — under AA. Pure black
+      // clears ~4.4:1 there and ~9.8:1 on the amber accentFrom end.
+      onAccent: '#000000',
     },
   },
 ];

@@ -14,6 +14,11 @@ const KEY_FILL: Record<ClassroomNoteShortcutKey, string> = {
   h: 'bg-lime-600 hover:bg-lime-700',
 };
 
+// Fixed white text on all five fills reads under 3.1:1 (emerald ~2.5,
+// sky ~2.8, red ~3.8, amber ~2.1, lime-600 ~3.1) — dark ink clears AA on
+// every one of them (5.6–9.8:1).
+const KEY_INK = 'text-slate-900';
+
 export function ClassroomBehaviorNoteTypePicker({
   studentLabel,
   onPick,
@@ -55,13 +60,14 @@ export function ClassroomBehaviorNoteTypePicker({
               type="button"
               variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: spring } }}
               className={cn(
-                'inline-flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-black text-white shadow-sm shadow-black/10 transition-all hover:-translate-y-0.5 hover:shadow-md',
+                'inline-flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-black shadow-sm shadow-black/10 transition-all hover:-translate-y-0.5 hover:shadow-md',
                 KEY_FILL[shortcut.key],
+                KEY_INK,
               )}
               onClick={() => onPick(shortcut.key)}
             >
               <span>{shortcut.hintLabel}</span>
-              <kbd className="rounded-md border border-white/30 bg-black/20 px-1.5 py-0.5 font-mono text-[11px] font-bold">
+              <kbd className="rounded-md border border-black/20 bg-white/40 px-1.5 py-0.5 font-mono text-[11px] font-bold">
                 {shortcut.key.toUpperCase()}
               </kbd>
             </motion.button>

@@ -29,7 +29,9 @@ export function ClassroomLiveCheatsheetTrigger({
       className={cn(
         'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold tracking-normal',
         visible
-          ? 'bg-indigo-500 text-white ring-2 ring-white/80'
+          // `indigo-500` reads ~4.47:1 against white text, just under AA —
+          // `indigo-600` clears it (~6.3:1).
+          ? 'bg-indigo-600 text-white ring-2 ring-white/80'
           : 'border border-white/20 bg-white/10 text-white hover:bg-white/20',
       )}
       aria-label={visible ? 'Cheatsheet showing' : 'Cheatsheet'}
