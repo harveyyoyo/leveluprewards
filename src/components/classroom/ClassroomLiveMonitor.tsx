@@ -160,10 +160,19 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     }
   }, [isInitialized, loginState, router, schoolId]);
 
-  const monitorClassId =
-    classIdFromUrl === CLASSROOM_ALL_STUDENTS_FILTER_ID
-      ? CLASSROOM_ALL_STUDENTS_FILTER_ID
-      : pickClassroomActiveClass(classes, classIdFromUrl);
+  const monitorClassId = useMemo(() => {
+    if (classIdFromUrl === CLASSROOM_ALL_STUDENTS_FILTER_ID) {
+      return CLASSROOM_ALL_STUDENTS_FILTER_ID;
+    }
+    const chosen = pickClassroomActiveClass(classes, classIdFromUrl);
+    if (classIdFromUrl || !classes.length) return chosen;
+    const studentClassIds = new Set(students.map((s) => s.classId).filter(Boolean));
+    if (studentClassIds.size > 0 && !studentClassIds.has(chosen)) {
+      const withStudents = classes.find((c) => studentClassIds.has(c.id));
+      if (withStudents) return withStudents.id;
+    }
+    return chosen;
+  }, [classIdFromUrl, classes, students]);
 
   const teach = useClassroomTeachNow({
     schoolId,

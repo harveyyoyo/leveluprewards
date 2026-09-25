@@ -100,10 +100,6 @@ function CollapsedToolIcon({
   return (
     <motion.button
       type="button"
-      variants={{
-        hidden: { opacity: 0, scale: 0.85 },
-        visible: { opacity: 1, scale: 1, transition: spring },
-      }}
       data-look={design}
       style={{
         ...look.style,
@@ -330,12 +326,6 @@ export function ClassroomMonitorQuickControls({
         <motion.div
           key="classroom-monitor-icon-rail"
           layoutId="classroom-monitor-tabs"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { ...spring, staggerChildren: 0.04 } },
-          }}
           className="flex h-full min-h-0 w-full flex-col items-center justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
           data-testid="classroom-monitor-icon-rail"
         >

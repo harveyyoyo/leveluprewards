@@ -44,7 +44,7 @@ describe('classroomThemeKitStyles', () => {
       hue: 0,
       vivid: 100,
       corners: 14,
-      depth: 4,
+      depth: 'Theme',
       darkMode: false,
     }) as Record<string, string>;
 
@@ -65,7 +65,7 @@ describe('classroomThemeKitStyles', () => {
       hue: 0,
       vivid: 100,
       corners: 12,
-      depth: 3,
+      depth: 'Flat',
       darkMode: true,
     }) as Record<string, string>;
 
@@ -83,7 +83,7 @@ describe('classroomThemeKitStyles', () => {
       hue: 0,
       vivid: 100,
       corners: 16,
-      depth: 4,
+      depth: 'Theme',
       darkMode: false,
     });
 

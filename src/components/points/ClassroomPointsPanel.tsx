@@ -2679,24 +2679,22 @@ function ClassroomPointsPanelInner({
             !editMode && classroomChartSurfaceClass(design),
           )}
         >
-      {chartNeedsRosterPlacement && !isFullscreen ? (
-        <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-amber-950 dark:text-amber-50">
+      {chartNeedsRosterPlacement ? (
+        <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 sm:flex-row sm:items-center sm:justify-between mx-4 mt-2">
+          <p className="text-xs text-amber-950 dark:text-amber-50">
             <span className="font-bold">No students on the chart.</span>{' '}
             {effectiveClassName ? `${effectiveClassName} has ` : ''}
-            {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in the roster but none are
-            on seats yet.
+            {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in the roster ready to be seated.
           </p>
-          <Button type="button" size="sm" className="shrink-0 rounded-xl font-bold" onClick={fillChartFromRoster}>
+          <Button type="button" size="sm" className="h-7 shrink-0 rounded-lg text-xs font-bold" onClick={fillChartFromRoster}>
             Place class on chart
           </Button>
         </div>
       ) : null}
-      {noStudentsInClass && !isFullscreen ? (
-        <p className="shrink-0 rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-          No students in {effectiveClassName || 'this class'} yet. Add them under{' '}
-          <span className="font-semibold text-foreground">Students</span> (or import a roster), then return here.
-        </p>
+      {noStudentsInClass ? (
+        <div className="mx-4 mt-2 rounded-xl border border-dashed border-black/15 bg-white/70 px-4 py-2.5 text-center text-xs text-muted-foreground shadow-sm">
+          No students in {effectiveClassName || 'this class'} yet. Use the class menu at the top to switch to another class.
+        </div>
       ) : null}
 
       {bathroomEnabled && !isStudentAudience && !isFullscreen && activeBathroomList.length > 0 ? (
